@@ -8,7 +8,7 @@
 | `sb3js/` | `src/index.js`, a thin wrapper over scratch-parser's `lib/parse` and `lib/validate`, bundled by esbuild into `build/dist/jscratch-sb3.js`. Node is downloaded by the Gradle node plugin, so nothing needs to be installed. |
 | `compiler/` | Platform-neutral core: `json/JsonTree.kt` (tree and the `ProjectJson` interface), `sb3/` (model and parser), `codegen/` (ASM emitters), `JarWriter`, `JScratch` (entry point). Depends on ASM only. |
 | `compiler-jvm/` | `RhinoProjectJson` (scratch-parser in Rhino, JSON through kotlinx-serialization) and the end-to-end tests. |
-| `cli/` | `jscratch` command. Embeds the runtime fat JAR as a resource. |
+| `cli/` | `jscratch` command, plus `ScratchDownloader`, which fetches shared projects from scratch.mit.edu with the JDK's `HttpClient`. Embeds the runtime fat JAR as a resource. |
 | `web/` | TeaVM playground: `Playground.kt`, `BrowserProjectJson.kt` plus the static page in `src/main/webapp/`. |
 | `samples/` | Sample projects as directories under `src/`, zipped into `.sb3` files by the build. |
 | `docs/` | This documentation, built with Zensical. |
@@ -19,6 +19,7 @@
 ./gradlew build                 # compile, lint, test, assemble everything including the playground
 ./gradlew :compiler-jvm:test    # Rhino tests and end-to-end: compile the samples and run them headless
 ./gradlew :runtime:test         # unit tests for value semantics
+./gradlew :cli:test             # project download tests (offline)
 ./gradlew ktlintFormat          # format Kotlin sources
 ./gradlew :cli:fatJar           # single-file CLI
 ./gradlew :web:assembleSite     # playground in web/build/site
@@ -34,6 +35,7 @@ The `CI` workflow in `.github/workflows/ci.yml` runs on every pull request and e
 ## Tests
 
 - `runtime/src/test`: unit tests for `Cast` and `Ops`, the parts most likely to drift from Scratch.
+- `cli/src/test`: `ScratchDownloaderTest` checks project link parsing and how a download is packed into an `.sb3`, with a fake server in place of the network so the build never goes online.
 - `compiler-jvm/src/test`: `RhinoProjectJsonTest` checks the scratch-parser bridge (valid project, schema rejection, broken JSON), and `CompileSamplesTest` compiles `samples/src/hello` with the real runtime, runs the JAR in a child JVM with `-Djscratch.headless=40`, and compares what the sprite said. Add a sample directory and a few expected `say` lines to cover a new block.
 
 To test rendering without a window, run a compiled JAR with `-Djscratch.headless=<frames> -Djscratch.screenshot=out.png` and look at the PNG.
