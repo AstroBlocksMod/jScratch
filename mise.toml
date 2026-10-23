@@ -1,0 +1,6 @@
+[tools]
+# Compiles the runtime's sound decoders (runtime/src/main/c) to WebAssembly.
+emsdk = "6.0.13"
+# emcc is a Python program that needs 3.10 or newer. Pinned here so builds started outside a
+# mise-activated shell, which reach emcc through `mise exec`, do not fall back to an older system Python.
+python = "3.15.1"

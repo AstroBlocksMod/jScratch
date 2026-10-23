@@ -31,6 +31,9 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6
 
+      # emcc for the runtime's sound decoders, pinned in mise.toml.
+      - uses: jdx/mise-action@v5
+
       # The full build lints and runs the end-to-end tests, so a broken
       # compiler never reaches the playground.
       - name: Build and test

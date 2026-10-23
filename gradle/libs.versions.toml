@@ -9,6 +9,13 @@ junit = "6.1.3"
 ktlint-plugin = "14.2.0"
 ktlint-cli = "1.8.0"
 node-plugin = "7.1.0"
+chicory = "1.7.5"
+# dr_libs release tags, one per header, with the SHA-256 of each header. A tag can be moved, so the
+# build checks the hashes. Update both together (see docs/development.md).
+dr-mp3 = "mp3-0.7.3"
+dr-mp3-sha256 = "d80e6800ddde29d50988ce894affe601858802d1bb8f047f98b84b33ae66c11a"
+dr-wav = "wav-0.14.5"
+dr-wav-sha256 = "c69816d0e0ac6cab3df8bf2f42df451d4531c2bfa34f7d7a69e959e6ed399038"
 
 [libraries]
 asm = { module = "org.ow2.asm:asm", version.ref = "asm" }
@@ -17,6 +24,10 @@ jsvg = { module = "com.github.weisj:jsvg", version.ref = "jsvg" }
 rhino = { module = "org.mozilla:rhino", version.ref = "rhino" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 teavm-jso-apis = { module = "org.teavm:teavm-jso-apis", version.ref = "teavm" }
+chicory-runtime = { module = "com.dylibso.chicory:runtime", version.ref = "chicory" }
+chicory-compiler-cli = { module = "com.dylibso.chicory:build-time-compiler-cli-experimental", version.ref = "chicory" }
+dr-mp3 = { module = "io.github.mackron:dr_mp3", version.ref = "dr-mp3" }
+dr-wav = { module = "io.github.mackron:dr_wav", version.ref = "dr-wav" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 

@@ -75,6 +75,23 @@ Stopping a script sets a `killed` flag; the next time the script resumes it thro
 
 Input events from Swing are queued and applied at the start of the next frame on the scheduler thread, which is where hats are started.
 
+## Sound
+
+The JDK's `javax.sound` plays PCM WAV only, while projects saved by the Scratch editor mostly hold MP3, and older ones ADPCM WAV. The runtime decodes both with dr_mp3 and dr_wav, two C libraries that are compiled to JVM bytecode at build time:
+
+```mermaid
+flowchart LR
+    c["decoders.c<br>dr_mp3 + dr_wav"] --> emcc["emcc<br>Emscripten"]
+    emcc --> wasm["decoders.wasm"]
+    wasm --> chicory["Chicory<br>build-time compiler"]
+    chicory --> classes["DecodersMachine classes"]
+    classes --> runtime["runtime fat JAR"]
+```
+
+At run time a `SoundStream` is one open decoder on its own [Chicory](https://chicory.dev) instance of the module: the file is copied into the instance's memory, and the stream hands out 16-bit PCM in chunks. Nothing is interpreted: every WebAssembly function is an ordinary JVM method that HotSpot compiles like any other.
+
+When the project starts, `Sounds` opens every sound in parallel on virtual threads to learn its length. Sounds up to 10 seconds are decoded into memory then, so they start at once. Longer ones, usually music, are decoded while they play, since a three-minute song takes about 30 MB as PCM. Each playing sound feeds its own `SourceDataLine` from a daemon thread. Decoding runs at about 200 times real time, so a stream never falls behind. Headless runs only read the lengths, so "play sound until done" waits as long as it does in a window.
+
 ## Modules
 
 ```mermaid

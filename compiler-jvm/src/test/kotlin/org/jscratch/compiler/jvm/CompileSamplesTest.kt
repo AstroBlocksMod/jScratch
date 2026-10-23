@@ -63,6 +63,20 @@ class CompileSamplesTest {
         assertEquals(expected, out.lines().filter { it.startsWith("Cat ") })
     }
 
+    /**
+     * An MP3 and an IMA ADPCM WAV. Headless runs decode sounds without playing them, so "play
+     * sound until done" waits for the decoded length on the virtual clock: 0.5 s for the MP3,
+     * then 0.37 s for the WAV (whole ADPCM blocks).
+     */
+    @Test
+    fun compilesAndRunsSoundsProject() {
+        val result = JScratch.compile(File(samplesDir, "sounds.sb3").readBytes(), runtimeJar.readBytes(), json)
+        assertEquals(emptyList(), result.warnings, "unexpected warnings")
+
+        val out = runHeadless(result.jar, frames = 60)
+        assertEquals(listOf("Speaker says: 5", "Speaker says: 9"), out.lines().filter { it.startsWith("Speaker ") })
+    }
+
     private fun runHeadless(jar: ByteArray, frames: Int): String {
         val tmp = Files.createTempFile("jscratch-test", ".jar").toFile()
         try {

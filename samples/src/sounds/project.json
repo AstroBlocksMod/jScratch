@@ -1,0 +1,331 @@
+{
+  "targets": [
+    {
+      "isStage": true,
+      "name": "Stage",
+      "variables": {},
+      "lists": {},
+      "broadcasts": {},
+      "blocks": {},
+      "comments": {},
+      "currentCostume": 0,
+      "costumes": [
+        {
+          "name": "Blue Sky",
+          "bitmapResolution": 1,
+          "dataFormat": "svg",
+          "assetId": "e7c147730f19d284bcd7b3f00af19bb6",
+          "md5ext": "e7c147730f19d284bcd7b3f00af19bb6.svg",
+          "rotationCenterX": 240,
+          "rotationCenterY": 180
+        }
+      ],
+      "sounds": [],
+      "volume": 100,
+      "layerOrder": 0,
+      "tempo": 60,
+      "videoTransparency": 50,
+      "videoState": "on",
+      "textToSpeechLanguage": null
+    },
+    {
+      "isStage": false,
+      "name": "Speaker",
+      "variables": {},
+      "lists": {},
+      "broadcasts": {},
+      "blocks": {
+        "h1": {
+          "opcode": "event_whenflagclicked",
+          "next": "s1",
+          "parent": null,
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": true,
+          "x": 20,
+          "y": 20
+        },
+        "s1": {
+          "opcode": "sensing_resettimer",
+          "next": "s2",
+          "parent": "h1",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s2": {
+          "opcode": "sound_playuntildone",
+          "next": "s3",
+          "parent": "s1",
+          "inputs": {
+            "SOUND_MENU": [
+              1,
+              "m1"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "m1": {
+          "opcode": "sound_sounds_menu",
+          "next": null,
+          "parent": "s2",
+          "inputs": {},
+          "fields": {
+            "SOUND_MENU": [
+              "beep",
+              null
+            ]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "s3": {
+          "opcode": "looks_say",
+          "next": "s4",
+          "parent": "s2",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "r1",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "r1": {
+          "opcode": "operator_round",
+          "next": null,
+          "parent": "s3",
+          "inputs": {
+            "NUM": [
+              3,
+              "x1",
+              [
+                4,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "x1": {
+          "opcode": "operator_multiply",
+          "next": null,
+          "parent": "r1",
+          "inputs": {
+            "NUM1": [
+              3,
+              "t1",
+              [
+                4,
+                ""
+              ]
+            ],
+            "NUM2": [
+              1,
+              [
+                4,
+                "10"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t1": {
+          "opcode": "sensing_timer",
+          "next": null,
+          "parent": "x1",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s4": {
+          "opcode": "sound_playuntildone",
+          "next": "s5",
+          "parent": "s3",
+          "inputs": {
+            "SOUND_MENU": [
+              3,
+              "n2",
+              "m2"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "m2": {
+          "opcode": "sound_sounds_menu",
+          "next": null,
+          "parent": "s4",
+          "inputs": {},
+          "fields": {
+            "SOUND_MENU": [
+              "beep",
+              null
+            ]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "n2": {
+          "opcode": "operator_add",
+          "next": null,
+          "parent": "s4",
+          "inputs": {
+            "NUM1": [
+              1,
+              [
+                4,
+                "1"
+              ]
+            ],
+            "NUM2": [
+              1,
+              [
+                4,
+                "1"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s5": {
+          "opcode": "looks_say",
+          "next": null,
+          "parent": "s4",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "r2",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "r2": {
+          "opcode": "operator_round",
+          "next": null,
+          "parent": "s5",
+          "inputs": {
+            "NUM": [
+              3,
+              "x2",
+              [
+                4,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "x2": {
+          "opcode": "operator_multiply",
+          "next": null,
+          "parent": "r2",
+          "inputs": {
+            "NUM1": [
+              3,
+              "t2",
+              [
+                4,
+                ""
+              ]
+            ],
+            "NUM2": [
+              1,
+              [
+                4,
+                "10"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t2": {
+          "opcode": "sensing_timer",
+          "next": null,
+          "parent": "x2",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        }
+      },
+      "comments": {},
+      "currentCostume": 0,
+      "costumes": [
+        {
+          "name": "Cat",
+          "bitmapResolution": 1,
+          "dataFormat": "svg",
+          "assetId": "6ac3a6339b85092fa9b1694f2da7779d",
+          "md5ext": "6ac3a6339b85092fa9b1694f2da7779d.svg",
+          "rotationCenterX": 48,
+          "rotationCenterY": 50
+        }
+      ],
+      "sounds": [
+        {
+          "name": "beep",
+          "assetId": "f5fb3a4ad6ca97cf1b9941f6a3c47ca6",
+          "dataFormat": "mp3",
+          "format": "",
+          "rate": 44100,
+          "sampleCount": 22050,
+          "md5ext": "f5fb3a4ad6ca97cf1b9941f6a3c47ca6.mp3"
+        },
+        {
+          "name": "boop",
+          "assetId": "fc79d17eb70ef257c9a9f644b2ba1c6e",
+          "dataFormat": "wav",
+          "format": "adpcm",
+          "rate": 22050,
+          "sampleCount": 8164,
+          "md5ext": "fc79d17eb70ef257c9a9f644b2ba1c6e.wav"
+        }
+      ],
+      "volume": 100,
+      "layerOrder": 1,
+      "visible": true,
+      "x": 0,
+      "y": 0,
+      "size": 100,
+      "direction": 90,
+      "draggable": false,
+      "rotationStyle": "all around"
+    }
+  ],
+  "monitors": [],
+  "extensions": [],
+  "meta": {
+    "semver": "3.0.0",
+    "vm": "0.2.0",
+    "agent": "jScratch sample"
+  }
+}

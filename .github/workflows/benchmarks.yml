@@ -36,6 +36,9 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6
 
+      # emcc for the runtime's sound decoders, pinned in mise.toml.
+      - uses: jdx/mise-action@v5
+
       - name: Run benchmarks
         env:
           RUNS: ${{ inputs.runs || '3' }}
