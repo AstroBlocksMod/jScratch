@@ -86,9 +86,12 @@ flowchart TD
     cli["cli<br>command line, embeds runtime JAR"]
     web["web<br>TeaVM playground, JSON.parse + page script"]
     samples["samples<br>.sb3 built from sources"]
+    benchmarks["benchmarks<br>timed against scratch-vm and TurboWarp"]
     compiler --> compilerJvm
     compiler --> web
     compilerJvm --> cli
+    compilerJvm --> benchmarks
+    runtime -. fat JAR compiled into each project .-> benchmarks
     sb3js -. bundle as resource .-> compilerJvm
     sb3js -. bundle served to the page .-> web
     runtime -. fat JAR as resource .-> cli

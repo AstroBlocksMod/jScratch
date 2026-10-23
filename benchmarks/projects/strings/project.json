@@ -1,0 +1,853 @@
+{
+  "targets": [
+    {
+      "isStage": true,
+      "name": "Stage",
+      "variables": {
+        "var_total": [
+          "total",
+          0
+        ],
+        "var_s": [
+          "s",
+          0
+        ],
+        "var_i": [
+          "i",
+          0
+        ],
+        "var_r": [
+          "r",
+          0
+        ]
+      },
+      "lists": {},
+      "broadcasts": {},
+      "blocks": {},
+      "comments": {},
+      "currentCostume": 0,
+      "costumes": [
+        {
+          "name": "Blue Sky",
+          "bitmapResolution": 1,
+          "dataFormat": "svg",
+          "assetId": "e7c147730f19d284bcd7b3f00af19bb6",
+          "md5ext": "e7c147730f19d284bcd7b3f00af19bb6.svg",
+          "rotationCenterX": 240,
+          "rotationCenterY": 180
+        }
+      ],
+      "sounds": [],
+      "volume": 100,
+      "layerOrder": 0,
+      "tempo": 60,
+      "videoTransparency": 50,
+      "videoState": "on",
+      "textToSpeechLanguage": null
+    },
+    {
+      "isStage": false,
+      "name": "Bench",
+      "variables": {},
+      "lists": {},
+      "broadcasts": {},
+      "blocks": {
+        "p1": {
+          "opcode": "procedures_definition",
+          "next": "b3",
+          "parent": null,
+          "inputs": {
+            "custom_block": [
+              1,
+              "p2"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": true,
+          "x": 400,
+          "y": 620
+        },
+        "p2": {
+          "opcode": "procedures_prototype",
+          "next": null,
+          "parent": "p1",
+          "inputs": {},
+          "fields": {},
+          "shadow": true,
+          "topLevel": false,
+          "mutation": {
+            "tagName": "mutation",
+            "children": [],
+            "proccode": "shuffle text",
+            "argumentids": "[]",
+            "warp": "true",
+            "argumentnames": "[]",
+            "argumentdefaults": "[]"
+          }
+        },
+        "b3": {
+          "opcode": "data_setvariableto",
+          "next": "b4",
+          "parent": "p1",
+          "inputs": {
+            "VALUE": [
+              1,
+              [
+                4,
+                "0"
+              ]
+            ]
+          },
+          "fields": {
+            "VARIABLE": [
+              "total",
+              "var_total"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "b4": {
+          "opcode": "control_repeat",
+          "next": null,
+          "parent": "b3",
+          "inputs": {
+            "TIMES": [
+              1,
+              [
+                4,
+                "15000"
+              ]
+            ],
+            "SUBSTACK": [
+              2,
+              "b5"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b5": {
+          "opcode": "data_setvariableto",
+          "next": "b6",
+          "parent": "b4",
+          "inputs": {
+            "VALUE": [
+              1,
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {
+            "VARIABLE": [
+              "s",
+              "var_s"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "b6": {
+          "opcode": "data_setvariableto",
+          "next": "b7",
+          "parent": "b5",
+          "inputs": {
+            "VALUE": [
+              1,
+              [
+                4,
+                "0"
+              ]
+            ]
+          },
+          "fields": {
+            "VARIABLE": [
+              "i",
+              "var_i"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "b7": {
+          "opcode": "control_repeat",
+          "next": "b15",
+          "parent": "b6",
+          "inputs": {
+            "TIMES": [
+              1,
+              [
+                4,
+                "300"
+              ]
+            ],
+            "SUBSTACK": [
+              2,
+              "b8"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b8": {
+          "opcode": "data_setvariableto",
+          "next": "b14",
+          "parent": "b7",
+          "inputs": {
+            "VALUE": [
+              3,
+              "b9",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {
+            "VARIABLE": [
+              "s",
+              "var_s"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "b9": {
+          "opcode": "operator_join",
+          "next": null,
+          "parent": "b8",
+          "inputs": {
+            "STRING1": [
+              3,
+              [
+                12,
+                "s",
+                "var_s"
+              ],
+              [
+                10,
+                ""
+              ]
+            ],
+            "STRING2": [
+              3,
+              "b10",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b10": {
+          "opcode": "operator_letter_of",
+          "next": null,
+          "parent": "b9",
+          "inputs": {
+            "LETTER": [
+              3,
+              "b11",
+              [
+                4,
+                ""
+              ]
+            ],
+            "STRING": [
+              1,
+              [
+                10,
+                "abcdefghijklmnopqrstuvwxyz"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b11": {
+          "opcode": "operator_add",
+          "next": null,
+          "parent": "b10",
+          "inputs": {
+            "NUM1": [
+              3,
+              "b12",
+              [
+                4,
+                ""
+              ]
+            ],
+            "NUM2": [
+              1,
+              [
+                4,
+                "1"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b12": {
+          "opcode": "operator_mod",
+          "next": null,
+          "parent": "b11",
+          "inputs": {
+            "NUM1": [
+              3,
+              "b13",
+              [
+                4,
+                ""
+              ]
+            ],
+            "NUM2": [
+              1,
+              [
+                4,
+                "26"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b13": {
+          "opcode": "operator_multiply",
+          "next": null,
+          "parent": "b12",
+          "inputs": {
+            "NUM1": [
+              3,
+              [
+                12,
+                "i",
+                "var_i"
+              ],
+              [
+                4,
+                ""
+              ]
+            ],
+            "NUM2": [
+              1,
+              [
+                4,
+                "7"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b14": {
+          "opcode": "data_changevariableby",
+          "next": null,
+          "parent": "b8",
+          "inputs": {
+            "VALUE": [
+              1,
+              [
+                4,
+                "1"
+              ]
+            ]
+          },
+          "fields": {
+            "VARIABLE": [
+              "i",
+              "var_i"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "b15": {
+          "opcode": "data_setvariableto",
+          "next": "b16",
+          "parent": "b7",
+          "inputs": {
+            "VALUE": [
+              1,
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {
+            "VARIABLE": [
+              "r",
+              "var_r"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "b16": {
+          "opcode": "data_setvariableto",
+          "next": "b18",
+          "parent": "b15",
+          "inputs": {
+            "VALUE": [
+              3,
+              "b17",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {
+            "VARIABLE": [
+              "i",
+              "var_i"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "b17": {
+          "opcode": "operator_length",
+          "next": null,
+          "parent": "b16",
+          "inputs": {
+            "STRING": [
+              3,
+              [
+                12,
+                "s",
+                "var_s"
+              ],
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b18": {
+          "opcode": "control_repeat_until",
+          "next": "b24",
+          "parent": "b16",
+          "inputs": {
+            "CONDITION": [
+              2,
+              "b19"
+            ],
+            "SUBSTACK": [
+              2,
+              "b20"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b19": {
+          "opcode": "operator_equals",
+          "next": null,
+          "parent": "b18",
+          "inputs": {
+            "OPERAND1": [
+              3,
+              [
+                12,
+                "i",
+                "var_i"
+              ],
+              [
+                4,
+                ""
+              ]
+            ],
+            "OPERAND2": [
+              1,
+              [
+                4,
+                "0"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b20": {
+          "opcode": "data_setvariableto",
+          "next": "b23",
+          "parent": "b18",
+          "inputs": {
+            "VALUE": [
+              3,
+              "b21",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {
+            "VARIABLE": [
+              "r",
+              "var_r"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "b21": {
+          "opcode": "operator_join",
+          "next": null,
+          "parent": "b20",
+          "inputs": {
+            "STRING1": [
+              3,
+              [
+                12,
+                "r",
+                "var_r"
+              ],
+              [
+                10,
+                ""
+              ]
+            ],
+            "STRING2": [
+              3,
+              "b22",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b22": {
+          "opcode": "operator_letter_of",
+          "next": null,
+          "parent": "b21",
+          "inputs": {
+            "LETTER": [
+              3,
+              [
+                12,
+                "i",
+                "var_i"
+              ],
+              [
+                4,
+                ""
+              ]
+            ],
+            "STRING": [
+              3,
+              [
+                12,
+                "s",
+                "var_s"
+              ],
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b23": {
+          "opcode": "data_changevariableby",
+          "next": null,
+          "parent": "b20",
+          "inputs": {
+            "VALUE": [
+              1,
+              [
+                4,
+                "-1"
+              ]
+            ]
+          },
+          "fields": {
+            "VARIABLE": [
+              "i",
+              "var_i"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "b24": {
+          "opcode": "control_if",
+          "next": null,
+          "parent": "b18",
+          "inputs": {
+            "CONDITION": [
+              2,
+              "b25"
+            ],
+            "SUBSTACK": [
+              2,
+              "b26"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b25": {
+          "opcode": "operator_contains",
+          "next": null,
+          "parent": "b24",
+          "inputs": {
+            "STRING1": [
+              3,
+              [
+                12,
+                "r",
+                "var_r"
+              ],
+              [
+                10,
+                ""
+              ]
+            ],
+            "STRING2": [
+              1,
+              [
+                10,
+                "UNGZ"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b26": {
+          "opcode": "data_changevariableby",
+          "next": null,
+          "parent": "b24",
+          "inputs": {
+            "VALUE": [
+              3,
+              "b27",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {
+            "VARIABLE": [
+              "total",
+              "var_total"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "b27": {
+          "opcode": "operator_length",
+          "next": null,
+          "parent": "b26",
+          "inputs": {
+            "STRING": [
+              3,
+              [
+                12,
+                "r",
+                "var_r"
+              ],
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b28": {
+          "opcode": "event_whenflagclicked",
+          "next": "b29",
+          "parent": null,
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": true,
+          "x": 20,
+          "y": 8420
+        },
+        "b29": {
+          "opcode": "procedures_call",
+          "next": "b30",
+          "parent": "b28",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false,
+          "mutation": {
+            "tagName": "mutation",
+            "children": [],
+            "proccode": "shuffle text",
+            "argumentids": "[]",
+            "warp": "true"
+          }
+        },
+        "b30": {
+          "opcode": "looks_say",
+          "next": null,
+          "parent": "b29",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "b31",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b31": {
+          "opcode": "operator_join",
+          "next": null,
+          "parent": "b30",
+          "inputs": {
+            "STRING1": [
+              3,
+              [
+                12,
+                "total",
+                "var_total"
+              ],
+              [
+                10,
+                ""
+              ]
+            ],
+            "STRING2": [
+              3,
+              "b32",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b32": {
+          "opcode": "operator_join",
+          "next": null,
+          "parent": "b31",
+          "inputs": {
+            "STRING1": [
+              1,
+              [
+                10,
+                " "
+              ]
+            ],
+            "STRING2": [
+              3,
+              "b33",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b33": {
+          "opcode": "operator_letter_of",
+          "next": null,
+          "parent": "b32",
+          "inputs": {
+            "LETTER": [
+              1,
+              [
+                4,
+                "1"
+              ]
+            ],
+            "STRING": [
+              3,
+              [
+                12,
+                "r",
+                "var_r"
+              ],
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        }
+      },
+      "comments": {},
+      "currentCostume": 0,
+      "costumes": [
+        {
+          "name": "Cat",
+          "bitmapResolution": 1,
+          "dataFormat": "svg",
+          "assetId": "6ac3a6339b85092fa9b1694f2da7779d",
+          "md5ext": "6ac3a6339b85092fa9b1694f2da7779d.svg",
+          "rotationCenterX": 48,
+          "rotationCenterY": 50
+        }
+      ],
+      "sounds": [],
+      "volume": 100,
+      "layerOrder": 1,
+      "visible": true,
+      "x": 0,
+      "y": 0,
+      "size": 100,
+      "direction": 90,
+      "draggable": false,
+      "rotationStyle": "all around"
+    }
+  ],
+  "monitors": [],
+  "extensions": [],
+  "meta": {
+    "semver": "3.0.0",
+    "vm": "0.2.0",
+    "agent": "jScratch benchmark"
+  }
+}

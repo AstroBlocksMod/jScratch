@@ -1,0 +1,60 @@
+name: Benchmarks
+
+# Times the benchmark projects on jScratch, TurboWarp and scratch-vm and puts the
+# report on the run's summary page. Shared runners are noisy, so the timings are a
+# trend to watch, not a gate. The job only fails when jScratch gives a wrong result.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      runs:
+        description: Runs per project and engine
+        default: "3"
+      only:
+        description: Comma-separated project names, empty for all
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: benchmarks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Run benchmarks
+        env:
+          RUNS: ${{ inputs.runs || '3' }}
+          ONLY: ${{ inputs.only || '' }}
+        run: ./gradlew :benchmarks:benchmark "-Pbenchmark.runs=$RUNS" "-Pbenchmark.only=$ONLY"
+
+      - name: Add the report to the summary
+        if: always()
+        run: |
+          if [ -f benchmarks/build/reports/benchmarks/report.md ]; then
+            cat benchmarks/build/reports/benchmarks/report.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: benchmark-results
+          path: |
+            benchmarks/build/benchmarks/*.json
+            benchmarks/build/reports/benchmarks/
+          if-no-files-found: ignore

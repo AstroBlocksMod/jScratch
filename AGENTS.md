@@ -13,6 +13,7 @@ Modules:
 - `cli/`: the `jscratch` command. The runtime fat JAR is embedded as a resource.
 - `web/`: TeaVM playground. `Playground.kt` exposes `window.jscratch.compile`; `BrowserProjectJson.kt` uses `JSON.parse` and the page-loaded `jscratch-sb3.js` through `@JSBody`. The page lives in `src/main/webapp/`.
 - `samples/`: sample projects as directories under `src/`, zipped into `.sb3` files by the build and used by the end-to-end tests.
+- `benchmarks/`: CPU-heavy projects under `projects/` (each with a `benchmark.properties` holding its description and expected `say` output, all sharing the costumes in `assets/`), a Kotlin runner that times them on jScratch, `js/run.js` that times them on scratch-vm and TurboWarp in Node, and a report that merges the results.
 - `docs/`: Zensical documentation, configured by `zensical.toml` at the root.
 
 The compiler never depends on the runtime module. It only knows runtime class and method names, listed in `RT` in `compiler/.../codegen/Names.kt`. When you change a runtime method that generated code calls, update the descriptor in `TargetCompiler` too, and the other way around.
@@ -22,7 +23,8 @@ The compiler never depends on the runtime module. It only knows runtime class an
 - `./gradlew build` compiles, lints, tests and assembles everything, including the TeaVM site. Requires a JDK of version 21 or newer (JDK 25 is installed locally through mise).
 - `./gradlew :compiler-jvm:test` runs the Rhino bridge tests and the end-to-end test: it compiles the samples with the real runtime and runs the JAR headless in a child JVM, checking the `say` output.
 - After editing `sb3js/src/index.js` or `sb3js/package.json`, run `npm install` in `sb3js/` to refresh `package-lock.json` (the Gradle task uses `npm ci`) and commit both.
-- Compiled JARs accept `-Djscratch.headless=<frames>` (virtual clock, prints `say` to stdout) and `-Djscratch.screenshot=<png>`. Use these to verify behavior and rendering without a window.
+- Compiled JARs accept `-Djscratch.headless=<frames>` (virtual clock, prints `say` to stdout, stops early once no script is running), `-Djscratch.screenshot=<png>` and `-Djscratch.timing=true` (frames and wall time on stderr). Use these to verify behavior and rendering without a window.
+- `./gradlew :benchmarks:benchmark` times the benchmarks on all three engines and writes `benchmarks/build/reports/benchmarks/report.md`. `-Pbenchmark.runs=<n>` and `-Pbenchmark.only=<a,b>` narrow it down; `:benchmarks:benchmarkJScratch` runs only jScratch. It is not part of `build`. After a change that could affect speed, run at least `benchmarkJScratch` and compare. After editing `benchmarks/js/package.json`, run `npm install` in `benchmarks/js/` and commit the lock file.
 - Add a block by adding a runtime method with a plain JVM signature and a case in `TargetCompiler`, then cover it with a sample and list it in `docs/blocks.md`.
 
 ## Verifying in a Browser (web playground)
@@ -60,7 +62,7 @@ Use modern code practices:
 
 Always update the docs if necessary when changing or adding code. If the docs already contain outdated information, expand your scope to cover that info too.
 
-The docs are a Zensical site: `zensical.toml` at the root, pages in `docs/`. `zensical build` validates the config and writes `site/` (ignored by git). Pages: `index.md`, `getting-started.md`, `blocks.md` (supported blocks, keep in step with `TargetCompiler`), `web-playground.md`, `architecture.md`, `development.md`.
+The docs are a Zensical site: `zensical.toml` at the root, pages in `docs/`. `zensical build` validates the config and writes `site/` (ignored by git). Pages: `index.md`, `getting-started.md`, `blocks.md` (supported blocks, keep in step with `TargetCompiler`), `web-playground.md`, `architecture.md`, `development.md`, `benchmarks.md` (method and latest results), `roadmap.md`.
 
 ## Diagrams as Mermaid, not ASCII art
 

@@ -9,6 +9,8 @@ description = "scratch-parser bundled with esbuild into one script for the brows
 node {
     version.set("26.12.0")
     download.set(true)
+    // The Node.js repository is declared in settings.gradle.kts.
+    distBaseUrl.set(null as String?)
     npmInstallCommand.set("ci")
 }
 

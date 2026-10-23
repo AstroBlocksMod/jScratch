@@ -1,0 +1,18 @@
+{
+  "name": "jscratch-benchmarks",
+  "private": true,
+  "description": "Runs the jScratch benchmark projects on scratch-vm and TurboWarp for comparison.",
+  "license": "GPL-3.0-only",
+  "dependencies": {
+    "@scratch/scratch-vm": "15.3.0",
+    "turbowarp-vm": "https://codeload.github.com/TurboWarp/scratch-vm/tar.gz/371839de44e1c7790e0bb4a6774d1acb8fa1e47a"
+  },
+  "overrides": {
+    "turbowarp-vm": {
+      "scratch-parser": "https://codeload.github.com/TurboWarp/scratch-parser/tar.gz/fb65ba09d78ab6a0d19ce908d64b72d1a122312f"
+    },
+    "@turbowarp/scratch-svg-renderer": {
+      "scratch-render-fonts": "https://codeload.github.com/TurboWarp/scratch-render-fonts/tar.gz/7b6768fc6dfef6b343a06f992587b74807043961"
+    }
+  }
+}

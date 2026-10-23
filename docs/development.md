@@ -11,6 +11,7 @@
 | `cli/` | `jscratch` command, plus `ScratchDownloader`, which fetches shared projects from scratch.mit.edu with the JDK's `HttpClient`. Embeds the runtime fat JAR as a resource. |
 | `web/` | TeaVM playground: `Playground.kt`, `BrowserProjectJson.kt` plus the static page in `src/main/webapp/`. |
 | `samples/` | Sample projects as directories under `src/`, zipped into `.sb3` files by the build. |
+| `benchmarks/` | CPU-heavy projects under `projects/` sharing the costumes in `assets/`, the jScratch runner and report in Kotlin, and `js/run.js`, which runs the same projects on scratch-vm and TurboWarp in Node. See [Benchmarks](benchmarks.md). |
 | `docs/` | This documentation, built with Zensical. |
 
 ## Everyday commands
@@ -24,13 +25,16 @@
 ./gradlew :cli:fatJar           # single-file CLI
 ./gradlew :web:assembleSite     # playground in web/build/site
 ./gradlew :sb3js:bundle         # rebuild the scratch-parser bundle after touching sb3js/
+./gradlew :benchmarks:benchmark # time the benchmarks on jScratch, TurboWarp and scratch-vm (a few minutes)
 ```
 
-The build uses the Gradle wrapper (Gradle 9), Kotlin 2.4 and a JDK of version 21 or newer on the path. Generated classes and the runtime target Java 21 because the scheduler uses virtual threads. To update JavaScript dependencies, edit `sb3js/package.json`, run `npm install` inside `sb3js/` to refresh `package-lock.json`, and commit both.
+The build uses the Gradle wrapper (Gradle 9), Kotlin 2.4 and a JDK of version 21 or newer on the path. Generated classes and the runtime target Java 21 because the scheduler uses virtual threads. To update JavaScript dependencies, edit `sb3js/package.json` or `benchmarks/js/package.json`, run `npm install` in the same directory to refresh `package-lock.json`, and commit both.
 
 ## Continuous integration
 
 The `CI` workflow in `.github/workflows/ci.yml` runs on every pull request and every push to `main`. It runs `./gradlew build` on JDK 21 and JDK 25, so both the oldest supported JDK and the current one are covered, and it builds the docs with `zensical build --strict`. When a test fails, the HTML test reports are attached to the run as an artifact. CI never deploys anything; publishing the site is the `Pages` workflow's job (see [Deployment](web-playground.md#deployment)).
+
+The `Benchmarks` workflow in `.github/workflows/benchmarks.yml` runs `./gradlew :benchmarks:benchmark` on every push to `main` and on demand from the Actions tab, where the number of runs and the projects can be chosen. The report shows up on the run's summary page, and the raw results are attached as an artifact. Shared runners are noisy, so the job only fails when jScratch gives a wrong result, not when it gets slower.
 
 ## Tests
 

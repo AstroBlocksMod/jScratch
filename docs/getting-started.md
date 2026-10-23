@@ -55,12 +55,13 @@ Warnings about unsupported blocks are printed to stderr. An unsupported block co
 
 ## Running headless
 
-Compiled JARs understand two system properties that are handy for tests and automation:
+Compiled JARs understand a few system properties that are handy for tests and automation:
 
 | Property | Effect |
 | --- | --- |
-| `-Djscratch.headless=<frames>` | Run that many frames with a virtual 30 fps clock and no window. Every `say` and `think` is printed to stdout as `<sprite> says: <text>`. |
+| `-Djscratch.headless=<frames>` | Run up to that many frames with a virtual 30 fps clock and no window, stopping early once no script is left running. Every `say` and `think` is printed to stdout as `<sprite> says: <text>`. |
 | `-Djscratch.screenshot=<file.png>` | In headless mode, save the final frame as a PNG at twice the stage resolution. |
+| `-Djscratch.timing=true` | In headless mode, print the number of frames and the wall time from the green flag to the end of the run to stderr, as `jscratch: <frames> frames in <ms> ms`. The [benchmarks](benchmarks.md) use it. |
 
 ```sh
 java -Djscratch.headless=90 -Djscratch.screenshot=frame.png -jar my-game.jar
