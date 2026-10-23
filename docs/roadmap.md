@@ -45,7 +45,15 @@ The [benchmarks](benchmarks.md) show jScratch well ahead of scratch-vm on comput
 - [ ] **Makey Makey.** Its hats map onto key presses, so it is cheap to add.
 - [ ] **Music.** Instruments and drums through `javax.sound.midi`, which ships with the JDK.
 - [ ] **Text to Speech and Translate.** These depend on online services. They will only be added if there is a way to do it without sending project data somewhere the user did not expect.
+- [ ] **Custom extensions in JavaScript.** Load the same extension files TurboWarp does, so the existing community extensions keep working. The runtime would run them in a bundled JavaScript engine and provide the `Scratch` object they expect: `Scratch.extensions.register`, the block and argument types, and the parts of `Scratch.vm` that extensions commonly reach into. Extensions that depend on the browser, such as ones that draw on a canvas or open web pages, will need replacements or will not work.
 - Video Sensing and hardware extensions are out of scope for now.
+
+## Cloud variables
+
+Cloud variables behave as ordinary variables today, so their values are lost when the project stops.
+
+- [ ] **Saved values.** Store cloud variables in a file next to the project so they survive a restart, which covers high scores and save data in single-player projects.
+- [ ] **Cloud servers.** Connect to a server that speaks Scratch's cloud protocol, such as TurboWarp's cloud server, through the JDK's WebSocket client. The server is chosen with a command line option or a system property and is off by default, so a project never goes online unless the person running it asks for that.
 
 ## Playground
 
@@ -79,6 +87,14 @@ With these in place, a project could become a Minecraft mod through blocks that 
 - [ ] **A full desktop editor.** Edit blocks, costumes and sounds, then compile and run the project in one click without leaving the editor.
 - [ ] **Debugging.** Breakpoints on blocks, stepping through scripts, and a live view of variables, lists and running scripts.
 - [ ] **Extension support.** Browse and add library extensions, and see their blocks in the palette like any built-in category.
+
+### Older Scratch versions and derivatives
+
+Most of this will probably go into separate related projects instead of jScratch itself, reusing parts of jScratch where that makes sense. It is listed here because there is no other place to track it yet.
+
+- [ ] **A converter for Scratch 1.x and 2.x.** Turn `.sb` and `.sb2` projects into the same model the compiler builds from `.sb3`, so they compile like any other project. scratch-vm already loads `.sb2` files, which gives a reference for the 2.x mapping.
+- [ ] **Reviving Scratch 1.x and 2.x.** Converting a project gets it running, but not the way it ran back then. The bigger goal is to bring the old versions themselves back on a modern platform, the JVM, with their own look and behavior. 1.x was built on Squeak Smalltalk and 2.0 on Flash, and those platforms have not aged well, but the versions themselves deserve better than to be left to rot. Many people feel they were better than what came after, and many more have strong nostalgia for them.
+- [ ] **Snap! and other derivatives.** Snap! has its own XML project format and features Scratch lacks, like first-class procedures and continuations, so it needs its own front end and much of its own runtime. Derivatives based on Scratch 1.x and 2.x fall in the same group and would build on the revival work above.
 
 ## Have a request?
 
