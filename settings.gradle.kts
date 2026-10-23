@@ -25,6 +25,20 @@ dependencyResolutionManagement {
                 includeModule("org.nodejs", "node")
             }
         }
+        // Single-header C decoders from dr_libs, fetched by release tag for the runtime's sound decoders.
+        ivy {
+            name = "dr_libs"
+            setUrl("https://raw.githubusercontent.com/mackron/dr_libs/")
+            patternLayout {
+                artifact("[revision]/[module].[ext]")
+            }
+            metadataSources {
+                artifact()
+            }
+            content {
+                includeGroup("io.github.mackron")
+            }
+        }
     }
 }
 

@@ -27,7 +27,7 @@ Graphic effects: only **ghost** is implemented. Other effects (color, fisheye, w
 
 ## Sound
 
-play sound, play sound until done, stop all sounds, set and change volume, volume. Only WAV sounds play, because the JDK has no MP3 decoder. MP3 sounds are skipped with a warning. Sound effects (pitch, pan) are ignored.
+play sound, play sound until done, stop all sounds, set and change volume, volume. MP3 and WAV sounds play, including the ADPCM WAV files common in projects that started in Scratch 2. Every sound is decoded once when the project starts. Sound effects (pitch, pan) are ignored.
 
 ## Events
 

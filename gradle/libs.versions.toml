@@ -9,6 +9,10 @@ junit = "6.1.3"
 ktlint-plugin = "14.2.0"
 ktlint-cli = "1.8.0"
 node-plugin = "7.1.0"
+chicory = "1.7.5"
+# dr_libs release tags, one per header.
+dr-mp3 = "mp3-0.7.3"
+dr-wav = "wav-0.14.5"
 
 [libraries]
 asm = { module = "org.ow2.asm:asm", version.ref = "asm" }
@@ -17,6 +21,10 @@ jsvg = { module = "com.github.weisj:jsvg", version.ref = "jsvg" }
 rhino = { module = "org.mozilla:rhino", version.ref = "rhino" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 teavm-jso-apis = { module = "org.teavm:teavm-jso-apis", version.ref = "teavm" }
+chicory-runtime = { module = "com.dylibso.chicory:runtime", version.ref = "chicory" }
+chicory-compiler-cli = { module = "com.dylibso.chicory:build-time-compiler-cli-experimental", version.ref = "chicory" }
+dr-mp3 = { module = "io.github.mackron:dr_mp3", version.ref = "dr-mp3" }
+dr-wav = { module = "io.github.mackron:dr_wav", version.ref = "dr-wav" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 

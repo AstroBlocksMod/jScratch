@@ -6,7 +6,7 @@ jScratch compiles `.sb3` files into Java bytecode and executable JAR files. Kotl
 
 Modules:
 
-- `runtime/`: the Scratch runtime bundled into every compiled JAR (value semantics in `Cast` and `Ops`, `Target`/`Sprite`/`Stage`, the `Runtime` scheduler on virtual threads, Java2D rendering, Swing window, pen, sound). Depends on JSVG for vector costumes. No JSON library: large list contents use the tiny line format in `ListData`.
+- `runtime/`: the Scratch runtime bundled into every compiled JAR (value semantics in `Cast` and `Ops`, `Target`/`Sprite`/`Stage`, the `Runtime` scheduler on virtual threads, Java2D rendering, Swing window, pen, sound). Depends on JSVG for vector costumes. MP3 and WAV decoding is C (`src/main/c/decoders.c` around dr_mp3 and dr_wav) compiled by Emscripten to WebAssembly and by Chicory to JVM classes at build time. No JSON library: large list contents use the tiny line format in `ListData`.
 - `sb3js/`: scratch-parser (the Scratch Foundation's JavaScript sb3 parser: `lib/parse` and `lib/validate`) wrapped by `src/index.js` and bundled with esbuild into `jscratch-sb3.js`. The Gradle node plugin downloads Node, so the build needs nothing installed. Target is ES2015 because Rhino has no classes and no spread in calls.
 - `compiler/`: platform-neutral core: the `JsonValue` tree and the `ProjectJson` interface (`json/JsonTree.kt`), sb3 model and parser (model shape follows ScratchEverywhere's `sb3.cpp`), ASM code generation (`codegen/`), `JarWriter`, and the `JScratch` entry point. Depends only on ASM, so TeaVM can translate it. It never parses JSON itself.
 - `compiler-jvm/`: `RhinoProjectJson` runs the scratch-parser bundle inside Rhino (interpreted mode, one shared scope) and parses JSON with kotlinx-serialization. Holds the end-to-end tests.
@@ -20,7 +20,8 @@ The compiler never depends on the runtime module. It only knows runtime class an
 
 ## Building and testing
 
-- `./gradlew build` compiles, lints, tests and assembles everything, including the TeaVM site. Requires a JDK of version 21 or newer (JDK 25 is installed locally through mise).
+- `./gradlew build` compiles, lints, tests and assembles everything, including the TeaVM site. Requires a JDK of version 21 or newer (JDK 25 is installed locally through mise) and Emscripten, which `mise install` sets up from `mise.toml`. CI installs it with `jdx/mise-action`.
+- The sound decoders must keep every generated method under 8000 bytes of bytecode, or HotSpot never JIT-compiles it. `SoundDecodersTest` checks this. Keep `-fno-inline-functions` and the `-O1` link in `runtime/build.gradle.kts` unless you have measured the alternative.
 - `./gradlew :compiler-jvm:test` runs the Rhino bridge tests and the end-to-end test: it compiles the samples with the real runtime and runs the JAR headless in a child JVM, checking the `say` output.
 - After editing `sb3js/src/index.js` or `sb3js/package.json`, run `npm install` in `sb3js/` to refresh `package-lock.json` (the Gradle task uses `npm ci`) and commit both.
 - Compiled JARs accept `-Djscratch.headless=<frames>` (virtual clock, prints `say` to stdout, stops early once no script is running), `-Djscratch.screenshot=<png>` and `-Djscratch.timing=true` (frames and wall time on stderr). Use these to verify behavior and rendering without a window.

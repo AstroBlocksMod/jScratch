@@ -3,7 +3,9 @@
 ## Requirements
 
 - A JDK, version 21 or newer, both to build jScratch and to run compiled projects.
-- Nothing else. The Gradle wrapper downloads the build tool, and the compiled JARs carry their own runtime.
+- [mise](https://mise.jdx.dev), to build jScratch. Run `mise install` once in the repository root. It installs Emscripten, which compiles the runtime's sound decoders, and the Python version Emscripten runs on.
+
+The Gradle wrapper downloads the build tool and everything else. Compiled JARs carry their own runtime, so running them needs only Java.
 
 ## Build the CLI
 

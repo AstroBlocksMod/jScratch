@@ -10,6 +10,7 @@ This page lists what is planned for jScratch, roughly in the order it will happe
 - [x] Java2D rendering with vector costumes, the pen layer and say bubbles
 - [x] Broadcasts, clones, lists, `sensing_of` and ask and wait
 - [x] WAV playback
+- [x] MP3 and ADPCM WAV sounds, decoded by dr_mp3 and dr_wav compiled to JVM bytecode
 - [x] Headless mode and screenshots for automated tests
 - [x] TeaVM playground and the documentation site on GitHub Pages
 
@@ -21,7 +22,6 @@ These are the gaps most likely to break a project downloaded from the Scratch we
 - [ ] **Color sensing.** `touching color` and `color is touching color`, built on the same masks plus a read of the rendered stage.
 - [ ] **Graphic effects.** Color, brightness, fisheye, whirl, pixelate and mosaic, applied per sprite in the renderer the way scratch-render does.
 - [ ] **Monitors.** Draw variable and list monitors, and make the show and hide blocks control them.
-- [ ] **MP3 sounds.** Most projects saved by the editor use MP3, so this needs a maintained pure Java decoder bundled into the runtime.
 - [ ] **Sound effects.** Pitch and pan, plus clear sound effects.
 - [ ] **Remaining hats.** `when timer greater than` first, since it needs no microphone. Loudness follows if microphone input proves workable through `javax.sound.sampled`.
 - [ ] **Small sensing blocks.** Drag mode for draggable sprites, and a `username` that can be set with a system property.

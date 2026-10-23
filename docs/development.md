@@ -4,7 +4,7 @@
 
 | Path | Contents |
 | --- | --- |
-| `runtime/` | The Scratch runtime bundled into compiled JARs: `Cast`, `Ops`, `ScratchList`, `Target`/`Sprite`/`Stage`, `Runtime` (scheduler), `StageRenderer`, `StageWindow`, pen and sound support. Depends on JSVG. |
+| `runtime/` | The Scratch runtime bundled into compiled JARs: `Cast`, `Ops`, `ScratchList`, `Target`/`Sprite`/`Stage`, `Runtime` (scheduler), `StageRenderer`, `StageWindow`, pen and sound support. Depends on JSVG and the Chicory runtime. The sound decoders are C in `src/main/c/`, see [Sound decoders](#sound-decoders). |
 | `sb3js/` | `src/index.js`, a thin wrapper over scratch-parser's `lib/parse` and `lib/validate`, bundled by esbuild into `build/dist/jscratch-sb3.js`. Node is downloaded by the Gradle node plugin, so nothing needs to be installed. |
 | `compiler/` | Platform-neutral core: `json/JsonTree.kt` (tree and the `ProjectJson` interface), `sb3/` (model and parser), `codegen/` (ASM emitters), `JarWriter`, `JScratch` (entry point). Depends on ASM only. |
 | `compiler-jvm/` | `RhinoProjectJson` (scratch-parser in Rhino, JSON through kotlinx-serialization) and the end-to-end tests. |
@@ -28,21 +28,33 @@
 ./gradlew :benchmarks:benchmark # time the benchmarks on jScratch, TurboWarp and scratch-vm (a few minutes)
 ```
 
-The build uses the Gradle wrapper (Gradle 9), Kotlin 2.4 and a JDK of version 21 or newer on the path. Generated classes and the runtime target Java 21 because the scheduler uses virtual threads. To update JavaScript dependencies, edit `sb3js/package.json` or `benchmarks/js/package.json`, run `npm install` in the same directory to refresh `package-lock.json`, and commit both.
+The build uses the Gradle wrapper (Gradle 9), Kotlin 2.4, a JDK of version 21 or newer on the path, and Emscripten from `mise.toml` (run `mise install` once). Generated classes and the runtime target Java 21 because the scheduler uses virtual threads. To update JavaScript dependencies, edit `sb3js/package.json` or `benchmarks/js/package.json`, run `npm install` in the same directory to refresh `package-lock.json`, and commit both.
 
 ## Continuous integration
 
-The `CI` workflow in `.github/workflows/ci.yml` runs on every pull request and every push to `main`. It runs `./gradlew build` on JDK 21 and JDK 25, so both the oldest supported JDK and the current one are covered, and it builds the docs with `zensical build --strict`. When a test fails, the HTML test reports are attached to the run as an artifact. CI never deploys anything; publishing the site is the `Pages` workflow's job (see [Deployment](web-playground.md#deployment)).
+The `CI` workflow in `.github/workflows/ci.yml` runs on every pull request and every push to `main`. It installs the tools in `mise.toml` with `jdx/mise-action`, then runs `./gradlew build` on JDK 21 and JDK 25, so both the oldest supported JDK and the current one are covered, and it builds the docs with `zensical build --strict`. When a test fails, the HTML test reports are attached to the run as an artifact. CI never deploys anything; publishing the site is the `Pages` workflow's job (see [Deployment](web-playground.md#deployment)).
 
 The `Benchmarks` workflow in `.github/workflows/benchmarks.yml` runs `./gradlew :benchmarks:benchmark` on every push to `main` and on demand from the Actions tab, where the number of runs and the projects can be chosen. The report shows up on the run's summary page, and the raw results are attached as an artifact. Shared runners are noisy, so the job only fails when jScratch gives a wrong result, not when it gets slower.
 
 ## Tests
 
-- `runtime/src/test`: unit tests for `Cast` and `Ops`, the parts most likely to drift from Scratch.
+- `runtime/src/test`: unit tests for `Cast` and `Ops`, the parts most likely to drift from Scratch, and `SoundDecodersTest`, which decodes the MP3 and WAV files in `src/test/resources/sounds` and checks that no generated decoder method is too big for the JIT.
 - `cli/src/test`: `ScratchDownloaderTest` checks project link parsing and how a download is packed into an `.sb3`, with a fake server in place of the network so the build never goes online.
-- `compiler-jvm/src/test`: `RhinoProjectJsonTest` checks the scratch-parser bridge (valid project, schema rejection, broken JSON), and `CompileSamplesTest` compiles `samples/src/hello` with the real runtime, runs the JAR in a child JVM with `-Djscratch.headless=40`, and compares what the sprite said. Add a sample directory and a few expected `say` lines to cover a new block.
+- `compiler-jvm/src/test`: `RhinoProjectJsonTest` checks the scratch-parser bridge (valid project, schema rejection, broken JSON), and `CompileSamplesTest` compiles `samples/src/hello` and `samples/src/sounds` with the real runtime, runs the JAR in a child JVM with `-Djscratch.headless=40`, and compares what the sprite said. Add a sample directory and a few expected `say` lines to cover a new block.
 
 To test rendering without a window, run a compiled JAR with `-Djscratch.headless=<frames> -Djscratch.screenshot=out.png` and look at the PNG.
+
+## Sound decoders
+
+The JDK only plays PCM WAV, so the runtime decodes sounds itself with [dr_mp3 and dr_wav](https://github.com/mackron/dr_libs), single-header C libraries. `runtime/src/main/c/decoders.c` wraps them in four exported functions. The build turns that into JVM classes in three steps, all in `runtime/build.gradle.kts`:
+
+1. `decoderHeaders` downloads the two headers by release tag. The tags are `dr-mp3` and `dr-wav` in `gradle/libs.versions.toml`, and the download goes through an Ivy repository declared in `settings.gradle.kts`.
+2. `decodersWasm` compiles the C file to a standalone WebAssembly module with Emscripten's `emcc`. It runs `emcc` from the path, or through `mise exec` when the shell has not activated mise, which is the usual case in an IDE. `mise.toml` also pins Python, because `emcc` needs 3.10 or newer and the system Python can be older.
+3. `decodersJvm` runs [Chicory](https://chicory.dev)'s build-time compiler, which turns every WebAssembly function into a JVM method. `decodersJar` packs the classes and a stripped copy of the module into a JAR on the runtime's class path, so it ends up in every compiled project.
+
+HotSpot never compiles a method over 8000 bytes of bytecode to machine code. Inlining in clang and in Emscripten's `wasm-opt` produces functions past that size, and those run several times slower in the interpreter. That is why the C file is compiled with `-fno-inline-functions` and linked at `-O1`. `SoundDecodersTest` fails if a generated method grows past the limit again, for example after a dr_libs update.
+
+To update dr_libs, change the tags in the version catalog and run `./gradlew :runtime:test`.
 
 ## Lint and formatting
 

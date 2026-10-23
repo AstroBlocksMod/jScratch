@@ -80,6 +80,7 @@ class Runtime {
         sprites.sortBy { it.layerOrder }
         timerStartMs = nowMillis()
         for (t in allTargets()) t.costumes.forEach { assets.load(it) }
+        for (t in allTargets()) t.sounds.forEach { sounds.load(it) }
         if (headless) {
             val start = System.nanoTime()
             startHats(HAT_FLAG, "", null)
