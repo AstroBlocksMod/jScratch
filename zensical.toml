@@ -14,6 +14,7 @@ nav = [
   { "Open the playground" = "https://jscratch.hermits.cc/playground/" },
   { "Architecture" = "architecture.md" },
   { "Development" = "development.md" },
+  { "Roadmap" = "roadmap.md" },
 ]
 
 [project.theme]

@@ -17,12 +17,13 @@ java -jar my-game.jar
 
 ## Status
 
-jScratch is an MVP. It compiles and runs typical projects from the Scratch website, but some blocks are still missing and rendering uses bounding boxes for collision. [Supported blocks](blocks.md) lists exactly what works today.
+jScratch is an MVP. It compiles and runs typical projects from the Scratch website, but some blocks are still missing and rendering uses bounding boxes for collision. [Supported blocks](blocks.md) lists exactly what works today, and the [Roadmap](roadmap.md) lists what comes next.
 
 ## Where to go next
 
 - [Getting started](getting-started.md): build the CLI and compile your first project.
 - [Architecture](architecture.md): how the pipeline and the runtime fit together.
 - [Development](development.md): module layout, tests, lint and docs.
+- [Roadmap](roadmap.md): what is planned next.
 
 jScratch is free software, released under the [GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html).
