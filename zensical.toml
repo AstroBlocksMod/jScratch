@@ -1,16 +1,17 @@
 [project]
 site_name = "jScratch"
 site_description = "Compiles Scratch 3 projects into Java bytecode and executable JARs."
-site_url = "https://example.com/jscratch/"
-repo_url = "https://github.com/playforge-coding/jScratch"
-repo_name = "playforge-coding/jScratch"
+site_url = "https://jscratch.hermits.cc/"
+repo_url = "https://github.com/AstroBlocksMod/jScratch"
+repo_name = "AstroBlocksMod/jScratch"
 copyright = "jScratch is free software under the GPL-3.0"
 
 nav = [
   { "Overview" = "index.md" },
   { "Getting started" = "getting-started.md" },
   { "Supported blocks" = "blocks.md" },
-  { "Web playground" = "playground.md" },
+  { "Web playground" = "web-playground.md" },
+  { "Open the playground" = "https://jscratch.hermits.cc/playground/" },
   { "Architecture" = "architecture.md" },
   { "Development" = "development.md" },
 ]

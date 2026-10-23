@@ -14,7 +14,7 @@ java -jar my-game.jar
 - Self-contained output: the JAR carries the runtime, costumes and sounds, and runs on Java 21 or newer.
 - Scratch semantics: value conversion, comparison rules, cooperative script scheduling, broadcasts, clones, "run without screen refresh" and the pen behave like the editor.
 - Projects are parsed and validated by [scratch-parser](https://github.com/scratchfoundation/scratch-parser), the Scratch Foundation's own JavaScript parser, running in [Rhino](https://github.com/mozilla/rhino) on the JVM and natively in the browser.
-- An experimental browser playground, built by translating the compiler to JavaScript with [TeaVM](https://teavm.org).
+- An experimental [browser playground](https://jscratch.hermits.cc/playground/), built by translating the compiler to JavaScript with [TeaVM](https://teavm.org).
 
 ## Status
 
@@ -41,7 +41,7 @@ Useful commands:
 zensical serve                # preview the docs
 ```
 
-See the [documentation](docs/index.md) for the CLI options, the supported blocks, the architecture and development notes.
+See the [documentation](https://jscratch.hermits.cc/) for the CLI options, the supported blocks, the architecture and development notes.
 
 ## License
 

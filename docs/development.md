@@ -27,6 +27,10 @@
 
 The build uses the Gradle wrapper (Gradle 9), Kotlin 2.4 and a JDK of version 21 or newer on the path. Generated classes and the runtime target Java 21 because the scheduler uses virtual threads. To update JavaScript dependencies, edit `sb3js/package.json`, run `npm install` inside `sb3js/` to refresh `package-lock.json`, and commit both.
 
+## Continuous integration
+
+The `CI` workflow in `.github/workflows/ci.yml` runs on every pull request and every push to `main`. It runs `./gradlew build` on JDK 21 and JDK 25, so both the oldest supported JDK and the current one are covered, and it builds the docs with `zensical build --strict`. When a test fails, the HTML test reports are attached to the run as an artifact. CI never deploys anything; publishing the site is the `Pages` workflow's job (see [Deployment](web-playground.md#deployment)).
+
 ## Tests
 
 - `runtime/src/test`: unit tests for `Cast` and `Ops`, the parts most likely to drift from Scratch.
@@ -54,5 +58,7 @@ uv tool install zensical   # once
 zensical serve             # live preview
 zensical build             # static site in site/
 ```
+
+Pushes to `main` publish the docs and the playground to [jscratch.hermits.cc](https://jscratch.hermits.cc/) through the `Pages` workflow. The workflow builds the docs with `zensical build --strict`, so fix any warnings before pushing. See [Deployment](web-playground.md#deployment).
 
 Diagrams are written as Mermaid code blocks. Keep the docs in step with the code: when a block, option or module changes, update the matching page in the same change.

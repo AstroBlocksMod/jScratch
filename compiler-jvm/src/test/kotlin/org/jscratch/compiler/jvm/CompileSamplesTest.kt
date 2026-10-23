@@ -28,7 +28,7 @@ class CompileSamplesTest {
         assertEquals("Cat", project.sprites.single().name)
         assertEquals(listOf("score"), project.stage.variables.values.map { it.name })
         assertEquals(listOf("apple", "banana"), project.stage.lists.values.single().items)
-        assertTrue(sb3.assets.containsKey("71a47f5380bba70e1767dfdcfcd78dd4.svg"))
+        assertTrue(sb3.assets.containsKey("6ac3a6339b85092fa9b1694f2da7779d.svg"))
         val call = project.sprites.single().blocks.getValue("s10")
         assertEquals("square %s", call.mutation?.proccode)
         assertEquals(listOf("arg1"), call.mutation?.argumentIds)

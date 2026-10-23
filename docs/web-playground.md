@@ -4,7 +4,13 @@ The playground runs the compiler in the browser. [TeaVM](https://teavm.org) tran
 
 It is experimental: the output is correct, but the page is deliberately plain, and compiling a large project can take a few seconds because the whole runtime JAR is re-zipped in JavaScript.
 
-## Build and serve
+[Open the playground](https://jscratch.hermits.cc/playground/){ .md-button .md-button--primary }
+
+## Deployment
+
+The `Pages` workflow in `.github/workflows/pages.yml` publishes both this documentation and the playground to GitHub Pages on every push to `main`. It runs `./gradlew build` first, so a commit that fails lint or tests is never deployed. Then it builds the docs with Zensical and puts the two sites together: the docs at the root of [jscratch.hermits.cc](https://jscratch.hermits.cc/) and the playground under `/playground/`. The playground uses only relative URLs, so it works under any path. No docs page may build to `/playground/`, which is why this page is `web-playground.md`; the workflow fails if the two collide. The custom domain is configured in the repository's Pages settings, which is why the site has no `CNAME` file. You can also start the workflow by hand from the Actions tab.
+
+## Build and serve locally
 
 ```sh
 ./gradlew :web:assembleSite

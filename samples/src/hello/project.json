@@ -696,5 +696,12 @@
       "draggable": false,
       "rotationStyle": "left-right"
     }
-  ]
+  ],
+  "monitors": [],
+  "extensions": [],
+  "meta": {
+    "semver": "3.0.0",
+    "vm": "0.2.0",
+    "agent": "jScratch sample"
+  }
 }

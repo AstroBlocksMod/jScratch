@@ -60,7 +60,7 @@ Use modern code practices:
 
 Always update the docs if necessary when changing or adding code. If the docs already contain outdated information, expand your scope to cover that info too.
 
-The docs are a Zensical site: `zensical.toml` at the root, pages in `docs/`. `zensical build` validates the config and writes `site/` (ignored by git). Pages: `index.md`, `getting-started.md`, `blocks.md` (supported blocks, keep in step with `TargetCompiler`), `playground.md`, `architecture.md`, `development.md`.
+The docs are a Zensical site: `zensical.toml` at the root, pages in `docs/`. `zensical build` validates the config and writes `site/` (ignored by git). Pages: `index.md`, `getting-started.md`, `blocks.md` (supported blocks, keep in step with `TargetCompiler`), `web-playground.md`, `architecture.md`, `development.md`.
 
 ## Diagrams as Mermaid, not ASCII art
 
