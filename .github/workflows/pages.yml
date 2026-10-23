@@ -36,7 +36,7 @@ jobs:
       - name: Build and test
         run: ./gradlew build
 
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.2
 
       - name: Build docs
         run: uvx "zensical==${ZENSICAL_VERSION}" build --strict
