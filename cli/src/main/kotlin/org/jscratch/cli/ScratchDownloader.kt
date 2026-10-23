@@ -2,6 +2,7 @@ package org.jscratch.cli
 
 import org.jscratch.compiler.json.JsonValue
 import org.jscratch.compiler.json.ProjectJson
+import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.URI
@@ -10,9 +11,11 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.ExecutorCompletionService
 import java.util.concurrent.Executors
 import java.util.concurrent.Semaphore
 import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 
 class DownloadException(message: String) : RuntimeException(message)
@@ -48,19 +51,19 @@ class ScratchDownloader(private val json: ProjectJson, private val fetch: (Strin
         val projectBytes =
             fetch(projectUrl) ?: throw DownloadException("the project server has no data for project $id")
 
-        if (projectBytes.startsWith("ScratchV0")) {
-            throw DownloadException("project $id is a Scratch 1.4 project. jScratch only compiles Scratch 3 projects.")
+        if (projectBytes.startsWith("ScratchV0")) throw legacyProject(id, "1.4")
+        // Projects uploaded from the Scratch 2 offline editor are stored as a whole archive
+        // instead of bare project.json, so look inside before accepting one.
+        if (projectBytes.startsWith("PK")) {
+            val archived =
+                archivedProjectJson(projectBytes)
+                    ?: throw DownloadException("the archive for project $id has no project.json")
+            if (parseJson(archived, "the project archive")["targets"]?.asArray == null) throw legacyProject(id, "2")
+            return DownloadedProject(id, title, author, projectBytes, emptyList())
         }
-        // A few projects are stored as a whole archive instead of bare project.json.
-        if (projectBytes.startsWith("PK")) return DownloadedProject(id, title, author, projectBytes, emptyList())
 
         val project = parseJson(projectBytes, "the project server")
-        if (project["targets"]?.asArray == null) {
-            throw DownloadException(
-                "project $id is a Scratch 2 project. jScratch only compiles Scratch 3 projects; " +
-                    "opening it in the Scratch editor and saving it again converts it.",
-            )
-        }
+        if (project["targets"]?.asArray == null) throw legacyProject(id, "2")
         val warnings = ArrayList<String>()
         val assets = fetchAssets(assetNames(project), warnings)
         return DownloadedProject(id, title, author, zip(projectBytes, assets), warnings)
@@ -72,32 +75,42 @@ class ScratchDownloader(private val json: ProjectJson, private val fetch: (Strin
         throw DownloadException("$source returned something that is not JSON: ${e.message}")
     }
 
-    /** Fetches assets in parallel on virtual threads, a few at a time to stay polite to the asset server. */
+    private fun legacyProject(id: String, version: String) = DownloadException(
+        "project $id is a Scratch $version project. jScratch only compiles Scratch 3 projects; " +
+            "open it in the Scratch 3 editor, save it, and try again.",
+    )
+
+    /**
+     * Fetches assets in parallel on virtual threads, a few at a time to stay polite to
+     * the asset server. Results are taken in completion order, so the first failure
+     * stops the download right away instead of after every queued request.
+     */
     private fun fetchAssets(names: Collection<String>, warnings: MutableList<String>): Map<String, ByteArray> {
         val permits = Semaphore(PARALLEL_ASSETS)
-        val results =
-            Executors.newVirtualThreadPerTaskExecutor().use { pool ->
-                names
-                    .map { name ->
-                        name to
-                            pool.submit<ByteArray?> {
-                                permits.acquire()
-                                try {
-                                    fetch("$ASSETS/$name/get/")
-                                } finally {
-                                    permits.release()
-                                }
-                            }
-                    }.map { (name, future) ->
-                        try {
-                            name to future.get()
-                        } catch (e: ExecutionException) {
-                            throw e.cause ?: e
-                        }
+        val fetched = HashMap<String, ByteArray?>()
+        Executors.newVirtualThreadPerTaskExecutor().use { pool ->
+            val done = ExecutorCompletionService<Pair<String, ByteArray?>>(pool)
+            for (name in names) {
+                done.submit {
+                    permits.acquire()
+                    try {
+                        name to fetch("$ASSETS/$name/get/")
+                    } finally {
+                        permits.release()
                     }
+                }
             }
+            try {
+                repeat(names.size) { fetched += done.take().get() }
+            } catch (e: ExecutionException) {
+                // Interrupt the remaining requests; otherwise close() waits for all of them.
+                pool.shutdownNow()
+                throw e.cause ?: e
+            }
+        }
         val assets = LinkedHashMap<String, ByteArray>()
-        for ((name, data) in results) {
+        for (name in names) {
+            val data = fetched[name]
             if (data != null) assets[name] = data else warnings.add("asset $name is missing from the Scratch server")
         }
         return assets
@@ -147,6 +160,21 @@ class ScratchDownloader(private val json: ProjectJson, private val fetch: (Strin
                 }
             }
             return names
+        }
+
+        /** The `project.json` entry of a zip archive, matched by file name like `Sb3Parser` does, or null. */
+        fun archivedProjectJson(archive: ByteArray): ByteArray? {
+            ZipInputStream(ByteArrayInputStream(archive)).use { zip ->
+                while (true) {
+                    val entry = zip.nextEntry ?: return null
+                    if (!entry.isDirectory && entry.name.substringAfterLast(
+                            '/',
+                        ) == "project.json"
+                    ) {
+                        return zip.readBytes()
+                    }
+                }
+            }
         }
 
         fun zip(projectJson: ByteArray, assets: Map<String, ByteArray>): ByteArray {

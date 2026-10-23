@@ -91,6 +91,53 @@ class ScratchDownloaderTest {
         assertTrue(e.message!!.contains("Scratch 2"), e.message)
     }
 
+    @Test
+    fun archivedScratch2ProjectsAreRejected() {
+        val sb2 = ScratchDownloader.zip("""{"objName":"Stage","children":[]}""".toByteArray(), emptyMap())
+        val e =
+            assertFailsWith<DownloadException> {
+                ScratchDownloader(json) { url ->
+                    if (url.startsWith("https://api.")) meta.toByteArray() else sb2
+                }.download("9")
+            }
+        assertTrue(e.message!!.contains("Scratch 2"), e.message)
+    }
+
+    @Test
+    fun archivedScratch3ProjectsPassThrough() {
+        val sb3 = ScratchDownloader.zip(projectJson.toByteArray(), mapOf("aaaa.svg" to "<svg/>".toByteArray()))
+        val project =
+            ScratchDownloader(json) { url ->
+                if (url.startsWith("https://api.")) meta.toByteArray() else sb3
+            }.download("9")
+        assertContentEquals(sb3, project.sb3)
+    }
+
+    @Test
+    fun aFailedAssetStopsTheOtherRequests() {
+        val server =
+            mapOf(
+                "https://api.scratch.mit.edu/projects/42" to meta,
+                "https://projects.scratch.mit.edu/42?token=t0k3n" to projectJson,
+            )
+        val downloader =
+            ScratchDownloader(json) { url ->
+                when {
+                    url in server -> server[url]!!.toByteArray()
+                    url.contains("bbbb.wav") -> throw DownloadException("asset server is down")
+                    else -> {
+                        Thread.sleep(60_000)
+                        null
+                    }
+                }
+            }
+        val started = System.nanoTime()
+        val e = assertFailsWith<DownloadException> { downloader.download("42") }
+        assertEquals("asset server is down", e.message)
+        val seconds = (System.nanoTime() - started) / 1e9
+        assertTrue(seconds < 10, "the slow requests should be interrupted, but the download took $seconds s")
+    }
+
     private fun unzip(bytes: ByteArray): Map<String, ByteArray> {
         val entries = LinkedHashMap<String, ByteArray>()
         ZipInputStream(ByteArrayInputStream(bytes)).use { zip ->
