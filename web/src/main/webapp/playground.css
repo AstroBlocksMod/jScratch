@@ -1,0 +1,105 @@
+:root {
+  --bg: #f4f6fb;
+  --card: #ffffff;
+  --text: #1f2430;
+  --muted: #5d6475;
+  --accent: #4c97ff;
+  --accent-dark: #3373cc;
+  --border: #d9dee8;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14171f;
+    --card: #1d2230;
+    --text: #e6e9f0;
+    --muted: #a0a7b8;
+    --border: #2e3547;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+header, main, footer {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+header h1 { margin: 0 0 4px; }
+header p { margin: 0; color: var(--muted); }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.hidden { display: none; }
+
+.drop {
+  display: block;
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  padding: 32px;
+  text-align: center;
+  cursor: pointer;
+  color: var(--muted);
+}
+.drop.active { border-color: var(--accent); color: var(--accent); }
+.drop input { display: none; }
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+button, .button {
+  background: var(--accent);
+  color: #fff;
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 1rem;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+button:hover, .button:hover { background: var(--accent-dark); }
+button:disabled { opacity: 0.5; cursor: default; }
+
+.status { color: var(--muted); margin: 12px 0 0; }
+.status.error { color: #d9534f; }
+.hint { color: var(--muted); }
+
+pre {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  overflow: auto;
+  max-height: 480px;
+  white-space: pre;
+}
+
+table { border-collapse: collapse; width: 100%; }
+th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--border); }
+
+footer p { color: var(--muted); font-size: 0.9rem; }

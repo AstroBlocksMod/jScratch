@@ -1,0 +1,12 @@
+.gradle/
+build/
+node_modules/
+out/
+.kotlin/
+.idea/
+*.iml
+.DS_Store
+site/
+.playwright-cli/
+target/
+*.log

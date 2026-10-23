@@ -1,0 +1,700 @@
+{
+  "targets": [
+    {
+      "isStage": true,
+      "name": "Stage",
+      "variables": {
+        "var_score": [
+          "score",
+          3
+        ]
+      },
+      "lists": {
+        "list_fruits": [
+          "fruits",
+          [
+            "apple",
+            "banana"
+          ]
+        ]
+      },
+      "broadcasts": {
+        "bc_ping": "ping"
+      },
+      "blocks": {},
+      "comments": {},
+      "currentCostume": 0,
+      "costumes": [
+        {
+          "name": "Blue Sky",
+          "bitmapResolution": 1,
+          "dataFormat": "svg",
+          "assetId": "e7c147730f19d284bcd7b3f00af19bb6",
+          "rotationCenterX": 240,
+          "rotationCenterY": 180
+        }
+      ],
+      "sounds": [],
+      "volume": 100,
+      "layerOrder": 0,
+      "tempo": 60,
+      "videoTransparency": 50,
+      "videoState": "on",
+      "textToSpeechLanguage": null
+    },
+    {
+      "isStage": false,
+      "name": "Cat",
+      "variables": {
+        "var_result": [
+          "result",
+          49
+        ]
+      },
+      "lists": {},
+      "broadcasts": {},
+      "blocks": {
+        "h1": {
+          "opcode": "event_whenflagclicked",
+          "next": "s1",
+          "parent": null,
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": true,
+          "x": 20,
+          "y": 20
+        },
+        "s1": {
+          "opcode": "data_setvariableto",
+          "next": "s2",
+          "parent": "h1",
+          "inputs": {
+            "VALUE": [
+              1,
+              [
+                10,
+                "0"
+              ]
+            ]
+          },
+          "fields": {
+            "VARIABLE": [
+              "score",
+              "var_score"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "s2": {
+          "opcode": "control_repeat",
+          "next": "s5",
+          "parent": "s1",
+          "inputs": {
+            "TIMES": [
+              1,
+              [
+                6,
+                "3"
+              ]
+            ],
+            "SUBSTACK": [
+              2,
+              "s3"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s3": {
+          "opcode": "data_changevariableby",
+          "next": "s4",
+          "parent": "s2",
+          "inputs": {
+            "VALUE": [
+              1,
+              [
+                4,
+                "1"
+              ]
+            ]
+          },
+          "fields": {
+            "VARIABLE": [
+              "score",
+              "var_score"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "s4": {
+          "opcode": "looks_say",
+          "next": null,
+          "parent": "s3",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "j1",
+              [
+                10,
+                "Hello!"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "j1": {
+          "opcode": "operator_join",
+          "next": null,
+          "parent": "s4",
+          "inputs": {
+            "STRING1": [
+              1,
+              [
+                10,
+                "score: "
+              ]
+            ],
+            "STRING2": [
+              3,
+              [
+                12,
+                "score",
+                "var_score"
+              ],
+              [
+                10,
+                "x"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s5": {
+          "opcode": "looks_say",
+          "next": "s6",
+          "parent": "s2",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "r1",
+              [
+                10,
+                "Hello!"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "r1": {
+          "opcode": "operator_round",
+          "next": null,
+          "parent": "s5",
+          "inputs": {
+            "NUM": [
+              1,
+              [
+                4,
+                "3.7"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s6": {
+          "opcode": "looks_say",
+          "next": "s7",
+          "parent": "s5",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "j2",
+              [
+                10,
+                "Hello!"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "j2": {
+          "opcode": "operator_join",
+          "next": null,
+          "parent": "s6",
+          "inputs": {
+            "STRING1": [
+              1,
+              [
+                10,
+                "abc"
+              ]
+            ],
+            "STRING2": [
+              3,
+              "l1",
+              [
+                10,
+                "x"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "l1": {
+          "opcode": "operator_letter_of",
+          "next": null,
+          "parent": "j2",
+          "inputs": {
+            "LETTER": [
+              1,
+              [
+                6,
+                "2"
+              ]
+            ],
+            "STRING": [
+              1,
+              [
+                10,
+                "xyz"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s7": {
+          "opcode": "control_if",
+          "next": "s9",
+          "parent": "s6",
+          "inputs": {
+            "CONDITION": [
+              2,
+              "c1"
+            ],
+            "SUBSTACK": [
+              2,
+              "s8"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "c1": {
+          "opcode": "operator_lt",
+          "next": null,
+          "parent": "s7",
+          "inputs": {
+            "OPERAND1": [
+              1,
+              [
+                10,
+                "1"
+              ]
+            ],
+            "OPERAND2": [
+              1,
+              [
+                10,
+                "2"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s8": {
+          "opcode": "looks_say",
+          "next": null,
+          "parent": "s7",
+          "inputs": {
+            "MESSAGE": [
+              1,
+              [
+                10,
+                "lt ok"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s9": {
+          "opcode": "looks_say",
+          "next": "s10",
+          "parent": "s7",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "i1",
+              [
+                10,
+                "Hello!"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "i1": {
+          "opcode": "data_itemoflist",
+          "next": null,
+          "parent": "s9",
+          "inputs": {
+            "INDEX": [
+              1,
+              [
+                7,
+                "2"
+              ]
+            ]
+          },
+          "fields": {
+            "LIST": [
+              "fruits",
+              "list_fruits"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "s10": {
+          "opcode": "procedures_call",
+          "next": "s11",
+          "parent": "s9",
+          "inputs": {
+            "arg1": [
+              1,
+              [
+                10,
+                "7"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false,
+          "mutation": {
+            "tagName": "mutation",
+            "children": [],
+            "proccode": "square %s",
+            "argumentids": "[\"arg1\"]",
+            "warp": "true"
+          }
+        },
+        "s11": {
+          "opcode": "looks_say",
+          "next": "s12",
+          "parent": "s10",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              [
+                12,
+                "result",
+                "var_result"
+              ],
+              [
+                10,
+                "Hello!"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s12": {
+          "opcode": "event_broadcast",
+          "next": "s13",
+          "parent": "s11",
+          "inputs": {
+            "BROADCAST_INPUT": [
+              1,
+              [
+                11,
+                "ping",
+                "bc_ping"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s13": {
+          "opcode": "control_wait",
+          "next": "s14",
+          "parent": "s12",
+          "inputs": {
+            "DURATION": [
+              1,
+              [
+                5,
+                "1"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s14": {
+          "opcode": "looks_say",
+          "next": null,
+          "parent": "s13",
+          "inputs": {
+            "MESSAGE": [
+              1,
+              [
+                10,
+                "done"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "p1": {
+          "opcode": "procedures_definition",
+          "next": "p3",
+          "parent": null,
+          "inputs": {
+            "custom_block": [
+              2,
+              "p2"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": true,
+          "x": 420,
+          "y": 20
+        },
+        "p2": {
+          "opcode": "procedures_prototype",
+          "next": null,
+          "parent": "p1",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false,
+          "mutation": {
+            "tagName": "mutation",
+            "children": [],
+            "proccode": "square %s",
+            "argumentids": "[\"arg1\"]",
+            "argumentnames": "[\"n\"]",
+            "argumentdefaults": "[\"\"]",
+            "warp": "true"
+          }
+        },
+        "p3": {
+          "opcode": "data_setvariableto",
+          "next": null,
+          "parent": "p1",
+          "inputs": {
+            "VALUE": [
+              3,
+              "p5",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {
+            "VARIABLE": [
+              "result",
+              "var_result"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "p5": {
+          "opcode": "operator_multiply",
+          "next": null,
+          "parent": "p3",
+          "inputs": {
+            "NUM1": [
+              3,
+              "p6",
+              [
+                4,
+                ""
+              ]
+            ],
+            "NUM2": [
+              3,
+              "p7",
+              [
+                4,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "p6": {
+          "opcode": "argument_reporter_string_number",
+          "next": null,
+          "parent": "p5",
+          "inputs": {},
+          "fields": {
+            "VALUE": [
+              "n",
+              null
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "p7": {
+          "opcode": "argument_reporter_string_number",
+          "next": null,
+          "parent": "p5",
+          "inputs": {},
+          "fields": {
+            "VALUE": [
+              "n",
+              null
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "b1": {
+          "opcode": "event_whenbroadcastreceived",
+          "next": "b2",
+          "parent": null,
+          "inputs": {},
+          "fields": {
+            "BROADCAST_OPTION": [
+              "ping",
+              "bc_ping"
+            ]
+          },
+          "shadow": false,
+          "topLevel": true,
+          "x": 420,
+          "y": 220
+        },
+        "b2": {
+          "opcode": "looks_say",
+          "next": null,
+          "parent": "b1",
+          "inputs": {
+            "MESSAGE": [
+              1,
+              [
+                10,
+                "pong"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "m1": {
+          "opcode": "event_whenflagclicked",
+          "next": "m2",
+          "parent": null,
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": true,
+          "x": 20,
+          "y": 900
+        },
+        "m2": {
+          "opcode": "control_forever",
+          "next": null,
+          "parent": "m1",
+          "inputs": {
+            "SUBSTACK": [
+              2,
+              "m3"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "m3": {
+          "opcode": "motion_movesteps",
+          "next": "m4",
+          "parent": "m2",
+          "inputs": {
+            "STEPS": [
+              1,
+              [
+                4,
+                "5"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "m4": {
+          "opcode": "motion_ifonedgebounce",
+          "next": null,
+          "parent": "m3",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        }
+      },
+      "comments": {},
+      "currentCostume": 0,
+      "costumes": [
+        {
+          "name": "Cat",
+          "bitmapResolution": 1,
+          "dataFormat": "svg",
+          "assetId": "6ac3a6339b85092fa9b1694f2da7779d",
+          "md5ext": "6ac3a6339b85092fa9b1694f2da7779d.svg",
+          "rotationCenterX": 48,
+          "rotationCenterY": 50
+        }
+      ],
+      "sounds": [],
+      "volume": 100,
+      "layerOrder": 1,
+      "visible": true,
+      "x": 0,
+      "y": -110,
+      "size": 100,
+      "direction": 90,
+      "draggable": false,
+      "rotationStyle": "left-right"
+    }
+  ]
+}

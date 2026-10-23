@@ -1,0 +1,16 @@
+{
+  "name": "jscratch-sb3js",
+  "version": "0.1.0",
+  "private": true,
+  "description": "scratch-parser (parse + schema validation) bundled for the browser and for Rhino on the JVM.",
+  "license": "GPL-3.0-only",
+  "scripts": {
+    "build": "esbuild src/index.js --bundle --format=iife --global-name=jscratchSb3 --platform=browser --target=es2015 --outfile=build/dist/jscratch-sb3.js"
+  },
+  "dependencies": {
+    "scratch-parser": "6.0.1"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

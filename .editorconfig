@@ -1,0 +1,25 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{kt,kts}]
+ktlint_code_style = intellij_idea
+max_line_length = 120
+ktlint_function_naming_ignore_when_annotated_with = Test
+# These two rewrite large `when` tables (the block dispatch in the compiler) into something much harder to scan.
+ktlint_standard_blank-line-between-when-conditions = disabled
+ktlint_standard_when-entry-bracing = disabled
+ktlint_standard_multiline-expression-wrapping = disabled
+ktlint_standard_binary-expression-wrapping = disabled
+
+[*.{md,toml,yml,yaml,json,html,css,js}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
