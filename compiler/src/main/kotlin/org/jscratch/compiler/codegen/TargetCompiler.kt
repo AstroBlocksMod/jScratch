@@ -240,7 +240,7 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
         } else {
             val path = ctx.addListResource(className, slot.field, items)
             mv.visitLdcInsn(path)
-            mv.visitMethodInsn(INVOKEVIRTUAL, RT.LIST, "loadResource", "(${RT.D_STRING})$RT.D_LIST", false)
+            mv.visitMethodInsn(INVOKEVIRTUAL, RT.LIST, "loadResource", "(${RT.D_STRING})${RT.D_LIST}", false)
         }
     }
 
