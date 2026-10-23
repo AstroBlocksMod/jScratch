@@ -1,3 +1,4 @@
+import java.security.MessageDigest
 import javax.inject.Inject
 
 plugins {
@@ -21,7 +22,26 @@ val decoderHeaders =
         from(drLibs)
         // dr_mp3-mp3-0.7.3.h becomes dr_mp3.h
         rename("""(dr_[a-z0-9]+)-.*\.h""", "\$1.h")
-        into(layout.buildDirectory.dir("decoders/include"))
+        val headers = layout.buildDirectory.dir("decoders/include")
+        into(headers)
+        val expected =
+            mapOf(
+                "dr_mp3.h" to libs.versions.dr.mp3.sha256.get(),
+                "dr_wav.h" to libs.versions.dr.wav.sha256.get(),
+            )
+        inputs.property("sha256", expected)
+        doLast {
+            for ((name, sha256) in expected) {
+                val bytes = headers.get().file(name).asFile.readBytes()
+                val actual = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+                if (actual != sha256) {
+                    throw GradleException(
+                        "$name has SHA-256 $actual, but gradle/libs.versions.toml expects $sha256. " +
+                            "If you changed the dr_libs tag, update the hash too.",
+                    )
+                }
+            }
+        }
     }
 
 /**
@@ -40,15 +60,29 @@ abstract class EmccTask : DefaultTask() {
 
     @get:Input abstract val linkArgs: ListProperty<String>
 
+    /** mise.toml pins the Emscripten version, so changing it compiles the decoders again. */
+    @get:InputFile
+    @get:Optional
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val toolchain: RegularFileProperty
+
     @get:OutputFile abstract val output: RegularFileProperty
 
     @TaskAction
     fun compile() {
-        val path = System.getenv("PATH").orEmpty().split(File.pathSeparator)
-        val emcc =
+        val path = System.getenv("PATH").orEmpty().split(File.pathSeparator).filter { it.isNotEmpty() }
+        // On Windows, emcc is emcc.bat and mise is mise.exe.
+        val suffixes = if (File.separatorChar == '\\') listOf(".exe", ".bat", ".cmd") else listOf("")
+        fun find(name: String): String? = path
+            .flatMap { dir -> suffixes.map { File(dir, name + it) } }
+            .firstOrNull { it.isFile && it.canExecute() }
+            ?.path
+        val emcc = find("emcc")
+        val mise = find("mise")
+        val command =
             when {
-                path.any { File(it, "emcc").canExecute() } -> listOf("emcc")
-                path.any { File(it, "mise").canExecute() } -> listOf("mise", "exec", "--", "emcc")
+                emcc != null -> listOf(emcc)
+                mise != null -> listOf(mise, "exec", "--", "emcc")
                 else -> throw GradleException(
                     "emcc was not found. Install mise and run `mise install` in the repository root " +
                         "(see docs/development.md).",
@@ -57,11 +91,11 @@ abstract class EmccTask : DefaultTask() {
         val obj = File(temporaryDir, "out.o")
         exec.exec {
             commandLine(
-                emcc + compileArgs.get() +
+                command + compileArgs.get() +
                     listOf("-I${includes.get().asFile}", "-c", source.get().asFile.path, "-o", obj.path),
             )
         }
-        exec.exec { commandLine(emcc + linkArgs.get() + listOf(obj.path, "-o", output.get().asFile.path)) }
+        exec.exec { commandLine(command + linkArgs.get() + listOf(obj.path, "-o", output.get().asFile.path)) }
     }
 }
 
@@ -85,22 +119,25 @@ val decodersWasm =
                 "-sALLOW_MEMORY_GROWTH",
                 "-sFILESYSTEM=0",
                 "-sMALLOC=emmalloc",
+                // Every sound gets its own instance, so start small. Memory grows as a file needs it.
+                "-sINITIAL_MEMORY=1mb",
                 "--no-entry",
             ),
         )
+        toolchain.set(layout.settingsDirectory.file("mise.toml"))
         output.set(layout.buildDirectory.file("decoders/decoders.wasm"))
     }
 
 val decodersJvm =
     tasks.register<JavaExec>("decodersJvm") {
         description = "Compiles the sound decoders' WebAssembly to JVM classes with Chicory."
-        val wasm = layout.buildDirectory.file("decoders/decoders.wasm")
+        val wasm = decodersWasm.flatMap { it.output }
         val output = layout.buildDirectory.dir("decoders/jvm")
         // The generated Java wrapper is not needed: SoundDecoders loads the module itself.
         val unusedSources = temporaryDir
         classpath(chicoryCompiler)
         mainClass.set("com.dylibso.chicory.experimental.compiler.cli.Cli")
-        inputs.files(decodersWasm)
+        inputs.file(wasm)
         outputs.dir(output)
         argumentProviders.add {
             val out = output.get().asFile.path

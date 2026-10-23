@@ -78,11 +78,11 @@ class Runtime {
 
     fun run() {
         sprites.sortBy { it.layerOrder }
-        timerStartMs = nowMillis()
         for (t in allTargets()) t.costumes.forEach { assets.load(it) }
-        for (t in allTargets()) t.sounds.forEach { sounds.load(it) }
+        sounds.loadAll(allTargets().flatMap { it.sounds })
         if (headless) {
             val start = System.nanoTime()
+            resetTimer()
             startHats(HAT_FLAG, "", null)
             // Stop early once every script has finished: nothing can start a new one without input.
             while (frameIndex < headlessFrames && threads.isNotEmpty()) {
@@ -162,6 +162,8 @@ class Runtime {
             when (e) {
                 is Event.GreenFlag -> {
                     stopAllInternal()
+                    // The green flag restarts the timer, as in scratch-vm, so loading time never counts.
+                    resetTimer()
                     startHats(HAT_FLAG, "", null)
                 }
                 is Event.StopAll -> stopAllInternal()

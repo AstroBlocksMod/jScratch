@@ -88,7 +88,9 @@ flowchart LR
     classes --> runtime["runtime fat JAR"]
 ```
 
-At run time `SoundDecoders` creates a [Chicory](https://chicory.dev) instance of the module for each sound, copies the file into its memory and reads back 16-bit PCM, which `Sounds` plays through a `Clip`. Nothing is interpreted: every WebAssembly function is an ordinary JVM method that HotSpot compiles like any other. All sounds are decoded when the project starts, as in Scratch. A three-minute MP3 takes under a second. Headless runs decode sounds too, without playing them, so "play sound until done" waits as long as it does in a window.
+At run time a `SoundStream` is one open decoder on its own [Chicory](https://chicory.dev) instance of the module: the file is copied into the instance's memory, and the stream hands out 16-bit PCM in chunks. Nothing is interpreted: every WebAssembly function is an ordinary JVM method that HotSpot compiles like any other.
+
+When the project starts, `Sounds` opens every sound in parallel on virtual threads to learn its length. Sounds up to 10 seconds are decoded into memory then, so they start at once. Longer ones, usually music, are decoded while they play, since a three-minute song takes about 30 MB as PCM. Each playing sound feeds its own `SourceDataLine` from a daemon thread. Decoding runs at about 200 times real time, so a stream never falls behind. Headless runs only read the lengths, so "play sound until done" waits as long as it does in a window.
 
 ## Modules
 

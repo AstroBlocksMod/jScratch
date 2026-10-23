@@ -56,10 +56,25 @@ class SoundDecodersTest {
     }
 
     @Test
+    fun streamsInChunks() {
+        val file = bytes("beep.mp3")
+        val whole = assertNotNull(SoundDecoders.decodeMp3(file))
+        val stream = assertNotNull(SoundStream.openMp3(file))
+        val streamed =
+            stream.use {
+                assertEquals(whole.frames.toLong(), it.frames, "reported length differs from the decoded one")
+                generateSequence { it.read(1000).takeIf { chunk -> chunk.isNotEmpty() } }
+                    .fold(ByteArray(0)) { acc, chunk -> acc + chunk }
+            }
+        assertContentEquals(whole.data, streamed)
+    }
+
+    @Test
     fun rejectsGarbage() {
         val garbage = ByteArray(1000) { (it * 31).toByte() }
         assertNull(SoundDecoders.decodeWav(garbage))
         assertNull(SoundDecoders.decodeMp3(ByteArray(0)))
+        assertNull(SoundStream.openMp3(garbage))
     }
 
     /**
@@ -82,7 +97,7 @@ class SoundDecodersTest {
         }
     }
 
-    /** Bytecode length of every method in a class file, by method name. */
+    /** Bytecode length of every method in a class file, by name and descriptor so overloads stay apart. */
     private fun codeSizes(bytes: ByteArray): Map<String, Int> {
         val data = DataInputStream(bytes.inputStream())
         data.skipBytes(8)
@@ -114,8 +129,7 @@ class SoundDecodersTest {
         val sizes = HashMap<String, Int>()
         repeat(data.readUnsignedShort()) {
             data.skipBytes(2)
-            val name = utf8.getValue(data.readUnsignedShort())
-            data.skipBytes(2)
+            val name = utf8.getValue(data.readUnsignedShort()) + utf8.getValue(data.readUnsignedShort())
             repeat(data.readUnsignedShort()) {
                 val attribute = utf8.getValue(data.readUnsignedShort())
                 val length = data.readInt()

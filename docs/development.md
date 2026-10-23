@@ -40,21 +40,21 @@ The `Benchmarks` workflow in `.github/workflows/benchmarks.yml` runs `./gradlew 
 
 - `runtime/src/test`: unit tests for `Cast` and `Ops`, the parts most likely to drift from Scratch, and `SoundDecodersTest`, which decodes the MP3 and WAV files in `src/test/resources/sounds` and checks that no generated decoder method is too big for the JIT.
 - `cli/src/test`: `ScratchDownloaderTest` checks project link parsing and how a download is packed into an `.sb3`, with a fake server in place of the network so the build never goes online.
-- `compiler-jvm/src/test`: `RhinoProjectJsonTest` checks the scratch-parser bridge (valid project, schema rejection, broken JSON), and `CompileSamplesTest` compiles `samples/src/hello` and `samples/src/sounds` with the real runtime, runs the JAR in a child JVM with `-Djscratch.headless=40`, and compares what the sprite said. Add a sample directory and a few expected `say` lines to cover a new block.
+- `compiler-jvm/src/test`: `RhinoProjectJsonTest` checks the scratch-parser bridge (valid project, schema rejection, broken JSON), and `CompileSamplesTest` compiles `samples/src/hello` and `samples/src/sounds` with the real runtime, runs each JAR in a child JVM with `-Djscratch.headless=<frames>` (40 frames for `hello`, 60 for `sounds`), and compares what the sprites said. Add a sample directory and a few expected `say` lines to cover a new block.
 
 To test rendering without a window, run a compiled JAR with `-Djscratch.headless=<frames> -Djscratch.screenshot=out.png` and look at the PNG.
 
 ## Sound decoders
 
-The JDK only plays PCM WAV, so the runtime decodes sounds itself with [dr_mp3 and dr_wav](https://github.com/mackron/dr_libs), single-header C libraries. `runtime/src/main/c/decoders.c` wraps them in four exported functions. The build turns that into JVM classes in three steps, all in `runtime/build.gradle.kts`:
+The JDK only plays PCM WAV, so the runtime decodes sounds itself with [dr_mp3 and dr_wav](https://github.com/mackron/dr_libs), single-header C libraries. `runtime/src/main/c/decoders.c` wraps them in an open, read and close function per format, so a sound can be decoded in chunks. The build turns that into JVM classes in three steps, all in `runtime/build.gradle.kts`:
 
-1. `decoderHeaders` downloads the two headers by release tag. The tags are `dr-mp3` and `dr-wav` in `gradle/libs.versions.toml`, and the download goes through an Ivy repository declared in `settings.gradle.kts`.
-2. `decodersWasm` compiles the C file to a standalone WebAssembly module with Emscripten's `emcc`. It runs `emcc` from the path, or through `mise exec` when the shell has not activated mise, which is the usual case in an IDE. `mise.toml` also pins Python, because `emcc` needs 3.10 or newer and the system Python can be older.
+1. `decoderHeaders` downloads the two headers by release tag and checks their SHA-256, because a tag can be moved. The tags and hashes are `dr-mp3`, `dr-wav` and their `-sha256` entries in `gradle/libs.versions.toml`. The download goes through an Ivy repository declared in `settings.gradle.kts`.
+2. `decodersWasm` compiles the C file to a standalone WebAssembly module with Emscripten's `emcc`. It runs `emcc` from the path, or through `mise exec` when the shell has not activated mise, which is the usual case in an IDE. `mise.toml` also pins Python, because `emcc` needs 3.10 or newer and the system Python can be older. The task treats `mise.toml` as an input, so a new Emscripten version compiles the decoders again.
 3. `decodersJvm` runs [Chicory](https://chicory.dev)'s build-time compiler, which turns every WebAssembly function into a JVM method. `decodersJar` packs the classes and a stripped copy of the module into a JAR on the runtime's class path, so it ends up in every compiled project.
 
 HotSpot never compiles a method over 8000 bytes of bytecode to machine code. Inlining in clang and in Emscripten's `wasm-opt` produces functions past that size, and those run several times slower in the interpreter. That is why the C file is compiled with `-fno-inline-functions` and linked at `-O1`. `SoundDecodersTest` fails if a generated method grows past the limit again, for example after a dr_libs update.
 
-To update dr_libs, change the tags in the version catalog and run `./gradlew :runtime:test`.
+To update dr_libs, change the tags in the version catalog and run `./gradlew :runtime:decoderHeaders`. It fails and prints the SHA-256 of each new header. Review the upstream changes, put the hashes in the catalog, then run `./gradlew :runtime:test`.
 
 ## Lint and formatting
 
