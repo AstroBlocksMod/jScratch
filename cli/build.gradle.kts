@@ -11,6 +11,9 @@ val runtimeJar = configurations.resolvable("runtimeJar") { extendsFrom(runtimeJa
 dependencies {
     implementation(project(":compiler-jvm"))
     add(runtimeJarDeps.name, project(mapOf("path" to ":runtime", "configuration" to "fatJarElements")))
+    testImplementation(kotlin("test"))
+    testImplementation(platform(libs.junit.bom))
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 application {

@@ -6,6 +6,9 @@ jScratch compiles [Scratch 3](https://scratch.mit.edu) projects (`.sb3`) into Ja
 ./gradlew :cli:fatJar
 java -jar cli/build/libs/cli-0.1.0-SNAPSHOT-all.jar my-game.sb3
 java -jar my-game.jar
+
+# or compile a shared project straight from the Scratch website
+java -jar cli/build/libs/cli-0.1.0-SNAPSHOT-all.jar https://scratch.mit.edu/projects/10128407/
 ```
 
 ## Highlights
@@ -28,7 +31,7 @@ This is an MVP. Typical projects from the Scratch website compile and run, with 
 | `sb3js/` | scratch-parser bundled with esbuild for Rhino and the browser |
 | `compiler/` | Platform-neutral core: sb3 model, ASM code generator, JAR writer |
 | `compiler-jvm/` | Rhino bridge to scratch-parser, JSON through kotlinx-serialization, end-to-end tests |
-| `cli/` | `jscratch` command line tool |
+| `cli/` | `jscratch` command line tool, including project downloads from scratch.mit.edu |
 | `web/` | TeaVM playground |
 | `samples/` | Sample projects, zipped into `.sb3` by the build |
 | `docs/` | Documentation site (Zensical) |
