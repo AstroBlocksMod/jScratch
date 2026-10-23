@@ -94,7 +94,7 @@ Most of this will probably go into separate related projects instead of jScratch
 
 - [ ] **A converter for Scratch 1.x and 2.x.** Turn `.sb` and `.sb2` projects into the same model the compiler builds from `.sb3`, so they compile like any other project. scratch-vm already loads `.sb2` files, which gives a reference for the 2.x mapping.
 - [ ] **Reviving Scratch 1.x and 2.x.** Converting a project gets it running, but not the way it ran back then. The bigger goal is to bring the old versions themselves back on a modern platform, the JVM, with their own look and behavior. 1.x was built on Squeak Smalltalk and 2.0 on Flash, and those platforms have not aged well, but the versions themselves deserve better than to be left to rot. Many people feel they were better than what came after, and many more have strong nostalgia for them.
-- [ ] **Snap! and other derivatives.** Snap! has its own XML project format and features Scratch lacks, like first-class procedures and continuations, so it needs its own front end and much of its own runtime. Derivatives based on Scratch 1.x and 2.x fall in the same group and would build on the revival work above.
+- [ ] **Snap*!* and other derivatives.** Snap*!* has its own XML project format and features Scratch lacks, like first-class procedures and continuations, so it needs its own front end and much of its own runtime. Derivatives based on Scratch 1.x and 2.x fall in the same group and would build on the revival work above.
 
 ## Have a request?
 
