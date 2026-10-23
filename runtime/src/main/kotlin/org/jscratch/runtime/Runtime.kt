@@ -8,10 +8,11 @@ import java.util.concurrent.ConcurrentLinkedQueue
  * input state and the window. The generated `Main` class builds one of these,
  * adds the targets and calls [run].
  *
- * Headless mode (`-Djscratch.headless=<frames>`) runs the given number of frames
- * with a virtual clock and no window, printing every `say` to stdout. With
- * `-Djscratch.screenshot=<file.png>` it also saves the final frame. The test
- * suite relies on both.
+ * Headless mode (`-Djscratch.headless=<frames>`) runs up to the given number of
+ * frames with a virtual clock and no window, printing every `say` to stdout. It
+ * stops early when no script is left running. With `-Djscratch.screenshot=<file.png>`
+ * it also saves the final frame, and `-Djscratch.timing=true` prints the frame
+ * count and wall time to stderr. The tests and the benchmarks rely on these.
  */
 class Runtime {
     lateinit var stage: Stage
@@ -80,10 +81,16 @@ class Runtime {
         timerStartMs = nowMillis()
         for (t in allTargets()) t.costumes.forEach { assets.load(it) }
         if (headless) {
+            val start = System.nanoTime()
             startHats(HAT_FLAG, "", null)
-            repeat(headlessFrames) {
+            // Stop early once every script has finished: nothing can start a new one without input.
+            while (frameIndex < headlessFrames && threads.isNotEmpty()) {
                 frame()
                 frameIndex++
+            }
+            if (java.lang.Boolean.getBoolean("jscratch.timing")) {
+                val ms = (System.nanoTime() - start) / 1_000_000.0
+                System.err.println("jscratch: $frameIndex frames in $ms ms")
             }
             System.getProperty("jscratch.screenshot")?.let { path ->
                 val img = StageRenderer.toImage(StageRenderer.snapshot(this), pen, 2)

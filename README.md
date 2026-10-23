@@ -34,6 +34,7 @@ This is an MVP. Typical projects from the Scratch website compile and run, with 
 | `cli/` | `jscratch` command line tool, including project downloads from scratch.mit.edu |
 | `web/` | TeaVM playground |
 | `samples/` | Sample projects, zipped into `.sb3` by the build |
+| `benchmarks/` | CPU-heavy projects timed on jScratch, TurboWarp and scratch-vm |
 | `docs/` | Documentation site (Zensical) |
 
 Useful commands:

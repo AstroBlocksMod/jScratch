@@ -1,0 +1,981 @@
+{
+  "targets": [
+    {
+      "isStage": true,
+      "name": "Stage",
+      "variables": {
+        "var_seed": [
+          "seed",
+          0
+        ],
+        "var_n": [
+          "n",
+          0
+        ],
+        "var_i": [
+          "i",
+          0
+        ],
+        "var_tmp": [
+          "tmp",
+          0
+        ]
+      },
+      "lists": {
+        "list_items": [
+          "items",
+          []
+        ]
+      },
+      "broadcasts": {},
+      "blocks": {},
+      "comments": {},
+      "currentCostume": 0,
+      "costumes": [
+        {
+          "name": "Blue Sky",
+          "bitmapResolution": 1,
+          "dataFormat": "svg",
+          "assetId": "e7c147730f19d284bcd7b3f00af19bb6",
+          "md5ext": "e7c147730f19d284bcd7b3f00af19bb6.svg",
+          "rotationCenterX": 240,
+          "rotationCenterY": 180
+        }
+      ],
+      "sounds": [],
+      "volume": 100,
+      "layerOrder": 0,
+      "tempo": 60,
+      "videoTransparency": 50,
+      "videoState": "on",
+      "textToSpeechLanguage": null
+    },
+    {
+      "isStage": false,
+      "name": "Bench",
+      "variables": {},
+      "lists": {},
+      "broadcasts": {},
+      "blocks": {
+        "p1": {
+          "opcode": "procedures_definition",
+          "next": "b3",
+          "parent": null,
+          "inputs": {
+            "custom_block": [
+              1,
+              "p2"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": true,
+          "x": 400,
+          "y": 620
+        },
+        "p2": {
+          "opcode": "procedures_prototype",
+          "next": null,
+          "parent": "p1",
+          "inputs": {},
+          "fields": {},
+          "shadow": true,
+          "topLevel": false,
+          "mutation": {
+            "tagName": "mutation",
+            "children": [],
+            "proccode": "bubble sort",
+            "argumentids": "[]",
+            "warp": "true",
+            "argumentnames": "[]",
+            "argumentdefaults": "[]"
+          }
+        },
+        "b3": {
+          "opcode": "data_deletealloflist",
+          "next": "b4",
+          "parent": "p1",
+          "inputs": {},
+          "fields": {
+            "LIST": [
+              "items",
+              "list_items"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "b4": {
+          "opcode": "data_setvariableto",
+          "next": "b5",
+          "parent": "b3",
+          "inputs": {
+            "VALUE": [
+              1,
+              [
+                4,
+                "1"
+              ]
+            ]
+          },
+          "fields": {
+            "VARIABLE": [
+              "seed",
+              "var_seed"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "b5": {
+          "opcode": "control_repeat",
+          "next": "b11",
+          "parent": "b4",
+          "inputs": {
+            "TIMES": [
+              1,
+              [
+                4,
+                "600"
+              ]
+            ],
+            "SUBSTACK": [
+              2,
+              "b6"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b6": {
+          "opcode": "data_setvariableto",
+          "next": "b10",
+          "parent": "b5",
+          "inputs": {
+            "VALUE": [
+              3,
+              "b7",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {
+            "VARIABLE": [
+              "seed",
+              "var_seed"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "b7": {
+          "opcode": "operator_mod",
+          "next": null,
+          "parent": "b6",
+          "inputs": {
+            "NUM1": [
+              3,
+              "b8",
+              [
+                4,
+                ""
+              ]
+            ],
+            "NUM2": [
+              1,
+              [
+                4,
+                "65537"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b8": {
+          "opcode": "operator_add",
+          "next": null,
+          "parent": "b7",
+          "inputs": {
+            "NUM1": [
+              3,
+              "b9",
+              [
+                4,
+                ""
+              ]
+            ],
+            "NUM2": [
+              1,
+              [
+                4,
+                "74"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b9": {
+          "opcode": "operator_multiply",
+          "next": null,
+          "parent": "b8",
+          "inputs": {
+            "NUM1": [
+              3,
+              [
+                12,
+                "seed",
+                "var_seed"
+              ],
+              [
+                4,
+                ""
+              ]
+            ],
+            "NUM2": [
+              1,
+              [
+                4,
+                "75"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b10": {
+          "opcode": "data_addtolist",
+          "next": null,
+          "parent": "b6",
+          "inputs": {
+            "ITEM": [
+              3,
+              [
+                12,
+                "seed",
+                "var_seed"
+              ],
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {
+            "LIST": [
+              "items",
+              "list_items"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "b11": {
+          "opcode": "data_setvariableto",
+          "next": "b13",
+          "parent": "b5",
+          "inputs": {
+            "VALUE": [
+              3,
+              "b12",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {
+            "VARIABLE": [
+              "n",
+              "var_n"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "b12": {
+          "opcode": "data_lengthoflist",
+          "next": null,
+          "parent": "b11",
+          "inputs": {},
+          "fields": {
+            "LIST": [
+              "items",
+              "list_items"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "b13": {
+          "opcode": "control_repeat",
+          "next": null,
+          "parent": "b11",
+          "inputs": {
+            "TIMES": [
+              3,
+              "b14",
+              [
+                4,
+                ""
+              ]
+            ],
+            "SUBSTACK": [
+              2,
+              "b15"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b14": {
+          "opcode": "operator_subtract",
+          "next": null,
+          "parent": "b13",
+          "inputs": {
+            "NUM1": [
+              3,
+              [
+                12,
+                "n",
+                "var_n"
+              ],
+              [
+                4,
+                ""
+              ]
+            ],
+            "NUM2": [
+              1,
+              [
+                4,
+                "1"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b15": {
+          "opcode": "data_setvariableto",
+          "next": "b16",
+          "parent": "b13",
+          "inputs": {
+            "VALUE": [
+              1,
+              [
+                4,
+                "1"
+              ]
+            ]
+          },
+          "fields": {
+            "VARIABLE": [
+              "i",
+              "var_i"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "b16": {
+          "opcode": "control_repeat",
+          "next": null,
+          "parent": "b15",
+          "inputs": {
+            "TIMES": [
+              3,
+              "b17",
+              [
+                4,
+                ""
+              ]
+            ],
+            "SUBSTACK": [
+              2,
+              "b18"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b17": {
+          "opcode": "operator_subtract",
+          "next": null,
+          "parent": "b16",
+          "inputs": {
+            "NUM1": [
+              3,
+              [
+                12,
+                "n",
+                "var_n"
+              ],
+              [
+                4,
+                ""
+              ]
+            ],
+            "NUM2": [
+              1,
+              [
+                4,
+                "1"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b18": {
+          "opcode": "control_if",
+          "next": "b30",
+          "parent": "b16",
+          "inputs": {
+            "CONDITION": [
+              2,
+              "b19"
+            ],
+            "SUBSTACK": [
+              2,
+              "b23"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b19": {
+          "opcode": "operator_gt",
+          "next": null,
+          "parent": "b18",
+          "inputs": {
+            "OPERAND1": [
+              3,
+              "b20",
+              [
+                4,
+                ""
+              ]
+            ],
+            "OPERAND2": [
+              3,
+              "b21",
+              [
+                4,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b20": {
+          "opcode": "data_itemoflist",
+          "next": null,
+          "parent": "b19",
+          "inputs": {
+            "INDEX": [
+              3,
+              [
+                12,
+                "i",
+                "var_i"
+              ],
+              [
+                4,
+                ""
+              ]
+            ]
+          },
+          "fields": {
+            "LIST": [
+              "items",
+              "list_items"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "b21": {
+          "opcode": "data_itemoflist",
+          "next": null,
+          "parent": "b19",
+          "inputs": {
+            "INDEX": [
+              3,
+              "b22",
+              [
+                4,
+                ""
+              ]
+            ]
+          },
+          "fields": {
+            "LIST": [
+              "items",
+              "list_items"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "b22": {
+          "opcode": "operator_add",
+          "next": null,
+          "parent": "b21",
+          "inputs": {
+            "NUM1": [
+              3,
+              [
+                12,
+                "i",
+                "var_i"
+              ],
+              [
+                4,
+                ""
+              ]
+            ],
+            "NUM2": [
+              1,
+              [
+                4,
+                "1"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b23": {
+          "opcode": "data_setvariableto",
+          "next": "b25",
+          "parent": "b18",
+          "inputs": {
+            "VALUE": [
+              3,
+              "b24",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {
+            "VARIABLE": [
+              "tmp",
+              "var_tmp"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "b24": {
+          "opcode": "data_itemoflist",
+          "next": null,
+          "parent": "b23",
+          "inputs": {
+            "INDEX": [
+              3,
+              [
+                12,
+                "i",
+                "var_i"
+              ],
+              [
+                4,
+                ""
+              ]
+            ]
+          },
+          "fields": {
+            "LIST": [
+              "items",
+              "list_items"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "b25": {
+          "opcode": "data_replaceitemoflist",
+          "next": "b28",
+          "parent": "b23",
+          "inputs": {
+            "INDEX": [
+              3,
+              [
+                12,
+                "i",
+                "var_i"
+              ],
+              [
+                4,
+                ""
+              ]
+            ],
+            "ITEM": [
+              3,
+              "b26",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {
+            "LIST": [
+              "items",
+              "list_items"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "b26": {
+          "opcode": "data_itemoflist",
+          "next": null,
+          "parent": "b25",
+          "inputs": {
+            "INDEX": [
+              3,
+              "b27",
+              [
+                4,
+                ""
+              ]
+            ]
+          },
+          "fields": {
+            "LIST": [
+              "items",
+              "list_items"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "b27": {
+          "opcode": "operator_add",
+          "next": null,
+          "parent": "b26",
+          "inputs": {
+            "NUM1": [
+              3,
+              [
+                12,
+                "i",
+                "var_i"
+              ],
+              [
+                4,
+                ""
+              ]
+            ],
+            "NUM2": [
+              1,
+              [
+                4,
+                "1"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b28": {
+          "opcode": "data_replaceitemoflist",
+          "next": null,
+          "parent": "b25",
+          "inputs": {
+            "INDEX": [
+              3,
+              "b29",
+              [
+                4,
+                ""
+              ]
+            ],
+            "ITEM": [
+              3,
+              [
+                12,
+                "tmp",
+                "var_tmp"
+              ],
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {
+            "LIST": [
+              "items",
+              "list_items"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "b29": {
+          "opcode": "operator_add",
+          "next": null,
+          "parent": "b28",
+          "inputs": {
+            "NUM1": [
+              3,
+              [
+                12,
+                "i",
+                "var_i"
+              ],
+              [
+                4,
+                ""
+              ]
+            ],
+            "NUM2": [
+              1,
+              [
+                4,
+                "1"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b30": {
+          "opcode": "data_changevariableby",
+          "next": null,
+          "parent": "b18",
+          "inputs": {
+            "VALUE": [
+              1,
+              [
+                4,
+                "1"
+              ]
+            ]
+          },
+          "fields": {
+            "VARIABLE": [
+              "i",
+              "var_i"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "b31": {
+          "opcode": "event_whenflagclicked",
+          "next": "b32",
+          "parent": null,
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": true,
+          "x": 20,
+          "y": 9320
+        },
+        "b32": {
+          "opcode": "control_repeat",
+          "next": "b34",
+          "parent": "b31",
+          "inputs": {
+            "TIMES": [
+              1,
+              [
+                4,
+                "40"
+              ]
+            ],
+            "SUBSTACK": [
+              2,
+              "b33"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b33": {
+          "opcode": "procedures_call",
+          "next": null,
+          "parent": "b32",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false,
+          "mutation": {
+            "tagName": "mutation",
+            "children": [],
+            "proccode": "bubble sort",
+            "argumentids": "[]",
+            "warp": "true"
+          }
+        },
+        "b34": {
+          "opcode": "looks_say",
+          "next": null,
+          "parent": "b32",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "b35",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b35": {
+          "opcode": "operator_join",
+          "next": null,
+          "parent": "b34",
+          "inputs": {
+            "STRING1": [
+              3,
+              "b36",
+              [
+                10,
+                ""
+              ]
+            ],
+            "STRING2": [
+              3,
+              "b37",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b36": {
+          "opcode": "data_itemoflist",
+          "next": null,
+          "parent": "b35",
+          "inputs": {
+            "INDEX": [
+              1,
+              [
+                4,
+                "1"
+              ]
+            ]
+          },
+          "fields": {
+            "LIST": [
+              "items",
+              "list_items"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "b37": {
+          "opcode": "operator_join",
+          "next": null,
+          "parent": "b35",
+          "inputs": {
+            "STRING1": [
+              1,
+              [
+                10,
+                " "
+              ]
+            ],
+            "STRING2": [
+              3,
+              "b38",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b38": {
+          "opcode": "data_itemoflist",
+          "next": null,
+          "parent": "b37",
+          "inputs": {
+            "INDEX": [
+              1,
+              [
+                4,
+                "600"
+              ]
+            ]
+          },
+          "fields": {
+            "LIST": [
+              "items",
+              "list_items"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        }
+      },
+      "comments": {},
+      "currentCostume": 0,
+      "costumes": [
+        {
+          "name": "Cat",
+          "bitmapResolution": 1,
+          "dataFormat": "svg",
+          "assetId": "6ac3a6339b85092fa9b1694f2da7779d",
+          "md5ext": "6ac3a6339b85092fa9b1694f2da7779d.svg",
+          "rotationCenterX": 48,
+          "rotationCenterY": 50
+        }
+      ],
+      "sounds": [],
+      "volume": 100,
+      "layerOrder": 1,
+      "visible": true,
+      "x": 0,
+      "y": 0,
+      "size": 100,
+      "direction": 90,
+      "draggable": false,
+      "rotationStyle": "all around"
+    }
+  ],
+  "monitors": [],
+  "extensions": [],
+  "meta": {
+    "semver": "3.0.0",
+    "vm": "0.2.0",
+    "agent": "jScratch benchmark"
+  }
+}

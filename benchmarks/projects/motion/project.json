@@ -1,0 +1,372 @@
+{
+  "targets": [
+    {
+      "isStage": true,
+      "name": "Stage",
+      "variables": {},
+      "lists": {},
+      "broadcasts": {},
+      "blocks": {},
+      "comments": {},
+      "currentCostume": 0,
+      "costumes": [
+        {
+          "name": "Blue Sky",
+          "bitmapResolution": 1,
+          "dataFormat": "svg",
+          "assetId": "e7c147730f19d284bcd7b3f00af19bb6",
+          "md5ext": "e7c147730f19d284bcd7b3f00af19bb6.svg",
+          "rotationCenterX": 240,
+          "rotationCenterY": 180
+        }
+      ],
+      "sounds": [],
+      "volume": 100,
+      "layerOrder": 0,
+      "tempo": 60,
+      "videoTransparency": 50,
+      "videoState": "on",
+      "textToSpeechLanguage": null
+    },
+    {
+      "isStage": false,
+      "name": "Bench",
+      "variables": {},
+      "lists": {},
+      "broadcasts": {},
+      "blocks": {
+        "p1": {
+          "opcode": "procedures_definition",
+          "next": "b3",
+          "parent": null,
+          "inputs": {
+            "custom_block": [
+              1,
+              "p2"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": true,
+          "x": 400,
+          "y": 620
+        },
+        "p2": {
+          "opcode": "procedures_prototype",
+          "next": null,
+          "parent": "p1",
+          "inputs": {},
+          "fields": {},
+          "shadow": true,
+          "topLevel": false,
+          "mutation": {
+            "tagName": "mutation",
+            "children": [],
+            "proccode": "spin",
+            "argumentids": "[]",
+            "warp": "true",
+            "argumentnames": "[]",
+            "argumentdefaults": "[]"
+          }
+        },
+        "b3": {
+          "opcode": "motion_gotoxy",
+          "next": "b4",
+          "parent": "p1",
+          "inputs": {
+            "X": [
+              1,
+              [
+                4,
+                "0"
+              ]
+            ],
+            "Y": [
+              1,
+              [
+                4,
+                "0"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b4": {
+          "opcode": "motion_pointindirection",
+          "next": "b5",
+          "parent": "b3",
+          "inputs": {
+            "DIRECTION": [
+              1,
+              [
+                4,
+                "90"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b5": {
+          "opcode": "control_repeat",
+          "next": null,
+          "parent": "b4",
+          "inputs": {
+            "TIMES": [
+              1,
+              [
+                4,
+                "300000"
+              ]
+            ],
+            "SUBSTACK": [
+              2,
+              "b6"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b6": {
+          "opcode": "motion_movesteps",
+          "next": "b7",
+          "parent": "b5",
+          "inputs": {
+            "STEPS": [
+              1,
+              [
+                4,
+                "10"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b7": {
+          "opcode": "motion_turnright",
+          "next": null,
+          "parent": "b6",
+          "inputs": {
+            "DEGREES": [
+              1,
+              [
+                4,
+                "13"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b8": {
+          "opcode": "event_whenflagclicked",
+          "next": "b9",
+          "parent": null,
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": true,
+          "x": 20,
+          "y": 2420
+        },
+        "b9": {
+          "opcode": "control_repeat",
+          "next": "b11",
+          "parent": "b8",
+          "inputs": {
+            "TIMES": [
+              1,
+              [
+                4,
+                "30"
+              ]
+            ],
+            "SUBSTACK": [
+              2,
+              "b10"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b10": {
+          "opcode": "procedures_call",
+          "next": null,
+          "parent": "b9",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false,
+          "mutation": {
+            "tagName": "mutation",
+            "children": [],
+            "proccode": "spin",
+            "argumentids": "[]",
+            "warp": "true"
+          }
+        },
+        "b11": {
+          "opcode": "looks_say",
+          "next": null,
+          "parent": "b9",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "b12",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b12": {
+          "opcode": "operator_join",
+          "next": null,
+          "parent": "b11",
+          "inputs": {
+            "STRING1": [
+              3,
+              "b13",
+              [
+                10,
+                ""
+              ]
+            ],
+            "STRING2": [
+              3,
+              "b15",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b13": {
+          "opcode": "operator_round",
+          "next": null,
+          "parent": "b12",
+          "inputs": {
+            "NUM": [
+              3,
+              "b14",
+              [
+                4,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b14": {
+          "opcode": "motion_xposition",
+          "next": null,
+          "parent": "b13",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b15": {
+          "opcode": "operator_join",
+          "next": null,
+          "parent": "b12",
+          "inputs": {
+            "STRING1": [
+              1,
+              [
+                10,
+                " "
+              ]
+            ],
+            "STRING2": [
+              3,
+              "b16",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b16": {
+          "opcode": "operator_round",
+          "next": null,
+          "parent": "b15",
+          "inputs": {
+            "NUM": [
+              3,
+              "b17",
+              [
+                4,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "b17": {
+          "opcode": "motion_yposition",
+          "next": null,
+          "parent": "b16",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        }
+      },
+      "comments": {},
+      "currentCostume": 0,
+      "costumes": [
+        {
+          "name": "Cat",
+          "bitmapResolution": 1,
+          "dataFormat": "svg",
+          "assetId": "6ac3a6339b85092fa9b1694f2da7779d",
+          "md5ext": "6ac3a6339b85092fa9b1694f2da7779d.svg",
+          "rotationCenterX": 48,
+          "rotationCenterY": 50
+        }
+      ],
+      "sounds": [],
+      "volume": 100,
+      "layerOrder": 1,
+      "visible": true,
+      "x": 0,
+      "y": 0,
+      "size": 100,
+      "direction": 90,
+      "draggable": false,
+      "rotationStyle": "all around"
+    }
+  ],
+  "monitors": [],
+  "extensions": [],
+  "meta": {
+    "semver": "3.0.0",
+    "vm": "0.2.0",
+    "agent": "jScratch benchmark"
+  }
+}
