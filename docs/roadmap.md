@@ -60,6 +60,7 @@ Cloud variables behave as ordinary variables today, so their values are lost whe
 - [ ] **Faster compiles.** Cache the unpacked runtime JAR between compiles instead of re-zipping it every time.
 - [ ] **Load by project ID.** Paste a Scratch project link instead of downloading the `.sb3` first.
 - [ ] **Clearer output.** Show warnings next to the block that caused them and group the bytecode listing by sprite.
+- [ ] **Run projects in the page.** A preview that runs the compiled classes in the browser, to show that a project works without downloading the JAR. The page cannot load new JVM classes, so a small bytecode interpreter compiled with TeaVM would run them against a browser build of the runtime: a canvas in place of Java2D and Swing, the browser's own SVG rendering in place of JSVG, Web Audio in place of the sound decoders, and TeaVM threads in place of virtual threads. That means splitting the runtime into a shared core and a backend per platform first. See [Web playground](web-playground.md#running-projects-in-the-page).
 
 ## Distribution
 

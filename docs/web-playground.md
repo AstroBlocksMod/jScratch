@@ -32,6 +32,10 @@ It returns `{ ok: true, jar, listing, warnings, classes, targets }` or `{ ok: fa
 
 `BrowserProjectJson.kt` is the browser side of the `ProjectJson` interface: `JSON.parse` for plain JSON and `window.jscratchSb3.parseProject` for `project.json`, both through small `@JSBody` helpers that walk the resulting JavaScript objects into the compiler's tree.
 
-## What cannot work in the browser
+## Running projects in the page
 
-The compiled JAR cannot run in the page: there is no JVM there. Download it and run it with `java -jar`.
+The playground cannot run a compiled project yet. Download the JAR and run it with `java -jar`.
+
+There are two reasons it does not run in the page. TeaVM compiles ahead of time, so the page has no way to load the classes the compiler has just written. And the runtime depends on parts of the JDK that TeaVM does not provide: Swing and Java2D for the window and rendering, JSVG for vector costumes, Chicory for the sound decoders, and virtual threads for the scheduler.
+
+Both can be worked around, and a preview in the page is on the [roadmap](roadmap.md#playground). The generated code only uses a small set of JVM instructions and calls nothing but the runtime methods listed in `RT`, so a small bytecode interpreter compiled with TeaVM could run the exact classes the compiler produced. The runtime would be split into a shared core and two backends: the current one for the JVM, and one for the browser that draws to a canvas, lets the browser render SVG costumes and decodes sounds with Web Audio. Scripts would run on TeaVM's own threads. Because the bytecode is interpreted inside JavaScript, the preview would be slower than scratch-vm, so it is meant to show that a project works, not to replace running the JAR.
