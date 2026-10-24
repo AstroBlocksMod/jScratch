@@ -33,9 +33,11 @@ class Silhouette(private val image: BufferedImage) {
 
     /**
      * Linear test at image coordinates ([px], [py]): true when any of the four
-     * pixels a bilinear sample would read is opaque, as in scratch-render.
+     * pixels a bilinear sample would read is opaque, as in scratch-render. Points
+     * outside the image never hit.
      */
     fun isTouchingLinear(px: Double, py: Double): Boolean {
+        if (px < 0 || py < 0 || px >= width || py >= height) return false
         val x = Math.floor(px / width * (width - 1)).toInt()
         val y = Math.floor(py / height * (height - 1)).toInt()
         return opaque(x, y) || opaque(x + 1, y) || opaque(x, y + 1) || opaque(x + 1, y + 1)

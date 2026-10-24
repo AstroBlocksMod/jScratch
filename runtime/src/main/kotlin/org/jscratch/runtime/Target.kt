@@ -146,18 +146,54 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
     /**
      * Tight bounds: the box around the costume's opaque pixels, transformed by
      * position, rotation and size. Scratch uses these for the edge, bouncing and
-     * fencing. A fully transparent costume falls back to its whole image.
+     * fencing. Null when nothing is opaque, like scratch-render's empty bounds.
      */
-    fun bounds(): Bounds? {
-        val c = costume ?: return null
-        val img = c.image ?: return null
-        val at = renderTransform() ?: return null
-        var pts = c.silhouette?.hull ?: DoubleArray(0)
-        if (pts.isEmpty()) {
-            val w = img.width.toDouble()
-            val h = img.height.toDouble()
-            pts = doubleArrayOf(0.0, 0.0, w, 0.0, 0.0, h, w, h)
+    fun bounds(): Bounds? = placement().bounds
+
+    /** Bounds snapped outwards to whole pixels and clipped to the stage, as scratch-render queries them. */
+    internal fun touchingBounds(): Bounds? = placement().touchingBounds
+
+    /** Tests stage points against this target's costume pixels. Null when there is nothing to hit. */
+    internal fun probe(): Probe? = placement().probe
+
+    private var placement: Placement? = null
+
+    private fun placement(): Placement {
+        val p = placement
+        if (p != null && p.isCurrent()) return p
+        return Placement().also { placement = it }
+    }
+
+    /**
+     * Geometry for one position, direction, size, rotation style and costume image.
+     * Each part is computed on first use and kept until any of those change, so
+     * repeated `touching` checks against a sprite that has not moved cost nothing.
+     */
+    private inner class Placement {
+        private val costume = this@Target.costume
+        private val image = costume?.image
+        private val x = this@Target.x
+        private val y = this@Target.y
+        private val direction = this@Target.direction
+        private val size = this@Target.size
+        private val rotationStyle = this@Target.rotationStyle
+
+        fun isCurrent(): Boolean {
+            val c = this@Target.costume
+            return c === costume && c?.image === image && this@Target.x == x && this@Target.y == y &&
+                this@Target.direction == direction && this@Target.size == size &&
+                this@Target.rotationStyle == rotationStyle
         }
+
+        val bounds: Bounds? by lazy(LazyThreadSafetyMode.NONE) { computeBounds() }
+        val touchingBounds: Bounds? by lazy(LazyThreadSafetyMode.NONE) { computeTouchingBounds(bounds) }
+        val probe: Probe? by lazy(LazyThreadSafetyMode.NONE) { computeProbe() }
+    }
+
+    private fun computeBounds(): Bounds? {
+        val pts = costume?.silhouette?.hull ?: return null
+        if (pts.isEmpty()) return null
+        val at = renderTransform() ?: return null
         val n = pts.size / 2
         val out = DoubleArray(pts.size)
         at.transform(pts, 0, out, 0, n)
@@ -177,9 +213,8 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         return Bounds(minX - hw, maxX - hw, hh - minY, hh - maxY)
     }
 
-    /** Bounds snapped outwards to whole pixels and clipped to the stage, as scratch-render queries them. */
-    internal fun touchingBounds(): Bounds? {
-        val b = bounds() ?: return null
+    private fun computeTouchingBounds(b: Bounds?): Bounds? {
+        if (b == null) return null
         val hw = Runtime.STAGE_WIDTH / 2.0
         val hh = Runtime.STAGE_HEIGHT / 2.0
         val left = Math.floor(b.left).coerceIn(-hw, hw)
@@ -190,8 +225,7 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         return Bounds(left, right, top, bottom)
     }
 
-    /** Tests stage points against this target's costume pixels. Null when there is nothing to hit. */
-    internal fun probe(): Probe? {
+    private fun computeProbe(): Probe? {
         val c = costume ?: return null
         val sil = c.silhouette ?: return null
         val inverse =
@@ -207,30 +241,33 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         return Probe(inverse, sil, nearest)
     }
 
-    internal class Probe(
-        private val inverse: AffineTransform,
-        private val sil: Silhouette,
-        private val nearest: Boolean,
-    ) {
-        private val pt = DoubleArray(2)
+    internal class Probe(inverse: AffineTransform, private val sil: Silhouette, private val nearest: Boolean) {
+        private val m00 = inverse.scaleX
+        private val m01 = inverse.shearX
+        private val m02 = inverse.translateX
+        private val m10 = inverse.shearY
+        private val m11 = inverse.scaleY
+        private val m12 = inverse.translateY
 
         /** Whether the stage point ([x], [y]), in Scratch coordinates, lands on an opaque pixel. */
         fun hits(x: Double, y: Double): Boolean {
-            pt[0] = Runtime.STAGE_WIDTH / 2.0 + x
-            pt[1] = Runtime.STAGE_HEIGHT / 2.0 - y
-            inverse.transform(pt, 0, pt, 0, 1)
-            var px = pt[0]
-            var py = pt[1]
+            val sx = Runtime.STAGE_WIDTH / 2.0 + x
+            val sy = Runtime.STAGE_HEIGHT / 2.0 - y
+            var px = m00 * sx + m01 * sy + m02
+            var py = m10 * sx + m11 * sy + m12
             if (Math.abs(px) < sil.width * 1e-6) px = 0.0
             if (Math.abs(py) < sil.height * 1e-6) py = 0.0
             return if (nearest) sil.isTouchingNearest(px, py) else sil.isTouchingLinear(px, py)
         }
     }
 
-    /** Whether the stage point ([px], [py]) lands on one of this sprite's opaque pixels. */
-    fun touchingPoint(px: Double, py: Double): Boolean {
+    /**
+     * Whether the mouse at ([mx], [my]) is over one of this sprite's opaque pixels. Like
+     * scratch-render, it tests the whole stage pixel under the mouse, not the exact point.
+     */
+    fun touchingPoint(mx: Double, my: Double): Boolean {
         if (!visible) return false
-        return probe()?.hits(px, py) == true
+        return probe()?.hits(Math.floor(mx), Math.ceil(my)) == true
     }
 
     /**

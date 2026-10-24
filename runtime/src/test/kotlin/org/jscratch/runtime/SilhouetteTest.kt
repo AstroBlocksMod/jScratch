@@ -46,4 +46,25 @@ class SilhouetteTest {
         assertFalse(s.isTouchingNearest(-1.0, 4.0))
         assertFalse(s.isTouchingNearest(20.0, 4.0))
     }
+
+    @Test
+    fun linearReadsNeighborsButNothingOutsideTheImage() {
+        val s = Silhouette(square())
+        assertTrue(s.isTouchingLinear(3.0, 4.0))
+        // Just left of the square, where a bilinear sample would still blend in its first column.
+        assertTrue(s.isTouchingLinear(1.9, 4.0))
+        assertFalse(s.isTouchingLinear(0.5, 0.5))
+        assertFalse(s.isTouchingLinear(-0.5, 4.0))
+        assertFalse(s.isTouchingLinear(10.0, 4.0))
+    }
+
+    @Test
+    fun linearOnAOnePixelWideImageStaysInsideIt() {
+        val img = BufferedImage(1, 4, BufferedImage.TYPE_INT_ARGB)
+        for (y in 0 until 4) img.setRGB(0, y, Color.RED.rgb)
+        val s = Silhouette(img)
+        assertTrue(s.isTouchingLinear(0.5, 2.0))
+        assertFalse(s.isTouchingLinear(-30.0, 2.0))
+        assertFalse(s.isTouchingLinear(30.0, 2.0))
+    }
 }

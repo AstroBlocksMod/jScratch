@@ -22,38 +22,46 @@ class Costume(
     val bitmapResolution: Double,
 ) {
     var image: BufferedImage? = null
-        set(value) {
-            field = value
-            silhouette = value?.let { Silhouette(it) }
-        }
+        private set
 
     /** Opaque pixels of [image], for collision and tight bounds. */
     var silhouette: Silhouette? = null
         private set
     var imageRotationCenterX: Double = rotationCenterX
+        private set
     var imageRotationCenterY: Double = rotationCenterY
+        private set
     var imageResolution: Double = if (bitmapResolution > 0) bitmapResolution else 1.0
-
-    /** Reuses [other]'s silhouette so it is built once per image. */
-    fun shareSilhouette(other: Costume) {
-        silhouette = other.silhouette
-    }
-
+        private set
     private var radius: Double = -1.0
 
     /**
-     * Distance in costume units from the rotation center to the farthest opaque pixel
-     * corner (or image corner when nothing is opaque). No rotation moves a pixel further.
+     * Sets the loaded pixels and everything derived from them in one step, so the
+     * silhouette and [radius] always describe the current image.
+     */
+    fun setImage(img: BufferedImage, centerX: Double, centerY: Double, resolution: Double, sil: Silhouette) {
+        image = img
+        silhouette = sil
+        imageRotationCenterX = centerX
+        imageRotationCenterY = centerY
+        imageResolution = resolution
+        radius = -1.0
+    }
+
+    /** Takes the pixels of [other], an already loaded costume of the same resource, without copying them. */
+    fun shareImage(other: Costume) {
+        val img = other.image ?: return
+        val sil = other.silhouette ?: return
+        setImage(img, other.imageRotationCenterX, other.imageRotationCenterY, other.imageResolution, sil)
+    }
+
+    /**
+     * Distance in costume units from the rotation center to the farthest corner of an
+     * opaque pixel, or 0 when nothing is opaque. No rotation moves a pixel further.
      */
     fun radius(): Double {
         if (radius >= 0) return radius
-        val img = image ?: return 0.0
-        var pts = silhouette?.hull ?: DoubleArray(0)
-        if (pts.isEmpty()) {
-            val w = img.width.toDouble()
-            val h = img.height.toDouble()
-            pts = doubleArrayOf(0.0, 0.0, w, 0.0, 0.0, h, w, h)
-        }
+        val pts = silhouette?.hull ?: return 0.0
         var max = 0.0
         for (i in 0 until pts.size / 2) {
             max = Math.max(max, Math.hypot(pts[i * 2] - imageRotationCenterX, pts[i * 2 + 1] - imageRotationCenterY))
@@ -78,11 +86,7 @@ class Assets {
     fun load(costume: Costume) {
         val cached = cache[costume.resource]
         if (cached != null) {
-            costume.image = cached.image
-            costume.shareSilhouette(cached)
-            costume.imageRotationCenterX = cached.imageRotationCenterX
-            costume.imageRotationCenterY = cached.imageRotationCenterY
-            costume.imageResolution = cached.imageResolution
+            costume.shareImage(cached)
             return
         }
 
@@ -102,19 +106,18 @@ class Assets {
         cache[costume.resource] = costume
     }
 
+    private fun set(costume: Costume, img: BufferedImage, centerX: Double, centerY: Double, resolution: Double) {
+        costume.setImage(img, centerX, centerY, resolution, Silhouette(img))
+    }
+
     private fun blank(costume: Costume) {
-        costume.image = BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB)
-        costume.imageResolution = 1.0
-        costume.imageRotationCenterX = 0.0
-        costume.imageRotationCenterY = 0.0
+        set(costume, BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB), 0.0, 0.0, 1.0)
     }
 
     private fun loadBitmap(costume: Costume, bytes: ByteArray) {
         val img = ImageIO.read(ByteArrayInputStream(bytes)) ?: throw IllegalStateException("unreadable bitmap")
-        costume.image = toArgb(img)
-        costume.imageResolution = if (costume.bitmapResolution > 0) costume.bitmapResolution else 1.0
-        costume.imageRotationCenterX = costume.rotationCenterX
-        costume.imageRotationCenterY = costume.rotationCenterY
+        val resolution = if (costume.bitmapResolution > 0) costume.bitmapResolution else 1.0
+        set(costume, toArgb(img), costume.rotationCenterX, costume.rotationCenterY, resolution)
     }
 
     private fun loadSvg(costume: Costume, bytes: ByteArray) {
@@ -140,11 +143,10 @@ class Assets {
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
         doc.render(null, g, ViewBox(0f, 0f, (w * SVG_SCALE).toFloat(), (h * SVG_SCALE).toFloat()))
         g.dispose()
-        costume.image = img
-        costume.imageResolution = SVG_SCALE
         // Scratch rotation centers for vector costumes are relative to the viewBox origin.
-        costume.imageRotationCenterX = (costume.rotationCenterX - box[0]) * SVG_SCALE
-        costume.imageRotationCenterY = (costume.rotationCenterY - box[1]) * SVG_SCALE
+        val cx = (costume.rotationCenterX - box[0]) * SVG_SCALE
+        val cy = (costume.rotationCenterY - box[1]) * SVG_SCALE
+        set(costume, img, cx, cy, SVG_SCALE)
     }
 
     /** Returns [x, y, width, height] of the SVG's viewBox, falling back to width/height. */

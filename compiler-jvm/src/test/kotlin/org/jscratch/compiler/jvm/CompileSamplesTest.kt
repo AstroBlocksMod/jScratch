@@ -100,9 +100,10 @@ class CompileSamplesTest {
                 // vertical bar at size 50, then 100
                 "false",
                 "true",
-                // edge
+                // edge, then a costume with nothing opaque right next to it
                 "false",
                 "true",
+                "false",
                 // mouse
                 "false",
                 "true",
