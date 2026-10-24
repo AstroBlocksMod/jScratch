@@ -1,11 +1,27 @@
 name: Pages
 
 # Builds the docs and the playground into one site: the docs at the root of
-# jscratch.hermits.cc and the playground under /playground/.
+# jscratch.hermits.cc and the playground under /playground/. Runs only when a
+# file that goes into the site changes: the docs, or a module the playground is
+# built from.
 
 on:
   push:
     branches: [main]
+    paths:
+      - "docs/**"
+      - "zensical.toml"
+      - "web/**"
+      - "compiler/**"
+      - "sb3js/**"
+      - "runtime/**"
+      - "gradle/**"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "gradle.properties"
+      - "gradlew"
+      - "mise.toml"
+      - ".github/workflows/pages.yml"
   workflow_dispatch:
 
 permissions:

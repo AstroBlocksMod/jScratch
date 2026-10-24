@@ -13,7 +13,7 @@ jScratch compiles projects to JVM bytecode, and HotSpot turns the hot parts into
 
 The report goes to `benchmarks/build/reports/benchmarks/report.md` and is printed at the end. It uses the latest results of each engine, so after `benchmarkJScratch` it still shows the earlier TurboWarp and scratch-vm numbers next to the new jScratch ones. Node and both VMs are downloaded by the build, so nothing needs to be installed. A full run takes a few minutes, almost all of it spent in scratch-vm.
 
-The `Benchmarks` workflow runs the same command on every push to `main`. See [Continuous integration](development.md#continuous-integration).
+The `Benchmarks` workflow runs the same command on every push to `main` that could change the results. See [Continuous integration](development.md#continuous-integration).
 
 ## What is measured
 

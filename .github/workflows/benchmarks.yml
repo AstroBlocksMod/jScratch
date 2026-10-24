@@ -3,10 +3,24 @@ name: Benchmarks
 # Times the benchmark projects on jScratch, TurboWarp and scratch-vm and puts the
 # report on the run's summary page. Shared runners are noisy, so the timings are a
 # trend to watch, not a gate. The job only fails when jScratch gives a wrong result.
+# Runs only when the benchmarks or a module they compile and run with change.
 
 on:
   push:
     branches: [main]
+    paths:
+      - "benchmarks/**"
+      - "compiler/**"
+      - "compiler-jvm/**"
+      - "sb3js/**"
+      - "runtime/**"
+      - "gradle/**"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "gradle.properties"
+      - "gradlew"
+      - "mise.toml"
+      - ".github/workflows/benchmarks.yml"
   workflow_dispatch:
     inputs:
       runs:

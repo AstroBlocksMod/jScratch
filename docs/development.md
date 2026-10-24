@@ -32,9 +32,13 @@ The build uses the Gradle wrapper (Gradle 9), Kotlin 2.4, a JDK of version 21 or
 
 ## Continuous integration
 
-The `CI` workflow in `.github/workflows/ci.yml` runs on every pull request and every push to `main`. It installs the tools in `mise.toml` with `jdx/mise-action`, then runs `./gradlew build` on JDK 21 and JDK 25, so both the oldest supported JDK and the current one are covered, and it builds the docs with `zensical build --strict`. When a test fails, the HTML test reports are attached to the run as an artifact. CI never deploys anything; publishing the site is the `Pages` workflow's job (see [Deployment](web-playground.md#deployment)).
+Each workflow runs only when a file it depends on changes, so a docs-only change skips the Gradle build and a code change skips the docs check. Every workflow can also be started by hand from the Actions tab. When you add a module or a top-level file the build reads, add it to the `paths` list of the workflows that need it.
 
-The `Benchmarks` workflow in `.github/workflows/benchmarks.yml` runs `./gradlew :benchmarks:benchmark` on every push to `main` and on demand from the Actions tab, where the number of runs and the projects can be chosen. The report shows up on the run's summary page, and the raw results are attached as an artifact. Shared runners are noisy, so the job only fails when jScratch gives a wrong result, not when it gets slower.
+The `CI` workflow in `.github/workflows/ci.yml` runs on pull requests and pushes to `main` that touch a module, the Gradle setup, `.editorconfig` or `mise.toml`. It installs the tools in `mise.toml` with `jdx/mise-action`, then runs `./gradlew build` on JDK 21 and JDK 25, so both the oldest supported JDK and the current one are covered. When a test fails, the HTML test reports are attached to the run as an artifact. CI never deploys anything; publishing the site is the `Pages` workflow's job (see [Deployment](web-playground.md#deployment)).
+
+The `Docs` workflow in `.github/workflows/docs.yml` runs on pull requests and pushes to `main` that touch `docs/` or `zensical.toml`, and builds the docs with `zensical build --strict`.
+
+The `Benchmarks` workflow in `.github/workflows/benchmarks.yml` runs `./gradlew :benchmarks:benchmark` on pushes to `main` that touch the benchmarks, a module they compile or run with (`runtime`, `sb3js`, `compiler`, `compiler-jvm`) or the Gradle setup, and on demand from the Actions tab, where the number of runs and the projects can be chosen. The report shows up on the run's summary page, and the raw results are attached as an artifact. Shared runners are noisy, so the job only fails when jScratch gives a wrong result, not when it gets slower.
 
 ## Tests
 
@@ -77,6 +81,6 @@ zensical serve             # live preview
 zensical build             # static site in site/
 ```
 
-Pushes to `main` publish the docs and the playground to [jscratch.hermits.cc](https://jscratch.hermits.cc/) through the `Pages` workflow. The workflow builds the docs with `zensical build --strict`, so fix any warnings before pushing. See [Deployment](web-playground.md#deployment).
+Pushes to `main` that change the docs or the playground publish them to [jscratch.hermits.cc](https://jscratch.hermits.cc/) through the `Pages` workflow. The workflow builds the docs with `zensical build --strict`, so fix any warnings before pushing. See [Deployment](web-playground.md#deployment).
 
 Diagrams are written as Mermaid code blocks. Keep the docs in step with the code: when a block, option or module changes, update the matching page in the same change.

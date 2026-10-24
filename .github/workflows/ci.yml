@@ -1,12 +1,31 @@
 name: CI
 
-# Lints, tests and assembles everything, and checks that the docs build.
-# Deploying is the Pages workflow's job.
+# Lints, tests and assembles everything. Runs only when a file the Gradle build
+# reads changes. The Docs workflow checks the docs, and deploying is the Pages
+# workflow's job.
 
 on:
   push:
     branches: [main]
+    paths: &paths
+      - "runtime/**"
+      - "sb3js/**"
+      - "compiler/**"
+      - "compiler-jvm/**"
+      - "cli/**"
+      - "web/**"
+      - "samples/**"
+      - "benchmarks/**"
+      - "gradle/**"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "gradle.properties"
+      - "gradlew"
+      - ".editorconfig"
+      - "mise.toml"
+      - ".github/workflows/ci.yml"
   pull_request:
+    paths: *paths
   workflow_dispatch:
 
 permissions:
@@ -15,9 +34,6 @@ permissions:
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
-
-env:
-  ZENSICAL_VERSION: "0.0.72"
 
 jobs:
   build:
@@ -52,13 +68,3 @@ jobs:
           path: "**/build/reports/tests/"
           if-no-files-found: ignore
 
-  docs:
-    name: Docs
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: astral-sh/setup-uv@v10.3.2
-
-      - name: Build docs
-        run: uvx "zensical==${ZENSICAL_VERSION}" build --strict

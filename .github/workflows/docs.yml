@@ -1,0 +1,37 @@
+name: Docs
+
+# Checks that the docs build without warnings. Runs only when the docs change.
+# Deploying is the Pages workflow's job.
+
+on:
+  push:
+    branches: [main]
+    paths: &paths
+      - "docs/**"
+      - "zensical.toml"
+      - ".github/workflows/docs.yml"
+  pull_request:
+    paths: *paths
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ZENSICAL_VERSION: "0.0.72"
+
+jobs:
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.3.2
+
+      - name: Build docs
+        run: uvx "zensical==${ZENSICAL_VERSION}" build --strict
