@@ -18,7 +18,7 @@ java -jar my-game.jar
 
 ## Status
 
-jScratch is an MVP. It compiles and runs typical projects from the Scratch website, but some blocks are still missing and rendering uses bounding boxes for collision. [Supported blocks](blocks.md) lists exactly what works today, and the [Roadmap](roadmap.md) lists what comes next.
+jScratch is an MVP. It compiles and runs typical projects from the Scratch website, but some blocks are still missing. [Supported blocks](blocks.md) lists exactly what works today, and the [Roadmap](roadmap.md) lists what comes next.
 
 ## Where to go next
 

@@ -77,6 +77,39 @@ class CompileSamplesTest {
         assertEquals(listOf("Speaker says: 5", "Speaker says: 9"), out.lines().filter { it.startsWith("Speaker ") })
     }
 
+    /**
+     * Pixel-accurate collision. In every case the bounding boxes overlap (or cross the edge, or
+     * cover the mouse), so only the costume pixels, rotation and size decide the answer.
+     */
+    @Test
+    fun compilesAndRunsCollisionProject() {
+        val result = JScratch.compile(File(samplesDir, "collision.sb3").readBytes(), runtimeJar.readBytes(), json)
+        assertEquals(emptyList(), result.warnings, "unexpected warnings")
+
+        val out = runHeadless(result.jar, frames = 10)
+        val expected =
+            listOf(
+                // circle against circle
+                "false",
+                "true",
+                // rotated bar: vertical, horizontal, diagonal away, diagonal through
+                "false",
+                "true",
+                "false",
+                "true",
+                // vertical bar at size 50, then 100
+                "false",
+                "true",
+                // edge
+                "false",
+                "true",
+                // mouse
+                "false",
+                "true",
+            ).map { "Probe says: $it" }
+        assertEquals(expected, out.lines().filter { it.startsWith("Probe ") })
+    }
+
     private fun runHeadless(jar: ByteArray, frames: Int): String {
         val tmp = Files.createTempFile("jscratch-test", ".jar").toFile()
         try {

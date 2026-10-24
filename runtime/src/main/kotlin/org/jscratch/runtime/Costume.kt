@@ -22,9 +22,45 @@ class Costume(
     val bitmapResolution: Double,
 ) {
     var image: BufferedImage? = null
+        set(value) {
+            field = value
+            silhouette = value?.let { Silhouette(it) }
+        }
+
+    /** Opaque pixels of [image], for collision and tight bounds. */
+    var silhouette: Silhouette? = null
+        private set
     var imageRotationCenterX: Double = rotationCenterX
     var imageRotationCenterY: Double = rotationCenterY
     var imageResolution: Double = if (bitmapResolution > 0) bitmapResolution else 1.0
+
+    /** Reuses [other]'s silhouette so it is built once per image. */
+    fun shareSilhouette(other: Costume) {
+        silhouette = other.silhouette
+    }
+
+    private var radius: Double = -1.0
+
+    /**
+     * Distance in costume units from the rotation center to the farthest opaque pixel
+     * corner (or image corner when nothing is opaque). No rotation moves a pixel further.
+     */
+    fun radius(): Double {
+        if (radius >= 0) return radius
+        val img = image ?: return 0.0
+        var pts = silhouette?.hull ?: DoubleArray(0)
+        if (pts.isEmpty()) {
+            val w = img.width.toDouble()
+            val h = img.height.toDouble()
+            pts = doubleArrayOf(0.0, 0.0, w, 0.0, 0.0, h, w, h)
+        }
+        var max = 0.0
+        for (i in 0 until pts.size / 2) {
+            max = Math.max(max, Math.hypot(pts[i * 2] - imageRotationCenterX, pts[i * 2 + 1] - imageRotationCenterY))
+        }
+        radius = max / imageResolution
+        return radius
+    }
 
     val isSvg: Boolean get() = resource.endsWith(".svg", ignoreCase = true)
 
@@ -43,6 +79,7 @@ class Assets {
         val cached = cache[costume.resource]
         if (cached != null) {
             costume.image = cached.image
+            costume.shareSilhouette(cached)
             costume.imageRotationCenterX = cached.imageRotationCenterX
             costume.imageRotationCenterY = cached.imageRotationCenterY
             costume.imageResolution = cached.imageResolution
