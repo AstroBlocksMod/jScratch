@@ -65,6 +65,8 @@ Always update the docs if necessary when changing or adding code. If the docs al
 
 The docs are a Zensical site: `zensical.toml` at the root, pages in `docs/`. `zensical build` validates the config and writes `site/` (ignored by git). Pages: `index.md`, `getting-started.md`, `blocks.md` (supported blocks, keep in step with `TargetCompiler`), `web-playground.md`, `architecture.md`, `development.md`, `benchmarks.md` (method and latest results), `roadmap.md`.
 
+When a roadmap item is finished, check it off (`- [x]`) where it is. DO NOT move it into an earlier section like "Done: the MVP". The roadmap shows how each goal is progressing, so finished items stay with the section they belong to.
+
 ## Diagrams as Mermaid, not ASCII art
 
 Never draw a flow, pipeline or architecture picture out of characters in a code block. Make a Mermaid diagram instead, which Zensical integrates with.
