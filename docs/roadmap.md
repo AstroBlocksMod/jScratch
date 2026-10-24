@@ -12,13 +12,13 @@ This page lists what is planned for jScratch, roughly in the order it will happe
 - [x] WAV playback
 - [x] MP3 and ADPCM WAV sounds, decoded by dr_mp3 and dr_wav compiled to JVM bytecode
 - [x] Headless mode and screenshots for automated tests
+- [x] Pixel-accurate collision from costume alpha masks, honoring rotation and size
 - [x] TeaVM playground and the documentation site on GitHub Pages
 
 ## Next: close the compatibility gaps
 
 These are the gaps most likely to break a project downloaded from the Scratch website, so they come first.
 
-- [ ] **Pixel-accurate collision.** Replace bounding boxes in `touching` with costume alpha masks, honoring rotation and size.
 - [ ] **Color sensing.** `touching color` and `color is touching color`, built on the same masks plus a read of the rendered stage.
 - [ ] **Graphic effects.** Color, brightness, fisheye, whirl, pixelate and mosaic, applied per sprite in the renderer the way scratch-render does.
 - [ ] **Monitors.** Draw variable and list monitors, and make the show and hide blocks control them.

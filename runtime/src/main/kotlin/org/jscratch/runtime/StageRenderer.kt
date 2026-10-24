@@ -33,7 +33,9 @@ object StageRenderer {
             if (!s.visible) continue
             val img = s.costume?.image ?: continue
             val at = s.renderTransform() ?: continue
-            items.add(DrawItem(img, at, (1.0 - s.ghost / 100.0).toFloat(), s.sayText, s.sayIsThink, s.bounds()))
+            // Bounds only place the say bubble. A costume with no opaque pixels anchors it at the sprite.
+            val bounds = if (s.sayText.isEmpty()) null else s.bounds() ?: Bounds(s.x, s.x, s.y, s.y)
+            items.add(DrawItem(img, at, (1.0 - s.ghost / 100.0).toFloat(), s.sayText, s.sayIsThink, bounds))
         }
 
         val stage = rt.stage

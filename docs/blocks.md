@@ -8,7 +8,7 @@ The compiler handles the blocks below. Anything else compiles to a no-op with a 
 | --- | --- |
 | when green flag clicked | Also runs on launch. |
 | when key pressed | Fires on key down, repeats with the OS key repeat. "any" works. |
-| when this sprite clicked, when stage clicked | Hit test uses the sprite's bounding box. |
+| when this sprite clicked, when stage clicked | A click hits the topmost sprite with an opaque pixel under the mouse. Sprites with a ghost effect of 100 do not catch clicks. |
 | when I receive | Case-insensitive match like Scratch. |
 | when backdrop switches to | Fires on every switch, even to the same backdrop. |
 | when I start as a clone | |
@@ -41,6 +41,8 @@ wait, repeat, forever, if, if else, wait until, repeat until, while, stop (all, 
 
 touching (mouse, edge, sprite), distance to, ask and wait with answer, key pressed, mouse down, mouse x and y, timer, reset timer, "of" (sprite and stage properties and variables), current date and time, days since 2000.
 
+Touching a sprite or the mouse is pixel-accurate: it compares the opaque pixels of the costumes as they are drawn, with rotation and size applied, the way scratch-render does. The mouse counts as the whole stage pixel under it. Ghost does not change what a sprite touches. Touching the edge, if on edge bounce and fencing use tight bounds, the box around the costume's opaque pixels, so transparent padding in a costume does not count. A costume with no opaque pixels at all touches nothing, not even the edge, and is not fenced.
+
 Not supported: touching color, color is touching color (always false), loudness (reports -1), username (reports an empty string), video sensing, drag mode (ignored).
 
 ## Operators
@@ -61,7 +63,6 @@ Music, Text to Speech, Translate, Video Sensing, Makey Makey and hardware extens
 
 ## Known limitations
 
-- Collision detection uses axis-aligned bounding boxes, not pixels.
 - Variable monitors and list monitors are not drawn.
 - A single script longer than the JVM's 64 KiB method limit will fail to compile. Very large lists are stored as resources, so they are fine.
 - Turbo mode and custom frame rates are not available.

@@ -11,8 +11,6 @@ class Bounds(val left: Double, val right: Double, val top: Double, val bottom: D
     val width: Double get() = right - left
     val height: Double get() = top - bottom
 
-    fun contains(x: Double, y: Double): Boolean = x >= left && x <= right && y <= top && y >= bottom
-
     fun intersects(o: Bounds): Boolean = left <= o.right && right >= o.left && bottom <= o.top && top >= o.bottom
 }
 
@@ -145,36 +143,169 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         return at
     }
 
-    fun bounds(): Bounds? {
-        val c = costume ?: return null
-        val img = c.image ?: return null
+    /**
+     * Tight bounds: the box around the costume's opaque pixels, transformed by
+     * position, rotation and size. Scratch uses these for the edge, bouncing and
+     * fencing. Null when nothing is opaque, like scratch-render's empty bounds.
+     */
+    fun bounds(): Bounds? = placement().bounds
+
+    /** Bounds snapped outwards to whole pixels and clipped to the stage, as scratch-render queries them. */
+    internal fun touchingBounds(): Bounds? = placement().touchingBounds
+
+    /** Tests stage points against this target's costume pixels. Null when there is nothing to hit. */
+    internal fun probe(): Probe? = placement().probe
+
+    private var placement: Placement? = null
+
+    private fun placement(): Placement {
+        val p = placement
+        if (p != null && p.isCurrent()) return p
+        return Placement().also { placement = it }
+    }
+
+    /**
+     * Geometry for one position, direction, size, rotation style and costume image.
+     * Each part is computed on first use and kept until any of those change, so
+     * repeated `touching` checks against a sprite that has not moved cost nothing.
+     */
+    private inner class Placement {
+        private val costume = this@Target.costume
+        private val image = costume?.image
+        private val x = this@Target.x
+        private val y = this@Target.y
+        private val direction = this@Target.direction
+        private val size = this@Target.size
+        private val rotationStyle = this@Target.rotationStyle
+
+        fun isCurrent(): Boolean {
+            val c = this@Target.costume
+            return c === costume && c?.image === image && this@Target.x == x && this@Target.y == y &&
+                this@Target.direction == direction && this@Target.size == size &&
+                this@Target.rotationStyle == rotationStyle
+        }
+
+        val bounds: Bounds? by lazy(LazyThreadSafetyMode.NONE) { computeBounds() }
+        val touchingBounds: Bounds? by lazy(LazyThreadSafetyMode.NONE) { computeTouchingBounds(bounds) }
+        val probe: Probe? by lazy(LazyThreadSafetyMode.NONE) { computeProbe() }
+    }
+
+    private fun computeBounds(): Bounds? {
+        val pts = costume?.silhouette?.hull ?: return null
+        if (pts.isEmpty()) return null
         val at = renderTransform() ?: return null
-        val pts =
-            doubleArrayOf(
-                0.0,
-                0.0,
-                img.width.toDouble(),
-                0.0,
-                0.0,
-                img.height.toDouble(),
-                img.width.toDouble(),
-                img.height.toDouble(),
-            )
-        at.transform(pts, 0, pts, 0, 4)
+        val n = pts.size / 2
+        val out = DoubleArray(pts.size)
+        at.transform(pts, 0, out, 0, n)
         var minX = Double.POSITIVE_INFINITY
         var maxX = Double.NEGATIVE_INFINITY
         var minY = Double.POSITIVE_INFINITY
         var maxY = Double.NEGATIVE_INFINITY
-        for (i in 0 until 4) {
-            minX = Math.min(minX, pts[i * 2])
-            maxX = Math.max(maxX, pts[i * 2])
-            minY = Math.min(minY, pts[i * 2 + 1])
-            maxY = Math.max(maxY, pts[i * 2 + 1])
+        for (i in 0 until n) {
+            minX = Math.min(minX, out[i * 2])
+            maxX = Math.max(maxX, out[i * 2])
+            minY = Math.min(minY, out[i * 2 + 1])
+            maxY = Math.max(maxY, out[i * 2 + 1])
         }
 
         val hw = Runtime.STAGE_WIDTH / 2.0
         val hh = Runtime.STAGE_HEIGHT / 2.0
         return Bounds(minX - hw, maxX - hw, hh - minY, hh - maxY)
+    }
+
+    private fun computeTouchingBounds(b: Bounds?): Bounds? {
+        if (b == null) return null
+        val hw = Runtime.STAGE_WIDTH / 2.0
+        val hh = Runtime.STAGE_HEIGHT / 2.0
+        val left = Math.floor(b.left).coerceIn(-hw, hw)
+        val right = Math.ceil(b.right).coerceIn(-hw, hw)
+        val bottom = Math.floor(b.bottom).coerceIn(-hh, hh)
+        val top = Math.ceil(b.top).coerceIn(-hh, hh)
+        if (right <= left || top <= bottom) return null
+        return Bounds(left, right, top, bottom)
+    }
+
+    private fun computeProbe(): Probe? {
+        val c = costume ?: return null
+        val sil = c.silhouette ?: return null
+        val inverse =
+            try {
+                renderTransform()?.createInverse() ?: return null
+            } catch (e: java.awt.geom.NoninvertibleTransformException) {
+                return null
+            }
+        // scratch-render samples bitmaps by nearest neighbor, and vectors only when they are
+        // drawn upright at their own size.
+        val drawnDirection = if (rotationStyle == RotationStyle.ALL_AROUND) direction else 90.0
+        val nearest = !c.isSvg || (drawnDirection % 90.0 == 0.0 && size > 99 && size < 101)
+        return Probe(inverse, sil, nearest)
+    }
+
+    internal class Probe(inverse: AffineTransform, private val sil: Silhouette, private val nearest: Boolean) {
+        private val m00 = inverse.scaleX
+        private val m01 = inverse.shearX
+        private val m02 = inverse.translateX
+        private val m10 = inverse.shearY
+        private val m11 = inverse.scaleY
+        private val m12 = inverse.translateY
+
+        /** Whether the stage point ([x], [y]), in Scratch coordinates, lands on an opaque pixel. */
+        fun hits(x: Double, y: Double): Boolean {
+            val sx = Runtime.STAGE_WIDTH / 2.0 + x
+            val sy = Runtime.STAGE_HEIGHT / 2.0 - y
+            var px = m00 * sx + m01 * sy + m02
+            var py = m10 * sx + m11 * sy + m12
+            if (Math.abs(px) < sil.width * 1e-6) px = 0.0
+            if (Math.abs(py) < sil.height * 1e-6) py = 0.0
+            return if (nearest) sil.isTouchingNearest(px, py) else sil.isTouchingLinear(px, py)
+        }
+    }
+
+    /**
+     * Whether the mouse at ([mx], [my]) is over one of this sprite's opaque pixels. Like
+     * scratch-render, it tests the whole stage pixel under the mouse, not the exact point.
+     */
+    fun touchingPoint(mx: Double, my: Double): Boolean {
+        if (!visible) return false
+        return probe()?.hits(Math.floor(mx), Math.ceil(my)) == true
+    }
+
+    /**
+     * Pixel-accurate collision with every visible sprite or clone called [spriteName], except this
+     * one. Like scratch-render, it walks the whole pixels where the bounds overlap and stops at the
+     * first one that is opaque in both costumes. Parts outside the stage never collide.
+     */
+    private fun touchingSprite(spriteName: String): Boolean {
+        val mine = touchingBounds() ?: return false
+        val myProbe = probe() ?: return false
+        val probes = ArrayList<Probe>()
+        var left = Double.POSITIVE_INFINITY
+        var right = Double.NEGATIVE_INFINITY
+        var bottom = Double.POSITIVE_INFINITY
+        var top = Double.NEGATIVE_INFINITY
+        for (other in rt.sprites) {
+            if (other === this || other.name != spriteName || !other.visible) continue
+            val ob = other.touchingBounds() ?: continue
+            if (!ob.intersects(mine)) continue
+            probes.add(other.probe() ?: continue)
+            left = Math.min(left, Math.max(mine.left, ob.left))
+            right = Math.max(right, Math.min(mine.right, ob.right))
+            bottom = Math.min(bottom, Math.max(mine.bottom, ob.bottom))
+            top = Math.max(top, Math.min(mine.top, ob.top))
+        }
+        if (probes.isEmpty()) return false
+        var px = left
+        while (px <= right) {
+            var py = bottom
+            while (py <= top) {
+                if (myProbe.hits(px, py)) {
+                    for (p in probes) if (p.hits(px, py)) return true
+                }
+                py++
+            }
+            px++
+        }
+        return false
     }
 
     // ---- control / threads ----------------------------------------------------------------------
@@ -235,6 +366,12 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
 
     /** Keeps at least a sliver of the sprite on stage, like scratch-render's fencing. */
     private fun fence(nx: Double, ny: Double): DoubleArray {
+        // Far from the edges no part of the costume can leave the fence, so skip the exact bounds.
+        val r = (costume?.radius() ?: 0.0) * size / 100.0
+        val clear =
+            Math.abs(nx) + r <= Runtime.STAGE_WIDTH / 2.0 - FENCE_WIDTH &&
+                Math.abs(ny) + r <= Runtime.STAGE_HEIGHT / 2.0 - FENCE_WIDTH
+        if (clear) return doubleArrayOf(nx, ny)
         val b = bounds() ?: return doubleArrayOf(nx, ny)
         var rx = nx
         var ry = ny
@@ -558,18 +695,14 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
 
     fun touching(option: Any?): Boolean {
         if (!visible) return false
-        val b = bounds() ?: return false
         return when (val s = Cast.toString(option)) {
-            "_mouse_" -> b.contains(rt.mouseX, rt.mouseY)
+            "_mouse_" -> touchingPoint(rt.mouseX, rt.mouseY)
             "_edge_" -> {
+                val b = bounds() ?: return false
                 b.left < -Runtime.STAGE_WIDTH / 2.0 || b.right > Runtime.STAGE_WIDTH / 2.0 ||
                     b.top > Runtime.STAGE_HEIGHT / 2.0 || b.bottom < -Runtime.STAGE_HEIGHT / 2.0
             }
-            else -> {
-                rt.sprites.any { other ->
-                    other !== this && other.name == s && other.visible && other.bounds()?.intersects(b) == true
-                }
-            }
+            else -> touchingSprite(s)
         }
     }
 

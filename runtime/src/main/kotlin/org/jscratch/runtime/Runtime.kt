@@ -169,7 +169,7 @@ class Runtime {
                 is Event.StopAll -> stopAllInternal()
                 is Event.KeyDown -> startHats(HAT_KEY, e.key, null)
                 is Event.Click -> {
-                    val hit = sprites.asReversed().firstOrNull { it.visible && it.bounds()?.contains(e.x, e.y) == true }
+                    val hit = sprites.asReversed().firstOrNull { it.ghost < 100.0 && it.touchingPoint(e.x, e.y) }
                     if (hit != null) startHats(HAT_CLICKED, "", hit) else startHats(HAT_CLICKED, "", stage)
                 }
             }

@@ -1,0 +1,1217 @@
+{
+  "targets": [
+    {
+      "isStage": true,
+      "name": "Stage",
+      "variables": {},
+      "lists": {},
+      "broadcasts": {},
+      "blocks": {},
+      "comments": {},
+      "currentCostume": 0,
+      "costumes": [
+        {
+          "name": "Blue Sky",
+          "bitmapResolution": 1,
+          "dataFormat": "svg",
+          "assetId": "e7c147730f19d284bcd7b3f00af19bb6",
+          "md5ext": "e7c147730f19d284bcd7b3f00af19bb6.svg",
+          "rotationCenterX": 240,
+          "rotationCenterY": 180
+        }
+      ],
+      "sounds": [],
+      "volume": 100,
+      "layerOrder": 0,
+      "tempo": 60,
+      "videoTransparency": 50,
+      "videoState": "on",
+      "textToSpeechLanguage": null
+    },
+    {
+      "isStage": false,
+      "name": "Target",
+      "variables": {},
+      "lists": {},
+      "broadcasts": {},
+      "blocks": {},
+      "comments": {},
+      "currentCostume": 0,
+      "costumes": [
+        {
+          "name": "ball",
+          "bitmapResolution": 1,
+          "dataFormat": "svg",
+          "assetId": "9b4d1f54db5cd5a833e83be2f184ff65",
+          "md5ext": "9b4d1f54db5cd5a833e83be2f184ff65.svg",
+          "rotationCenterX": 100,
+          "rotationCenterY": 100
+        }
+      ],
+      "sounds": [],
+      "volume": 100,
+      "layerOrder": 1,
+      "visible": true,
+      "x": 0,
+      "y": 0,
+      "size": 100,
+      "direction": 90,
+      "draggable": false,
+      "rotationStyle": "all around"
+    },
+    {
+      "isStage": false,
+      "name": "Probe",
+      "variables": {},
+      "lists": {},
+      "broadcasts": {},
+      "blocks": {
+        "hat": {
+          "opcode": "event_whenflagclicked",
+          "next": "s1",
+          "parent": null,
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": true,
+          "x": 20,
+          "y": 20
+        },
+        "s1": {
+          "opcode": "motion_gotoxy",
+          "next": "s2",
+          "parent": "hat",
+          "inputs": {
+            "X": [
+              1,
+              [
+                4,
+                "80"
+              ]
+            ],
+            "Y": [
+              1,
+              [
+                4,
+                "80"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t3": {
+          "opcode": "sensing_touchingobject",
+          "next": null,
+          "parent": "s2",
+          "inputs": {
+            "TOUCHINGOBJECTMENU": [
+              1,
+              "m4"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "m4": {
+          "opcode": "sensing_touchingobjectmenu",
+          "next": null,
+          "parent": "t3",
+          "inputs": {},
+          "fields": {
+            "TOUCHINGOBJECTMENU": [
+              "Target",
+              null
+            ]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "s2": {
+          "opcode": "looks_say",
+          "next": "s5",
+          "parent": "s1",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "t3",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s5": {
+          "opcode": "motion_gotoxy",
+          "next": "s6",
+          "parent": "s2",
+          "inputs": {
+            "X": [
+              1,
+              [
+                4,
+                "60"
+              ]
+            ],
+            "Y": [
+              1,
+              [
+                4,
+                "0"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t7": {
+          "opcode": "sensing_touchingobject",
+          "next": null,
+          "parent": "s6",
+          "inputs": {
+            "TOUCHINGOBJECTMENU": [
+              1,
+              "m8"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "m8": {
+          "opcode": "sensing_touchingobjectmenu",
+          "next": null,
+          "parent": "t7",
+          "inputs": {},
+          "fields": {
+            "TOUCHINGOBJECTMENU": [
+              "Target",
+              null
+            ]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "s6": {
+          "opcode": "looks_say",
+          "next": "s9",
+          "parent": "s5",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "t7",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "m10": {
+          "opcode": "looks_costume",
+          "next": null,
+          "parent": "s9",
+          "inputs": {},
+          "fields": {
+            "COSTUME": [
+              "bar",
+              null
+            ]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "s9": {
+          "opcode": "looks_switchcostumeto",
+          "next": "s11",
+          "parent": "s6",
+          "inputs": {
+            "COSTUME": [
+              1,
+              "m10"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s11": {
+          "opcode": "motion_gotoxy",
+          "next": "s12",
+          "parent": "s9",
+          "inputs": {
+            "X": [
+              1,
+              [
+                4,
+                "100"
+              ]
+            ],
+            "Y": [
+              1,
+              [
+                4,
+                "0"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s12": {
+          "opcode": "motion_pointindirection",
+          "next": "s13",
+          "parent": "s11",
+          "inputs": {
+            "DIRECTION": [
+              1,
+              [
+                8,
+                "0"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t14": {
+          "opcode": "sensing_touchingobject",
+          "next": null,
+          "parent": "s13",
+          "inputs": {
+            "TOUCHINGOBJECTMENU": [
+              1,
+              "m15"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "m15": {
+          "opcode": "sensing_touchingobjectmenu",
+          "next": null,
+          "parent": "t14",
+          "inputs": {},
+          "fields": {
+            "TOUCHINGOBJECTMENU": [
+              "Target",
+              null
+            ]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "s13": {
+          "opcode": "looks_say",
+          "next": "s16",
+          "parent": "s12",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "t14",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s16": {
+          "opcode": "motion_pointindirection",
+          "next": "s17",
+          "parent": "s13",
+          "inputs": {
+            "DIRECTION": [
+              1,
+              [
+                8,
+                "90"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t18": {
+          "opcode": "sensing_touchingobject",
+          "next": null,
+          "parent": "s17",
+          "inputs": {
+            "TOUCHINGOBJECTMENU": [
+              1,
+              "m19"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "m19": {
+          "opcode": "sensing_touchingobjectmenu",
+          "next": null,
+          "parent": "t18",
+          "inputs": {},
+          "fields": {
+            "TOUCHINGOBJECTMENU": [
+              "Target",
+              null
+            ]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "s17": {
+          "opcode": "looks_say",
+          "next": "s20",
+          "parent": "s16",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "t18",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s20": {
+          "opcode": "motion_gotoxy",
+          "next": "s21",
+          "parent": "s17",
+          "inputs": {
+            "X": [
+              1,
+              [
+                4,
+                "80"
+              ]
+            ],
+            "Y": [
+              1,
+              [
+                4,
+                "80"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s21": {
+          "opcode": "motion_pointindirection",
+          "next": "s22",
+          "parent": "s20",
+          "inputs": {
+            "DIRECTION": [
+              1,
+              [
+                8,
+                "-45"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t23": {
+          "opcode": "sensing_touchingobject",
+          "next": null,
+          "parent": "s22",
+          "inputs": {
+            "TOUCHINGOBJECTMENU": [
+              1,
+              "m24"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "m24": {
+          "opcode": "sensing_touchingobjectmenu",
+          "next": null,
+          "parent": "t23",
+          "inputs": {},
+          "fields": {
+            "TOUCHINGOBJECTMENU": [
+              "Target",
+              null
+            ]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "s22": {
+          "opcode": "looks_say",
+          "next": "s25",
+          "parent": "s21",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "t23",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s25": {
+          "opcode": "motion_pointindirection",
+          "next": "s26",
+          "parent": "s22",
+          "inputs": {
+            "DIRECTION": [
+              1,
+              [
+                8,
+                "45"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t27": {
+          "opcode": "sensing_touchingobject",
+          "next": null,
+          "parent": "s26",
+          "inputs": {
+            "TOUCHINGOBJECTMENU": [
+              1,
+              "m28"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "m28": {
+          "opcode": "sensing_touchingobjectmenu",
+          "next": null,
+          "parent": "t27",
+          "inputs": {},
+          "fields": {
+            "TOUCHINGOBJECTMENU": [
+              "Target",
+              null
+            ]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "s26": {
+          "opcode": "looks_say",
+          "next": "s29",
+          "parent": "s25",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "t27",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s29": {
+          "opcode": "motion_gotoxy",
+          "next": "s30",
+          "parent": "s26",
+          "inputs": {
+            "X": [
+              1,
+              [
+                4,
+                "0"
+              ]
+            ],
+            "Y": [
+              1,
+              [
+                4,
+                "110"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s30": {
+          "opcode": "motion_pointindirection",
+          "next": "s31",
+          "parent": "s29",
+          "inputs": {
+            "DIRECTION": [
+              1,
+              [
+                8,
+                "0"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s31": {
+          "opcode": "looks_setsizeto",
+          "next": "s32",
+          "parent": "s30",
+          "inputs": {
+            "SIZE": [
+              1,
+              [
+                4,
+                "50"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t33": {
+          "opcode": "sensing_touchingobject",
+          "next": null,
+          "parent": "s32",
+          "inputs": {
+            "TOUCHINGOBJECTMENU": [
+              1,
+              "m34"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "m34": {
+          "opcode": "sensing_touchingobjectmenu",
+          "next": null,
+          "parent": "t33",
+          "inputs": {},
+          "fields": {
+            "TOUCHINGOBJECTMENU": [
+              "Target",
+              null
+            ]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "s32": {
+          "opcode": "looks_say",
+          "next": "s35",
+          "parent": "s31",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "t33",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s35": {
+          "opcode": "looks_setsizeto",
+          "next": "s36",
+          "parent": "s32",
+          "inputs": {
+            "SIZE": [
+              1,
+              [
+                4,
+                "100"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t37": {
+          "opcode": "sensing_touchingobject",
+          "next": null,
+          "parent": "s36",
+          "inputs": {
+            "TOUCHINGOBJECTMENU": [
+              1,
+              "m38"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "m38": {
+          "opcode": "sensing_touchingobjectmenu",
+          "next": null,
+          "parent": "t37",
+          "inputs": {},
+          "fields": {
+            "TOUCHINGOBJECTMENU": [
+              "Target",
+              null
+            ]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "s36": {
+          "opcode": "looks_say",
+          "next": "s39",
+          "parent": "s35",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "t37",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "m40": {
+          "opcode": "looks_costume",
+          "next": null,
+          "parent": "s39",
+          "inputs": {},
+          "fields": {
+            "COSTUME": [
+              "ball",
+              null
+            ]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "s39": {
+          "opcode": "looks_switchcostumeto",
+          "next": "s41",
+          "parent": "s36",
+          "inputs": {
+            "COSTUME": [
+              1,
+              "m40"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s41": {
+          "opcode": "motion_pointindirection",
+          "next": "s42",
+          "parent": "s39",
+          "inputs": {
+            "DIRECTION": [
+              1,
+              [
+                8,
+                "90"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s42": {
+          "opcode": "motion_gotoxy",
+          "next": "s43",
+          "parent": "s41",
+          "inputs": {
+            "X": [
+              1,
+              [
+                4,
+                "170"
+              ]
+            ],
+            "Y": [
+              1,
+              [
+                4,
+                "0"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t44": {
+          "opcode": "sensing_touchingobject",
+          "next": null,
+          "parent": "s43",
+          "inputs": {
+            "TOUCHINGOBJECTMENU": [
+              1,
+              "m45"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "m45": {
+          "opcode": "sensing_touchingobjectmenu",
+          "next": null,
+          "parent": "t44",
+          "inputs": {},
+          "fields": {
+            "TOUCHINGOBJECTMENU": [
+              "_edge_",
+              null
+            ]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "s43": {
+          "opcode": "looks_say",
+          "next": "s46",
+          "parent": "s42",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "t44",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s46": {
+          "opcode": "motion_gotoxy",
+          "next": "s47",
+          "parent": "s43",
+          "inputs": {
+            "X": [
+              1,
+              [
+                4,
+                "200"
+              ]
+            ],
+            "Y": [
+              1,
+              [
+                4,
+                "0"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t48": {
+          "opcode": "sensing_touchingobject",
+          "next": null,
+          "parent": "s47",
+          "inputs": {
+            "TOUCHINGOBJECTMENU": [
+              1,
+              "m49"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "m49": {
+          "opcode": "sensing_touchingobjectmenu",
+          "next": null,
+          "parent": "t48",
+          "inputs": {},
+          "fields": {
+            "TOUCHINGOBJECTMENU": [
+              "_edge_",
+              null
+            ]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "s47": {
+          "opcode": "looks_say",
+          "next": "s50",
+          "parent": "s46",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "t48",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "m51": {
+          "opcode": "looks_costume",
+          "next": null,
+          "parent": "s50",
+          "inputs": {},
+          "fields": {
+            "COSTUME": [
+              "empty",
+              null
+            ]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "s50": {
+          "opcode": "looks_switchcostumeto",
+          "next": "s52",
+          "parent": "s47",
+          "inputs": {
+            "COSTUME": [
+              1,
+              "m51"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s52": {
+          "opcode": "motion_gotoxy",
+          "next": "s53",
+          "parent": "s50",
+          "inputs": {
+            "X": [
+              1,
+              [
+                4,
+                "230"
+              ]
+            ],
+            "Y": [
+              1,
+              [
+                4,
+                "0"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t54": {
+          "opcode": "sensing_touchingobject",
+          "next": null,
+          "parent": "s53",
+          "inputs": {
+            "TOUCHINGOBJECTMENU": [
+              1,
+              "m55"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "m55": {
+          "opcode": "sensing_touchingobjectmenu",
+          "next": null,
+          "parent": "t54",
+          "inputs": {},
+          "fields": {
+            "TOUCHINGOBJECTMENU": [
+              "_edge_",
+              null
+            ]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "s53": {
+          "opcode": "looks_say",
+          "next": "s56",
+          "parent": "s52",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "t54",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "m57": {
+          "opcode": "looks_costume",
+          "next": null,
+          "parent": "s56",
+          "inputs": {},
+          "fields": {
+            "COSTUME": [
+              "ball",
+              null
+            ]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "s56": {
+          "opcode": "looks_switchcostumeto",
+          "next": "s58",
+          "parent": "s53",
+          "inputs": {
+            "COSTUME": [
+              1,
+              "m57"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s58": {
+          "opcode": "motion_gotoxy",
+          "next": "s59",
+          "parent": "s56",
+          "inputs": {
+            "X": [
+              1,
+              [
+                4,
+                "-80"
+              ]
+            ],
+            "Y": [
+              1,
+              [
+                4,
+                "-80"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t60": {
+          "opcode": "sensing_touchingobject",
+          "next": null,
+          "parent": "s59",
+          "inputs": {
+            "TOUCHINGOBJECTMENU": [
+              1,
+              "m61"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "m61": {
+          "opcode": "sensing_touchingobjectmenu",
+          "next": null,
+          "parent": "t60",
+          "inputs": {},
+          "fields": {
+            "TOUCHINGOBJECTMENU": [
+              "_mouse_",
+              null
+            ]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "s59": {
+          "opcode": "looks_say",
+          "next": "s62",
+          "parent": "s58",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "t60",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s62": {
+          "opcode": "motion_gotoxy",
+          "next": "s63",
+          "parent": "s59",
+          "inputs": {
+            "X": [
+              1,
+              [
+                4,
+                "-30"
+              ]
+            ],
+            "Y": [
+              1,
+              [
+                4,
+                "-30"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t64": {
+          "opcode": "sensing_touchingobject",
+          "next": null,
+          "parent": "s63",
+          "inputs": {
+            "TOUCHINGOBJECTMENU": [
+              1,
+              "m65"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "m65": {
+          "opcode": "sensing_touchingobjectmenu",
+          "next": null,
+          "parent": "t64",
+          "inputs": {},
+          "fields": {
+            "TOUCHINGOBJECTMENU": [
+              "_mouse_",
+              null
+            ]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "s63": {
+          "opcode": "looks_say",
+          "next": null,
+          "parent": "s62",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "t64",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        }
+      },
+      "comments": {},
+      "currentCostume": 0,
+      "costumes": [
+        {
+          "name": "ball",
+          "bitmapResolution": 1,
+          "dataFormat": "svg",
+          "assetId": "9b4d1f54db5cd5a833e83be2f184ff65",
+          "md5ext": "9b4d1f54db5cd5a833e83be2f184ff65.svg",
+          "rotationCenterX": 100,
+          "rotationCenterY": 100
+        },
+        {
+          "name": "bar",
+          "bitmapResolution": 1,
+          "dataFormat": "svg",
+          "assetId": "dec5f3eab4778ae53a4a782bebb59107",
+          "md5ext": "dec5f3eab4778ae53a4a782bebb59107.svg",
+          "rotationCenterX": 100,
+          "rotationCenterY": 5
+        },
+        {
+          "name": "empty",
+          "bitmapResolution": 1,
+          "dataFormat": "svg",
+          "assetId": "b9eac63f2505fa10f226723e0c0ca51d",
+          "md5ext": "b9eac63f2505fa10f226723e0c0ca51d.svg",
+          "rotationCenterX": 50,
+          "rotationCenterY": 50
+        }
+      ],
+      "sounds": [],
+      "volume": 100,
+      "layerOrder": 2,
+      "visible": true,
+      "x": -150,
+      "y": 100,
+      "size": 100,
+      "direction": 90,
+      "draggable": false,
+      "rotationStyle": "all around"
+    }
+  ],
+  "monitors": [],
+  "extensions": [],
+  "meta": {
+    "semver": "3.0.0",
+    "vm": "0.2.0",
+    "agent": "jScratch sample"
+  }
+}
