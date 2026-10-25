@@ -136,10 +136,10 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
     internal fun effectedCostume(): EffectedCostume? {
         if (!effects.active) return null
         val c = costume ?: return null
-        val img = c.image ?: return null
+        val sil = c.silhouette ?: return null
         val e = effected
-        if (e != null && e.source === img && e.effects == effects) return e
-        return EffectedCostume(c, img, effects).also { effected = it }
+        if (e != null && e.source === sil && e.effects == effects) return e
+        return EffectedCostume(sil, c.width, c.height, effects).also { effected = it }
     }
 
     /** The pixels this target draws and stamps: its costume image with every effect but ghost. */
@@ -286,13 +286,15 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         private val m10 = inverse.shearY
         private val m11 = inverse.scaleY
         private val m12 = inverse.translateY
-        private val point = DoubleArray(2)
 
         /** Whether the stage point ([x], [y]), in Scratch coordinates, lands on an opaque pixel. */
         fun hits(x: Double, y: Double): Boolean =
             toImage(x, y) { px, py -> if (nearest) sil.isTouchingNearest(px, py) else sil.isTouchingLinear(px, py) }
 
-        /** The costume's color at ([x], [y]) with every effect but ghost. scratch-render samples colors by nearest neighbor. */
+        /**
+         * The costume's color at ([x], [y]) with every effect but ghost. scratch-render samples colors
+         * by nearest neighbor.
+         */
         override fun colorAt(x: Double, y: Double): Int =
             effects.transformColor(toImage(x, y) { px, py -> sil.colorAtNearest(px, py) })
 
@@ -305,8 +307,7 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
             if (Math.abs(py) < sil.height * 1e-6) py = 0.0
             // Effects only move points that land on the costume.
             if (effects.changesShape && px >= 0 && px < sil.width && py >= 0 && py < sil.height) {
-                point[0] = px / sil.width
-                point[1] = py / sil.height
+                val point = doubleArrayOf(px / sil.width, py / sil.height)
                 effects.transformPoint(point, skinWidth, skinHeight)
                 px = point[0] * sil.width
                 py = point[1] * sil.height
@@ -466,7 +467,9 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
     /** Keeps at least a sliver of the sprite on stage, like scratch-render's fencing. */
     private fun fence(nx: Double, ny: Double): DoubleArray {
         // Far from the edges no part of the costume can leave the fence, so skip the exact bounds.
-        val radius = if (effects.changesShape) effectedCostume()?.radius else costume?.radius()
+        // Effects that move pixels keep them inside the costume's box, so its corners bound them
+        // without drawing the effects.
+        val radius = if (effects.changesShape) costume?.boxRadius() else costume?.radius()
         val r = (radius ?: 0.0) * size / 100.0
         val clear =
             Math.abs(nx) + r <= Runtime.STAGE_WIDTH / 2.0 - FENCE_WIDTH &&
@@ -773,21 +776,25 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         rt.moveLayers(this, if (direction == "forward") n else -n)
     }
 
-    /** `set effect to`. Like scratch-vm, it clamps ghost to 0..100 and brightness to -100..100 and ignores unknown effects. */
+    /** `set effect to`. Like scratch-vm, ghost is clamped to 0..100 and unknown effects change nothing. */
     fun setEffect(effect: String, value: Double) {
-        when (val name = effect.lowercase()) {
-            "ghost" -> ghost = value.coerceIn(0.0, 100.0)
-            "brightness" -> effects = effects.with(name, value.coerceIn(-100.0, 100.0))
-            else -> effects = effects.with(name, value)
-        }
-        if (visible || isStage) rt.requestRedraw()
+        val name = effect.lowercase()
+        if (name == "ghost" || effects.get(name) != null) setEffectNamed(name, value) else unknownEffect(effect)
     }
 
     fun changeEffect(effect: String, delta: Double) {
         val name = effect.lowercase()
-        val current = if (name == "ghost") ghost else effects.get(name) ?: return
-        setEffect(name, current + delta)
+        val current = if (name == "ghost") ghost else effects.get(name)
+        if (current != null) setEffectNamed(name, current + delta) else unknownEffect(effect)
     }
+
+    /** Sets the known effect [name], which is already lower case. */
+    private fun setEffectNamed(name: String, value: Double) {
+        if (name == "ghost") ghost = value.coerceIn(0.0, 100.0) else effects = effects.with(name, value)
+        if (visible || isStage) rt.requestRedraw()
+    }
+
+    private fun unknownEffect(effect: String) = Log.warn("Unknown graphic effect '$effect'; it does nothing.")
 
     fun clearEffects() {
         ghost = 0.0

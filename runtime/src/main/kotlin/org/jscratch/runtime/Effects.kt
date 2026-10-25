@@ -17,7 +17,7 @@ internal data class Effects(
     val mosaic: Double,
 ) {
     private val uColor = color / 200 % 1
-    private val uBrightness = brightness.coerceIn(-100.0, 100.0) / 100
+    private val uBrightness = brightness / 100
     private val uFisheye = Math.max(0.0, (fisheye + 100) / 100)
     private val uWhirl = -whirl * Math.PI / 180
     private val uPixelate = Math.abs(pixelate) / 10
@@ -39,10 +39,13 @@ internal data class Effects(
         else -> null
     }
 
-    /** A copy with the effect called [name] set to [value]. Unknown names change nothing. */
+    /**
+     * A copy with the effect called [name] set to [value]. Brightness is clamped to -100..100, as
+     * scratch-vm does. Unknown names change nothing.
+     */
     fun with(name: String, value: Double): Effects = when (name) {
         "color" -> copy(color = value)
-        "brightness" -> copy(brightness = value)
+        "brightness" -> copy(brightness = value.coerceIn(-100.0, 100.0))
         "fisheye" -> copy(fisheye = value)
         "whirl" -> copy(whirl = value)
         "pixelate" -> copy(pixelate = value)
@@ -247,11 +250,14 @@ internal data class Effects(
  * A costume image as a target's graphic effects draw it. Built on first use and shared by clones,
  * which copy their parent's effects.
  */
-internal class EffectedCostume(val costume: Costume, val source: BufferedImage, val effects: Effects) {
-    val image: BufferedImage by lazy { effects.render(costume.silhouette!!, costume.width, costume.height) }
+internal class EffectedCostume(
+    val source: Silhouette,
+    private val skinWidth: Double,
+    private val skinHeight: Double,
+    val effects: Effects,
+) {
+    val image: BufferedImage by lazy { effects.render(source, skinWidth, skinHeight) }
 
     /** The outline of [image], for bounds. Touching samples the costume through the effects instead. */
     val silhouette: Silhouette by lazy { Silhouette(image) }
-
-    val radius: Double by lazy { costume.radiusOf(silhouette.hull) }
 }

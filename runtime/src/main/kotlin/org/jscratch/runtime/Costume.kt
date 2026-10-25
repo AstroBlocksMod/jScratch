@@ -60,18 +60,22 @@ class Costume(
      * opaque pixel, or 0 when nothing is opaque. No rotation moves a pixel further.
      */
     fun radius(): Double {
-        if (radius < 0) radius = radiusOf(silhouette?.hull)
-        return radius
-    }
-
-    /** [radius] for another outline of this costume's image, such as one that graphic effects moved. */
-    fun radiusOf(hull: DoubleArray?): Double {
-        val pts = hull ?: return 0.0
+        if (radius >= 0) return radius
+        val pts = silhouette?.hull ?: return 0.0
         var max = 0.0
         for (i in 0 until pts.size / 2) {
             max = Math.max(max, Math.hypot(pts[i * 2] - imageRotationCenterX, pts[i * 2 + 1] - imageRotationCenterY))
         }
-        return max / imageResolution
+        radius = max / imageResolution
+        return radius
+    }
+
+    /** Distance in costume units from the rotation center to the farthest corner of the whole image. */
+    fun boxRadius(): Double {
+        val img = image ?: return 0.0
+        val dx = Math.max(imageRotationCenterX, img.width - imageRotationCenterX)
+        val dy = Math.max(imageRotationCenterY, img.height - imageRotationCenterY)
+        return Math.hypot(dx, dy) / imageResolution
     }
 
     val isSvg: Boolean get() = resource.endsWith(".svg", ignoreCase = true)

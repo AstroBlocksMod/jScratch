@@ -26,6 +26,14 @@ class EffectsTest {
     }
 
     @Test
+    fun brightnessIsClampedLikeScratchVm() {
+        assertEquals(100.0, effect("brightness", 300.0).brightness)
+        assertEquals(-100.0, effect("brightness", -300.0).brightness)
+        // Other effects keep any value.
+        assertEquals(300.0, effect("whirl", 300.0).whirl)
+    }
+
+    @Test
     fun colorShiftsTheHue() {
         // 100 is half way around the color wheel: red turns cyan. scratch-render's saturation comes out
         // a hair under 1, which leaves 1 in the red channel.
