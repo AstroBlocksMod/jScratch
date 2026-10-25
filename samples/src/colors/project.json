@@ -1,0 +1,735 @@
+{
+  "targets": [
+    {
+      "isStage": true,
+      "name": "Stage",
+      "variables": {},
+      "lists": {},
+      "broadcasts": {},
+      "blocks": {},
+      "comments": {},
+      "currentCostume": 0,
+      "costumes": [
+        {
+          "name": "strip",
+          "bitmapResolution": 1,
+          "dataFormat": "svg",
+          "assetId": "cbd97399be9a86a26ff9de8fa0b81600",
+          "md5ext": "cbd97399be9a86a26ff9de8fa0b81600.svg",
+          "rotationCenterX": 240,
+          "rotationCenterY": 180
+        }
+      ],
+      "sounds": [],
+      "volume": 100,
+      "layerOrder": 0,
+      "tempo": 60,
+      "videoTransparency": 50,
+      "videoState": "on",
+      "textToSpeechLanguage": null
+    },
+    {
+      "isStage": false,
+      "name": "Ball",
+      "variables": {},
+      "lists": {},
+      "broadcasts": {},
+      "blocks": {},
+      "comments": {},
+      "currentCostume": 0,
+      "costumes": [
+        {
+          "name": "ball",
+          "bitmapResolution": 1,
+          "dataFormat": "svg",
+          "assetId": "9b4d1f54db5cd5a833e83be2f184ff65",
+          "md5ext": "9b4d1f54db5cd5a833e83be2f184ff65.svg",
+          "rotationCenterX": 100,
+          "rotationCenterY": 100
+        }
+      ],
+      "sounds": [],
+      "volume": 100,
+      "layerOrder": 1,
+      "visible": true,
+      "x": 150,
+      "y": 100,
+      "size": 100,
+      "direction": 90,
+      "draggable": false,
+      "rotationStyle": "all around"
+    },
+    {
+      "isStage": false,
+      "name": "Probe",
+      "variables": {},
+      "lists": {},
+      "broadcasts": {},
+      "blocks": {
+        "hat": {
+          "opcode": "event_whenflagclicked",
+          "next": "s1",
+          "parent": null,
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": true,
+          "x": 20,
+          "y": 20
+        },
+        "s1": {
+          "opcode": "motion_gotoxy",
+          "next": "s2",
+          "parent": "hat",
+          "inputs": {
+            "X": [
+              1,
+              [
+                4,
+                "0"
+              ]
+            ],
+            "Y": [
+              1,
+              [
+                4,
+                "0"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s2": {
+          "opcode": "looks_say",
+          "next": "s4",
+          "parent": "s1",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "t3",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t3": {
+          "opcode": "sensing_touchingcolor",
+          "next": null,
+          "parent": "s2",
+          "inputs": {
+            "COLOR": [
+              1,
+              [
+                9,
+                "#4c97ff"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s4": {
+          "opcode": "motion_gotoxy",
+          "next": "s5",
+          "parent": "s2",
+          "inputs": {
+            "X": [
+              1,
+              [
+                4,
+                "85"
+              ]
+            ],
+            "Y": [
+              1,
+              [
+                4,
+                "100"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s5": {
+          "opcode": "looks_say",
+          "next": "s7",
+          "parent": "s4",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "t6",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t6": {
+          "opcode": "sensing_touchingcolor",
+          "next": null,
+          "parent": "s5",
+          "inputs": {
+            "COLOR": [
+              1,
+              [
+                9,
+                "#4c97ff"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s7": {
+          "opcode": "looks_say",
+          "next": "s9",
+          "parent": "s5",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "t8",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t8": {
+          "opcode": "sensing_coloristouchingcolor",
+          "next": null,
+          "parent": "s7",
+          "inputs": {
+            "COLOR": [
+              1,
+              [
+                9,
+                "#9966ff"
+              ]
+            ],
+            "COLOR2": [
+              1,
+              [
+                9,
+                "#4c97ff"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s9": {
+          "opcode": "looks_say",
+          "next": "s11",
+          "parent": "s7",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "t10",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t10": {
+          "opcode": "sensing_coloristouchingcolor",
+          "next": null,
+          "parent": "s9",
+          "inputs": {
+            "COLOR": [
+              1,
+              [
+                9,
+                "#ffab19"
+              ]
+            ],
+            "COLOR2": [
+              1,
+              [
+                9,
+                "#4c97ff"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s11": {
+          "opcode": "looks_hide",
+          "next": "s12",
+          "parent": "s9",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s12": {
+          "opcode": "looks_say",
+          "next": "s14",
+          "parent": "s11",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "t13",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t13": {
+          "opcode": "sensing_touchingcolor",
+          "next": null,
+          "parent": "s12",
+          "inputs": {
+            "COLOR": [
+              1,
+              [
+                9,
+                "#4c97ff"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s14": {
+          "opcode": "looks_show",
+          "next": "s15",
+          "parent": "s12",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s15": {
+          "opcode": "motion_gotoxy",
+          "next": "s16",
+          "parent": "s14",
+          "inputs": {
+            "X": [
+              1,
+              [
+                4,
+                "-200"
+              ]
+            ],
+            "Y": [
+              1,
+              [
+                4,
+                "0"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s16": {
+          "opcode": "looks_say",
+          "next": "s18",
+          "parent": "s15",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "t17",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t17": {
+          "opcode": "sensing_touchingcolor",
+          "next": null,
+          "parent": "s16",
+          "inputs": {
+            "COLOR": [
+              1,
+              [
+                9,
+                "#ff0000"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s18": {
+          "opcode": "looks_say",
+          "next": "s20",
+          "parent": "s16",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "t19",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t19": {
+          "opcode": "sensing_touchingcolor",
+          "next": null,
+          "parent": "s18",
+          "inputs": {
+            "COLOR": [
+              1,
+              [
+                9,
+                "#ffffff"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s20": {
+          "opcode": "motion_gotoxy",
+          "next": "s21",
+          "parent": "s18",
+          "inputs": {
+            "X": [
+              1,
+              [
+                4,
+                "0"
+              ]
+            ],
+            "Y": [
+              1,
+              [
+                4,
+                "-100"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s21": {
+          "opcode": "looks_say",
+          "next": "s23",
+          "parent": "s20",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "t22",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t22": {
+          "opcode": "sensing_touchingcolor",
+          "next": null,
+          "parent": "s21",
+          "inputs": {
+            "COLOR": [
+              1,
+              [
+                9,
+                "#ffffff"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s23": {
+          "opcode": "pen_clear",
+          "next": "s24",
+          "parent": "s21",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s24": {
+          "opcode": "pen_setPenColorToColor",
+          "next": "s25",
+          "parent": "s23",
+          "inputs": {
+            "COLOR": [
+              1,
+              [
+                9,
+                "#00ff00"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s25": {
+          "opcode": "pen_setPenSizeTo",
+          "next": "s26",
+          "parent": "s24",
+          "inputs": {
+            "SIZE": [
+              1,
+              [
+                4,
+                "10"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s26": {
+          "opcode": "motion_gotoxy",
+          "next": "s27",
+          "parent": "s25",
+          "inputs": {
+            "X": [
+              1,
+              [
+                4,
+                "-50"
+              ]
+            ],
+            "Y": [
+              1,
+              [
+                4,
+                "-150"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s27": {
+          "opcode": "pen_penDown",
+          "next": "s28",
+          "parent": "s26",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s28": {
+          "opcode": "motion_gotoxy",
+          "next": "s29",
+          "parent": "s27",
+          "inputs": {
+            "X": [
+              1,
+              [
+                4,
+                "0"
+              ]
+            ],
+            "Y": [
+              1,
+              [
+                4,
+                "-150"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s29": {
+          "opcode": "pen_penUp",
+          "next": "s30",
+          "parent": "s28",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s30": {
+          "opcode": "motion_gotoxy",
+          "next": "s31",
+          "parent": "s29",
+          "inputs": {
+            "X": [
+              1,
+              [
+                4,
+                "-25"
+              ]
+            ],
+            "Y": [
+              1,
+              [
+                4,
+                "-140"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s31": {
+          "opcode": "looks_say",
+          "next": "s33",
+          "parent": "s30",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "t32",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t32": {
+          "opcode": "sensing_touchingcolor",
+          "next": null,
+          "parent": "s31",
+          "inputs": {
+            "COLOR": [
+              1,
+              [
+                9,
+                "#00ff00"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s33": {
+          "opcode": "pen_clear",
+          "next": "s34",
+          "parent": "s31",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s34": {
+          "opcode": "looks_say",
+          "next": null,
+          "parent": "s33",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "t35",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t35": {
+          "opcode": "sensing_touchingcolor",
+          "next": null,
+          "parent": "s34",
+          "inputs": {
+            "COLOR": [
+              1,
+              [
+                9,
+                "#00ff00"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        }
+      },
+      "comments": {},
+      "currentCostume": 0,
+      "costumes": [
+        {
+          "name": "square",
+          "bitmapResolution": 1,
+          "dataFormat": "svg",
+          "assetId": "221215cf274f91a413d1de3c74d32c08",
+          "md5ext": "221215cf274f91a413d1de3c74d32c08.svg",
+          "rotationCenterX": 20,
+          "rotationCenterY": 20
+        }
+      ],
+      "sounds": [],
+      "volume": 100,
+      "layerOrder": 2,
+      "visible": true,
+      "x": 0,
+      "y": 0,
+      "size": 100,
+      "direction": 90,
+      "draggable": false,
+      "rotationStyle": "all around"
+    }
+  ],
+  "monitors": [],
+  "extensions": [
+    "pen"
+  ],
+  "meta": {
+    "semver": "3.0.0",
+    "vm": "0.2.0",
+    "agent": "jScratch sample"
+  }
+}

@@ -21,6 +21,9 @@ class Silhouette(private val image: BufferedImage) {
 
     private class Data(val mask: LongArray, val hull: DoubleArray)
 
+    /** ARGB pixels, read only once a color sensing block needs them so other projects do not pay for a copy. */
+    private val argb: IntArray by lazy { image.getRGB(0, 0, width, height, null, 0, width) }
+
     /** Whether the pixel at integer image coordinates ([x], [y]) is opaque. Out of range is transparent. */
     fun opaque(x: Int, y: Int): Boolean {
         if (x < 0 || y < 0 || x >= width || y >= height) return false
@@ -41,6 +44,17 @@ class Silhouette(private val image: BufferedImage) {
         val x = Math.floor(px / width * (width - 1)).toInt()
         val y = Math.floor(py / height * (height - 1)).toInt()
         return opaque(x, y) || opaque(x + 1, y) || opaque(x, y + 1) || opaque(x + 1, y + 1)
+    }
+
+    /**
+     * Premultiplied ARGB at image coordinates ([px], [py]), picked the way scratch-render's
+     * `colorAtNearest` picks it. Points outside the image are transparent.
+     */
+    fun colorAtNearest(px: Double, py: Double): Int {
+        if (px < 0 || py < 0 || px > width || py > height) return 0
+        val x = Math.floor(px / width * (width - 1)).toInt()
+        val y = Math.floor(py / height * (height - 1)).toInt()
+        return ColorSensing.premultiply(argb[y * width + x])
     }
 
     private fun build(): Data {

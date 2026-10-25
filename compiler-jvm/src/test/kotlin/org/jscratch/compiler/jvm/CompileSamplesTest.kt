@@ -111,6 +111,33 @@ class CompileSamplesTest {
         assertEquals(expected, out.lines().filter { it.startsWith("Probe ") })
     }
 
+    /** Color sensing against another sprite, the backdrop, the white stage behind it and the pen layer. */
+    @Test
+    fun compilesAndRunsColorsProject() {
+        val result = JScratch.compile(File(samplesDir, "colors.sb3").readBytes(), runtimeJar.readBytes(), json)
+        assertEquals(emptyList(), result.warnings, "unexpected warnings")
+
+        val out = runHeadless(result.jar, frames = 10)
+        val expected =
+            listOf(
+                // the ball: far away, overlapping, then only the purple half of the probe counts
+                "false",
+                "true",
+                "true",
+                "false",
+                // still touching while hidden
+                "true",
+                // inside the backdrop's red strip: red but no white, then white with no backdrop
+                "true",
+                "false",
+                "true",
+                // a pen line, then the cleared pen layer
+                "true",
+                "false",
+            ).map { "Probe says: $it" }
+        assertEquals(expected, out.lines().filter { it.startsWith("Probe ") })
+    }
+
     private fun runHeadless(jar: ByteArray, frames: Int): String {
         val tmp = Files.createTempFile("jscratch-test", ".jar").toFile()
         try {

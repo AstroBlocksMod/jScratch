@@ -1195,9 +1195,10 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
                 call("touchingColor", "(${RT.D_OBJECT})Z", VType.BOOL) { any("COLOR") }
             }
             "sensing_coloristouchingcolor" -> {
-                ctx.warn("Block 'sensing_coloristouchingcolor' is not supported yet; it reports false")
-                mv.visitInsn(ICONST_0)
-                VType.BOOL
+                call("colorTouchingColor", "(${RT.D_OBJECT}${RT.D_OBJECT})Z", VType.BOOL) {
+                    any("COLOR")
+                    any("COLOR2")
+                }
             }
             "sensing_distanceto" -> {
                 call("distanceTo", "(${RT.D_OBJECT})D", VType.NUM) { any("DISTANCETOMENU") }

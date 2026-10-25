@@ -19,7 +19,7 @@ This page lists what is planned for jScratch, roughly in the order it will happe
 These are the gaps most likely to break a project downloaded from the Scratch website, so they come first.
 
 - [x] Pixel-accurate collision from costume alpha masks, honoring rotation and size
-- [ ] **Color sensing.** `touching color` and `color is touching color`, built on the same masks plus a read of the rendered stage.
+- [x] **Color sensing.** `touching color` and `color is touching color`, sampled from the costumes, the pen layer and the backdrop the way scratch-render's CPU path does.
 - [ ] **Graphic effects.** Color, brightness, fisheye, whirl, pixelate and mosaic, applied per sprite in the renderer the way scratch-render does.
 - [ ] **Monitors.** Draw variable and list monitors, and make the show and hide blocks control them.
 - [ ] **Sound effects.** Pitch and pan, plus clear sound effects.

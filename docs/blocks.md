@@ -39,11 +39,13 @@ wait, repeat, forever, if, if else, wait until, repeat until, while, stop (all, 
 
 ## Sensing
 
-touching (mouse, edge, sprite), distance to, ask and wait with answer, key pressed, mouse down, mouse x and y, timer, reset timer, "of" (sprite and stage properties and variables), current date and time, days since 2000.
+touching (mouse, edge, sprite), touching color, color is touching color, distance to, ask and wait with answer, key pressed, mouse down, mouse x and y, timer, reset timer, "of" (sprite and stage properties and variables), current date and time, days since 2000.
 
 Touching a sprite or the mouse is pixel-accurate: it compares the opaque pixels of the costumes as they are drawn, with rotation and size applied, the way scratch-render does. The mouse counts as the whole stage pixel under it. Ghost does not change what a sprite touches. Touching the edge, if on edge bounce and fencing use tight bounds, the box around the costume's opaque pixels, so transparent padding in a costume does not count. A costume with no opaque pixels at all touches nothing, not even the edge, and is not fenced.
 
-Not supported: touching color, color is touching color (always false), loudness (reports -1), username (reports an empty string), video sensing, drag mode (ignored).
+Touching color looks at what the stage shows under every opaque pixel of the sprite: the other sprites in front to back order (with their ghost effect), the pen layer, the backdrop and the white stage behind it. Color is touching color only looks under the sprite's pixels that have the first color, ignoring its ghost effect. Colors match loosely, like in Scratch: the top 5 bits of red and green and the top 4 bits of blue have to agree, and the first color of color is touching color needs the top 6 bits of each channel. Both blocks work while the sprite is hidden, as in Scratch 3.
+
+Not supported: loudness (reports -1), username (reports an empty string), video sensing, drag mode (ignored).
 
 ## Operators
 
