@@ -70,6 +70,14 @@ class Costume(
         return radius
     }
 
+    /** Distance in costume units from the rotation center to the farthest corner of the whole image. */
+    fun boxRadius(): Double {
+        val img = image ?: return 0.0
+        val dx = Math.max(imageRotationCenterX, img.width - imageRotationCenterX)
+        val dy = Math.max(imageRotationCenterY, img.height - imageRotationCenterY)
+        return Math.hypot(dx, dy) / imageResolution
+    }
+
     val isSvg: Boolean get() = resource.endsWith(".svg", ignoreCase = true)
 
     /** Logical width in Scratch stage units. */

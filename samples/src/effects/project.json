@@ -1,0 +1,644 @@
+{
+  "targets": [
+    {
+      "isStage": true,
+      "name": "Stage",
+      "variables": {},
+      "lists": {},
+      "broadcasts": {},
+      "blocks": {},
+      "comments": {},
+      "currentCostume": 0,
+      "costumes": [
+        {
+          "name": "strip",
+          "bitmapResolution": 1,
+          "dataFormat": "svg",
+          "assetId": "cbd97399be9a86a26ff9de8fa0b81600",
+          "md5ext": "cbd97399be9a86a26ff9de8fa0b81600.svg",
+          "rotationCenterX": 240,
+          "rotationCenterY": 180
+        }
+      ],
+      "sounds": [],
+      "volume": 100,
+      "layerOrder": 0,
+      "tempo": 60,
+      "videoTransparency": 50,
+      "videoState": "on",
+      "textToSpeechLanguage": null
+    },
+    {
+      "isStage": false,
+      "name": "Ball",
+      "variables": {},
+      "lists": {},
+      "broadcasts": {},
+      "blocks": {
+        "hat": {
+          "opcode": "event_whenflagclicked",
+          "next": "s1",
+          "parent": null,
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": true,
+          "x": 20,
+          "y": 20
+        },
+        "s1": {
+          "opcode": "motion_gotoxy",
+          "next": "s2",
+          "parent": "hat",
+          "inputs": {
+            "X": [1, [4, "0"]],
+            "Y": [1, [4, "0"]]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s2": {
+          "opcode": "looks_say",
+          "next": "s3",
+          "parent": "s1",
+          "inputs": {
+            "MESSAGE": [3, "t2", [10, ""]]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t2": {
+          "opcode": "sensing_touchingobject",
+          "next": null,
+          "parent": "s2",
+          "inputs": {
+            "TOUCHINGOBJECTMENU": [1, "m2"]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "m2": {
+          "opcode": "sensing_touchingobjectmenu",
+          "next": null,
+          "parent": "t2",
+          "inputs": {},
+          "fields": {
+            "TOUCHINGOBJECTMENU": ["Probe", null]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "s3": {
+          "opcode": "looks_changeeffectby",
+          "next": "s4",
+          "parent": "s2",
+          "inputs": {
+            "CHANGE": [1, [4, "100"]]
+          },
+          "fields": {
+            "EFFECT": ["FISHEYE", null]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "s4": {
+          "opcode": "looks_say",
+          "next": "s5",
+          "parent": "s3",
+          "inputs": {
+            "MESSAGE": [3, "t4", [10, ""]]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t4": {
+          "opcode": "sensing_touchingobject",
+          "next": null,
+          "parent": "s4",
+          "inputs": {
+            "TOUCHINGOBJECTMENU": [1, "m4"]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "m4": {
+          "opcode": "sensing_touchingobjectmenu",
+          "next": null,
+          "parent": "t4",
+          "inputs": {},
+          "fields": {
+            "TOUCHINGOBJECTMENU": ["Probe", null]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "s5": {
+          "opcode": "looks_cleargraphiceffects",
+          "next": "s6",
+          "parent": "s4",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s6": {
+          "opcode": "looks_seteffectto",
+          "next": "s7",
+          "parent": "s5",
+          "inputs": {
+            "VALUE": [1, [4, "90"]]
+          },
+          "fields": {
+            "EFFECT": ["MOSAIC", null]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "s7": {
+          "opcode": "looks_say",
+          "next": "s8",
+          "parent": "s6",
+          "inputs": {
+            "MESSAGE": [3, "t7", [10, ""]]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t7": {
+          "opcode": "sensing_touchingobject",
+          "next": null,
+          "parent": "s7",
+          "inputs": {
+            "TOUCHINGOBJECTMENU": [1, "m7"]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "m7": {
+          "opcode": "sensing_touchingobjectmenu",
+          "next": null,
+          "parent": "t7",
+          "inputs": {},
+          "fields": {
+            "TOUCHINGOBJECTMENU": ["Probe", null]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "s8": {
+          "opcode": "looks_cleargraphiceffects",
+          "next": "s9",
+          "parent": "s7",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s9": {
+          "opcode": "looks_say",
+          "next": "s10",
+          "parent": "s8",
+          "inputs": {
+            "MESSAGE": [3, "t9", [10, ""]]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t9": {
+          "opcode": "sensing_touchingobject",
+          "next": null,
+          "parent": "s9",
+          "inputs": {
+            "TOUCHINGOBJECTMENU": [1, "m9"]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "m9": {
+          "opcode": "sensing_touchingobjectmenu",
+          "next": null,
+          "parent": "t9",
+          "inputs": {},
+          "fields": {
+            "TOUCHINGOBJECTMENU": ["Probe", null]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "s10": {
+          "opcode": "motion_setx",
+          "next": "s11",
+          "parent": "s9",
+          "inputs": {
+            "X": [1, [4, "170"]]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s11": {
+          "opcode": "looks_say",
+          "next": "s12",
+          "parent": "s10",
+          "inputs": {
+            "MESSAGE": [3, "t11", [10, ""]]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t11": {
+          "opcode": "sensing_touchingobject",
+          "next": null,
+          "parent": "s11",
+          "inputs": {
+            "TOUCHINGOBJECTMENU": [1, "m11"]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "m11": {
+          "opcode": "sensing_touchingobjectmenu",
+          "next": null,
+          "parent": "t11",
+          "inputs": {},
+          "fields": {
+            "TOUCHINGOBJECTMENU": ["_edge_", null]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "s12": {
+          "opcode": "looks_seteffectto",
+          "next": "s13",
+          "parent": "s11",
+          "inputs": {
+            "VALUE": [1, [4, "90"]]
+          },
+          "fields": {
+            "EFFECT": ["MOSAIC", null]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "s13": {
+          "opcode": "looks_say",
+          "next": "s14",
+          "parent": "s12",
+          "inputs": {
+            "MESSAGE": [3, "t13", [10, ""]]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t13": {
+          "opcode": "sensing_touchingobject",
+          "next": null,
+          "parent": "s13",
+          "inputs": {
+            "TOUCHINGOBJECTMENU": [1, "m13"]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "m13": {
+          "opcode": "sensing_touchingobjectmenu",
+          "next": null,
+          "parent": "t13",
+          "inputs": {},
+          "fields": {
+            "TOUCHINGOBJECTMENU": ["_edge_", null]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "s14": {
+          "opcode": "looks_cleargraphiceffects",
+          "next": "s15",
+          "parent": "s13",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s15": {
+          "opcode": "motion_gotoxy",
+          "next": "s16",
+          "parent": "s14",
+          "inputs": {
+            "X": [1, [4, "20"]],
+            "Y": [1, [4, "0"]]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s16": {
+          "opcode": "looks_say",
+          "next": "s17",
+          "parent": "s15",
+          "inputs": {
+            "MESSAGE": [3, "t16", [10, ""]]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t16": {
+          "opcode": "sensing_coloristouchingcolor",
+          "next": null,
+          "parent": "s16",
+          "inputs": {
+            "COLOR": [1, [9, "#4c97ff"]],
+            "COLOR2": [1, [9, "#ffab19"]]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s17": {
+          "opcode": "looks_seteffectto",
+          "next": "s18",
+          "parent": "s16",
+          "inputs": {
+            "VALUE": [1, [4, "100"]]
+          },
+          "fields": {
+            "EFFECT": ["COLOR", null]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "s18": {
+          "opcode": "looks_say",
+          "next": "s19",
+          "parent": "s17",
+          "inputs": {
+            "MESSAGE": [3, "t18", [10, ""]]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t18": {
+          "opcode": "sensing_coloristouchingcolor",
+          "next": null,
+          "parent": "s18",
+          "inputs": {
+            "COLOR": [1, [9, "#4c97ff"]],
+            "COLOR2": [1, [9, "#ffab19"]]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s19": {
+          "opcode": "looks_say",
+          "next": "s20",
+          "parent": "s18",
+          "inputs": {
+            "MESSAGE": [3, "t19", [10, ""]]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t19": {
+          "opcode": "sensing_coloristouchingcolor",
+          "next": null,
+          "parent": "s19",
+          "inputs": {
+            "COLOR": [1, [9, "#ffb54d"]],
+            "COLOR2": [1, [9, "#ffab19"]]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s20": {
+          "opcode": "looks_cleargraphiceffects",
+          "next": "s21",
+          "parent": "s19",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s21": {
+          "opcode": "looks_seteffectto",
+          "next": "s22",
+          "parent": "s20",
+          "inputs": {
+            "VALUE": [1, [4, "-100"]]
+          },
+          "fields": {
+            "EFFECT": ["BRIGHTNESS", null]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "s22": {
+          "opcode": "looks_say",
+          "next": "s23",
+          "parent": "s21",
+          "inputs": {
+            "MESSAGE": [3, "t22", [10, ""]]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t22": {
+          "opcode": "sensing_coloristouchingcolor",
+          "next": null,
+          "parent": "s22",
+          "inputs": {
+            "COLOR": [1, [9, "#000000"]],
+            "COLOR2": [1, [9, "#ffab19"]]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s23": {
+          "opcode": "looks_cleargraphiceffects",
+          "next": "s24",
+          "parent": "s22",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s24": {
+          "opcode": "motion_gotoxy",
+          "next": "s25",
+          "parent": "s23",
+          "inputs": {
+            "X": [1, [4, "0"]],
+            "Y": [1, [4, "-100"]]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s25": {
+          "opcode": "looks_seteffectto",
+          "next": "s26",
+          "parent": "s24",
+          "inputs": {
+            "VALUE": [1, [4, "100"]]
+          },
+          "fields": {
+            "EFFECT": ["COLOR", null]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "s26": {
+          "opcode": "pen_stamp",
+          "next": "s27",
+          "parent": "s25",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s27": {
+          "opcode": "looks_cleargraphiceffects",
+          "next": "s28",
+          "parent": "s26",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s28": {
+          "opcode": "looks_say",
+          "next": "s29",
+          "parent": "s27",
+          "inputs": {
+            "MESSAGE": [3, "t28", [10, ""]]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t28": {
+          "opcode": "sensing_touchingcolor",
+          "next": null,
+          "parent": "s28",
+          "inputs": {
+            "COLOR": [1, [9, "#ffb54d"]]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s29": {
+          "opcode": "pen_clear",
+          "next": "s30",
+          "parent": "s28",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s30": {
+          "opcode": "looks_say",
+          "next": null,
+          "parent": "s29",
+          "inputs": {
+            "MESSAGE": [3, "t30", [10, ""]]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t30": {
+          "opcode": "sensing_touchingcolor",
+          "next": null,
+          "parent": "s30",
+          "inputs": {
+            "COLOR": [1, [9, "#ffb54d"]]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        }
+      },
+      "comments": {},
+      "currentCostume": 0,
+      "costumes": [
+        {
+          "name": "ball",
+          "bitmapResolution": 1,
+          "dataFormat": "svg",
+          "assetId": "9b4d1f54db5cd5a833e83be2f184ff65",
+          "md5ext": "9b4d1f54db5cd5a833e83be2f184ff65.svg",
+          "rotationCenterX": 100,
+          "rotationCenterY": 100
+        }
+      ],
+      "sounds": [],
+      "volume": 100,
+      "layerOrder": 1,
+      "visible": true,
+      "x": 0,
+      "y": 0,
+      "size": 100,
+      "direction": 90,
+      "draggable": false,
+      "rotationStyle": "all around"
+    },
+    {
+      "isStage": false,
+      "name": "Probe",
+      "variables": {},
+      "lists": {},
+      "broadcasts": {},
+      "blocks": {},
+      "comments": {},
+      "currentCostume": 0,
+      "costumes": [
+        {
+          "name": "square",
+          "bitmapResolution": 1,
+          "dataFormat": "svg",
+          "assetId": "221215cf274f91a413d1de3c74d32c08",
+          "md5ext": "221215cf274f91a413d1de3c74d32c08.svg",
+          "rotationCenterX": 20,
+          "rotationCenterY": 20
+        }
+      ],
+      "sounds": [],
+      "volume": 100,
+      "layerOrder": 2,
+      "visible": true,
+      "x": 80,
+      "y": 0,
+      "size": 100,
+      "direction": 90,
+      "draggable": false,
+      "rotationStyle": "all around"
+    }
+  ],
+  "monitors": [],
+  "extensions": ["pen"],
+  "meta": {
+    "semver": "3.0.0",
+    "vm": "0.2.0",
+    "agent": "jScratch sample"
+  }
+}

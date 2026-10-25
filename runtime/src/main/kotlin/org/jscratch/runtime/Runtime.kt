@@ -261,7 +261,11 @@ class Runtime {
 
     private fun stopAllInternal() {
         for (t in threads) t.killed = true
-        for (t in allTargets()) t.clearSay()
+        for (t in allTargets()) {
+            t.clearSay()
+            // scratch-vm clears graphic effects on stop, and so on every green flag.
+            t.clearEffects()
+        }
         sprites.removeAll { it.isClone }
         sounds.stopAll()
         pendingQuestion = null
