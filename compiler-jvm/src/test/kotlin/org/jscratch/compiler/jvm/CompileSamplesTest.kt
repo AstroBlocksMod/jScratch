@@ -138,6 +138,38 @@ class CompileSamplesTest {
         assertEquals(expected, out.lines().filter { it.startsWith("Probe ") })
     }
 
+    /**
+     * Graphic effects change what a sprite touches, its bounds, its own colors and what it stamps.
+     * The Probe square sits just right of the ball, its orange half nearer.
+     */
+    @Test
+    fun compilesAndRunsEffectsProject() {
+        val result = JScratch.compile(File(samplesDir, "effects.sb3").readBytes(), runtimeJar.readBytes(), json)
+        assertEquals(emptyList(), result.warnings, "unexpected warnings")
+
+        val out = runHeadless(result.jar, frames = 10)
+        val expected =
+            listOf(
+                // touching the probe: plain, fisheye, mosaic, cleared
+                "false",
+                "true",
+                "true",
+                "false",
+                // touching the edge near it, then with mosaic filling the whole costume box
+                "false",
+                "true",
+                // the ball's blue on the probe's orange, then shifted by the color effect, then black
+                "true",
+                "false",
+                "true",
+                "true",
+                // a stamp with the color effect, then the cleared pen layer
+                "true",
+                "false",
+            ).map { "Ball says: $it" }
+        assertEquals(expected, out.lines().filter { it.startsWith("Ball ") })
+    }
+
     private fun runHeadless(jar: ByteArray, frames: Int): String {
         val tmp = Files.createTempFile("jscratch-test", ".jar").toFile()
         try {

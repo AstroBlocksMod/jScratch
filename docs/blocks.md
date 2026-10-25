@@ -23,7 +23,7 @@ All motion blocks: move, turn, go to (xy, random, mouse, sprite), glide (both fo
 
 say, say for secs, think, think for secs, show, hide, switch costume, next costume, switch backdrop, switch backdrop and wait, next backdrop, change and set size, go to front or back, go forward or backward layers, costume number or name, backdrop number or name, size.
 
-Graphic effects: only **ghost** is implemented. Other effects (color, fisheye, whirl, pixelate, mosaic, brightness) are accepted but have no visible result.
+Graphic effects: set effect to, change effect by and clear graphic effects, for all seven effects (color, fisheye, whirl, pixelate, mosaic, brightness, ghost), on sprites and on the stage. They use scratch-render's shader math, so a value looks the same as in Scratch: color 200 goes once around the color wheel, mosaic 10 makes two copies across, pixelate blocks are a tenth of the value in stage units. Ghost is clamped to 0 through 100 and brightness to -100 through 100, as in Scratch. Stamps carry the sprite's effects. Clones start with their parent's effects, and the green flag and stop clear every effect.
 
 ## Sound
 
@@ -41,9 +41,9 @@ wait, repeat, forever, if, if else, wait until, repeat until, while, stop (all, 
 
 touching (mouse, edge, sprite), touching color, color is touching color, distance to, ask and wait with answer, key pressed, mouse down, mouse x and y, timer, reset timer, "of" (sprite and stage properties and variables), current date and time, days since 2000.
 
-Touching a sprite or the mouse is pixel-accurate: it compares the opaque pixels of the costumes as they are drawn, with rotation and size applied, the way scratch-render does. The mouse counts as the whole stage pixel under it. Ghost does not change what a sprite touches. Touching the edge, if on edge bounce and fencing use tight bounds, the box around the costume's opaque pixels, so transparent padding in a costume does not count. A costume with no opaque pixels at all touches nothing, not even the edge, and is not fenced.
+Touching a sprite or the mouse is pixel-accurate: it compares the opaque pixels of the costumes as they are drawn, with rotation, size and the effects that move pixels (fisheye, whirl, pixelate, mosaic) applied, the way scratch-render does. The mouse counts as the whole stage pixel under it. Ghost and the other color effects do not change what a sprite touches. Touching the edge, if on edge bounce and fencing use tight bounds, the box around the costume's opaque pixels as the effects draw them, so transparent padding in a costume does not count. A costume with no opaque pixels at all touches nothing, not even the edge, and is not fenced.
 
-Touching color looks at what the stage shows under every opaque pixel of the sprite: the other sprites in front to back order (with their ghost effect), the pen layer, the backdrop and the white stage behind it. Color is touching color only looks under the sprite's pixels that have the first color, ignoring its ghost effect. Colors match loosely, like in Scratch: the top 5 bits of red and green and the top 4 bits of blue have to agree, and the first color of color is touching color needs the top 6 bits of each channel. Both blocks work while the sprite is hidden, as in Scratch 3.
+Touching color looks at what the stage shows under every opaque pixel of the sprite: the other sprites in front to back order (with all their effects), the pen layer, the backdrop (with the stage's effects) and the white stage behind it. Color is touching color only looks under the sprite's pixels that have the first color after its own color and brightness effects, ignoring its ghost effect. Colors match loosely, like in Scratch: the top 5 bits of red and green and the top 4 bits of blue have to agree, and the first color of color is touching color needs the top 6 bits of each channel. Both blocks work while the sprite is hidden, as in Scratch 3.
 
 Not supported: loudness (reports -1), username (reports an empty string), video sensing, drag mode (ignored).
 

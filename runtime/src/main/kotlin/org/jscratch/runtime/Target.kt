@@ -2,6 +2,7 @@ package org.jscratch.runtime
 
 import java.awt.geom.AffineTransform
 import java.awt.geom.Point2D
+import java.awt.image.BufferedImage
 import java.time.LocalDateTime
 
 enum class RotationStyle { ALL_AROUND, LEFT_RIGHT, DONT_ROTATE }
@@ -46,6 +47,11 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
     @JvmField var volume: Double = 100.0
 
     @JvmField var ghost: Double = 0.0
+
+    /** Every graphic effect besides [ghost]. */
+    internal var effects: Effects = Effects.NONE
+        private set
+    private var effected: EffectedCostume? = null
 
     @JvmField var isClone: Boolean = false
 
@@ -116,6 +122,8 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         currentCostume = src.currentCostume
         volume = src.volume
         ghost = src.ghost
+        effects = src.effects
+        effected = src.effected
         pen.copyFrom(src.pen)
         copyLocalsFrom(src)
     }
@@ -123,6 +131,23 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
     // ---- geometry -------------------------------------------------------------------------------
 
     val costume: Costume? get() = costumes.getOrNull(currentCostume)
+
+    /** The current costume with [effects] applied, or null while none of them is on. */
+    internal fun effectedCostume(): EffectedCostume? {
+        if (!effects.active) return null
+        val c = costume ?: return null
+        val img = c.image ?: return null
+        val e = effected
+        if (e != null && e.source === img && e.effects == effects) return e
+        return EffectedCostume(c, img, effects).also { effected = it }
+    }
+
+    /** The pixels this target draws and stamps: its costume image with every effect but ghost. */
+    fun drawnImage(): BufferedImage? = effectedCostume()?.image ?: costume?.image
+
+    /** The costume's opaque pixels as drawn, which effects that move pixels change. */
+    private fun drawnSilhouette(): Silhouette? =
+        if (effects.changesShape) effectedCostume()?.silhouette else costume?.silhouette
 
     /** Costume-pixels to stage-pixels transform (stage pixel origin top-left, y down). */
     fun renderTransform(): AffineTransform? {
@@ -165,9 +190,9 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
     }
 
     /**
-     * Geometry for one position, direction, size, rotation style and costume image.
-     * Each part is computed on first use and kept until any of those change, so
-     * repeated `touching` checks against a sprite that has not moved cost nothing.
+     * Geometry for one position, direction, size, rotation style, costume image and
+     * set of effects. Each part is computed on first use and kept until any of those
+     * change, so repeated `touching` checks against a sprite that has not moved cost nothing.
      */
     private inner class Placement {
         private val costume = this@Target.costume
@@ -177,12 +202,13 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         private val direction = this@Target.direction
         private val size = this@Target.size
         private val rotationStyle = this@Target.rotationStyle
+        private val effects = this@Target.effects
 
         fun isCurrent(): Boolean {
             val c = this@Target.costume
             return c === costume && c?.image === image && this@Target.x == x && this@Target.y == y &&
                 this@Target.direction == direction && this@Target.size == size &&
-                this@Target.rotationStyle == rotationStyle
+                this@Target.rotationStyle == rotationStyle && this@Target.effects == effects
         }
 
         val bounds: Bounds? by lazy(LazyThreadSafetyMode.NONE) { computeBounds() }
@@ -191,7 +217,7 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
     }
 
     private fun computeBounds(): Bounds? {
-        val pts = costume?.silhouette?.hull ?: return null
+        val pts = drawnSilhouette()?.hull ?: return null
         if (pts.isEmpty()) return null
         val at = renderTransform() ?: return null
         val n = pts.size / 2
@@ -238,24 +264,37 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         // drawn upright at their own size.
         val drawnDirection = if (rotationStyle == RotationStyle.ALL_AROUND) direction else 90.0
         val nearest = !c.isSvg || (drawnDirection % 90.0 == 0.0 && size > 99 && size < 101)
-        return Probe(inverse, sil, nearest)
+        return Probe(inverse, sil, nearest, effects, c.width, c.height)
     }
 
-    internal class Probe(inverse: AffineTransform, private val sil: Silhouette, private val nearest: Boolean) :
-        ColorLayer {
+    /**
+     * Samples the costume at stage points. With [effects], it moves each point the way the effects
+     * move pixels and changes the color it finds, like scratch-render's `getLocalPosition` and
+     * `sampleColor4b`. Ghost is left to the caller.
+     */
+    internal class Probe(
+        inverse: AffineTransform,
+        private val sil: Silhouette,
+        private val nearest: Boolean,
+        private val effects: Effects,
+        private val skinWidth: Double,
+        private val skinHeight: Double,
+    ) : ColorLayer {
         private val m00 = inverse.scaleX
         private val m01 = inverse.shearX
         private val m02 = inverse.translateX
         private val m10 = inverse.shearY
         private val m11 = inverse.scaleY
         private val m12 = inverse.translateY
+        private val point = DoubleArray(2)
 
         /** Whether the stage point ([x], [y]), in Scratch coordinates, lands on an opaque pixel. */
         fun hits(x: Double, y: Double): Boolean =
             toImage(x, y) { px, py -> if (nearest) sil.isTouchingNearest(px, py) else sil.isTouchingLinear(px, py) }
 
-        /** The costume's own color at ([x], [y]), without effects. scratch-render samples colors by nearest neighbor. */
-        override fun colorAt(x: Double, y: Double): Int = toImage(x, y) { px, py -> sil.colorAtNearest(px, py) }
+        /** The costume's color at ([x], [y]) with every effect but ghost. scratch-render samples colors by nearest neighbor. */
+        override fun colorAt(x: Double, y: Double): Int =
+            effects.transformColor(toImage(x, y) { px, py -> sil.colorAtNearest(px, py) })
 
         private inline fun <R> toImage(x: Double, y: Double, sample: (Double, Double) -> R): R {
             val sx = Runtime.STAGE_WIDTH / 2.0 + x
@@ -264,6 +303,14 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
             var py = m10 * sx + m11 * sy + m12
             if (Math.abs(px) < sil.width * 1e-6) px = 0.0
             if (Math.abs(py) < sil.height * 1e-6) py = 0.0
+            // Effects only move points that land on the costume.
+            if (effects.changesShape && px >= 0 && px < sil.width && py >= 0 && py < sil.height) {
+                point[0] = px / sil.width
+                point[1] = py / sil.height
+                effects.transformPoint(point, skinWidth, skinHeight)
+                px = point[0] * sil.width
+                py = point[1] * sil.height
+            }
             return sample(px, py)
         }
     }
@@ -419,7 +466,8 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
     /** Keeps at least a sliver of the sprite on stage, like scratch-render's fencing. */
     private fun fence(nx: Double, ny: Double): DoubleArray {
         // Far from the edges no part of the costume can leave the fence, so skip the exact bounds.
-        val r = (costume?.radius() ?: 0.0) * size / 100.0
+        val radius = if (effects.changesShape) effectedCostume()?.radius else costume?.radius()
+        val r = (radius ?: 0.0) * size / 100.0
         val clear =
             Math.abs(nx) + r <= Runtime.STAGE_WIDTH / 2.0 - FENCE_WIDTH &&
                 Math.abs(ny) + r <= Runtime.STAGE_HEIGHT / 2.0 - FENCE_WIDTH
@@ -725,21 +773,25 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         rt.moveLayers(this, if (direction == "forward") n else -n)
     }
 
+    /** `set effect to`. Like scratch-vm, it clamps ghost to 0..100 and brightness to -100..100 and ignores unknown effects. */
     fun setEffect(effect: String, value: Double) {
-        if (effect.equals("ghost", ignoreCase = true)) {
-            ghost = value.coerceIn(0.0, 100.0)
-            rt.requestRedraw()
-        } else {
-            Log.warn("Graphic effect '$effect' is not supported yet; only 'ghost' is.")
+        when (val name = effect.lowercase()) {
+            "ghost" -> ghost = value.coerceIn(0.0, 100.0)
+            "brightness" -> effects = effects.with(name, value.coerceIn(-100.0, 100.0))
+            else -> effects = effects.with(name, value)
         }
+        if (visible || isStage) rt.requestRedraw()
     }
 
     fun changeEffect(effect: String, delta: Double) {
-        if (effect.equals("ghost", ignoreCase = true)) setEffect(effect, ghost + delta) else setEffect(effect, delta)
+        val name = effect.lowercase()
+        val current = if (name == "ghost") ghost else effects.get(name) ?: return
+        setEffect(name, current + delta)
     }
 
     fun clearEffects() {
         ghost = 0.0
+        effects = Effects.NONE
         rt.requestRedraw()
     }
 
@@ -869,7 +921,7 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
     }
 
     fun stamp() {
-        val img = costume?.image ?: return
+        val img = drawnImage() ?: return
         val at = renderTransform() ?: return
         rt.pen.stamp(img, at, (1.0 - ghost / 100.0).toFloat())
     }

@@ -24,6 +24,9 @@ class Silhouette(private val image: BufferedImage) {
     /** ARGB pixels, read only once a color sensing block needs them so other projects do not pay for a copy. */
     private val argb: IntArray by lazy { image.getRGB(0, 0, width, height, null, 0, width) }
 
+    /** Premultiplied ARGB pixels, for drawing graphic effects. */
+    internal val premultiplied: IntArray by lazy { IntArray(argb.size) { ColorSensing.premultiply(argb[it]) } }
+
     /** Whether the pixel at integer image coordinates ([x], [y]) is opaque. Out of range is transparent. */
     fun opaque(x: Int, y: Int): Boolean {
         if (x < 0 || y < 0 || x >= width || y >= height) return false

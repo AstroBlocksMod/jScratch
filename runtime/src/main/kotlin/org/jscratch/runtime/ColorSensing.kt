@@ -62,8 +62,8 @@ internal object ColorSensing {
     private fun blue(c: Int): Int = c and 0xFF
 
     /** Rounds half to even and clamps to 0..255, like a store into a `Uint8ClampedArray`. */
-    private fun clamp(v: Double): Double = Math.rint(v).coerceIn(0.0, 255.0)
+    fun clamp(v: Double): Double = Math.rint(v).coerceIn(0.0, 255.0)
 
-    private fun pack(a: Double, r: Double, g: Double, b: Double): Int =
+    fun pack(a: Double, r: Double, g: Double, b: Double): Int =
         (clamp(a).toInt() shl 24) or (clamp(r).toInt() shl 16) or (clamp(g).toInt() shl 8) or clamp(b).toInt()
 }
