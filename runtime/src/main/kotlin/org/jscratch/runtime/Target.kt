@@ -327,13 +327,14 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
      * at the first match. The pen layer covers the whole stage, so scratch-render's union of candidate
      * bounds is always these bounds. Unlike `touching` a sprite, this works while hidden.
      */
-    private fun touchingColor(rgb: Int, mask: Int): Boolean {
+    private fun sensesColor(rgb: Int, mask: Int): Boolean {
         val bounds = touchingBounds() ?: return false
         val mine = probe() ?: return false
         val layers = ArrayList<ColorLayer>()
         for (i in rt.sprites.indices.reversed()) {
             val other = rt.sprites[i]
-            if (other === this || !other.visible) continue
+            // A fully ghosted sprite adds nothing to the blend, so skip sampling it.
+            if (other === this || !other.visible || other.ghost >= 100) continue
             val ob = other.touchingBounds() ?: continue
             if (!ob.intersects(bounds)) continue
             val p = other.probe() ?: continue
@@ -757,11 +758,11 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         }
     }
 
-    fun touchingColor(color: Any?): Boolean = touchingColor(Cast.toArgb(color) and 0xFFFFFF, ColorSensing.NO_MASK)
+    fun touchingColor(color: Any?): Boolean = sensesColor(Cast.toArgb(color) and 0xFFFFFF, ColorSensing.NO_MASK)
 
     /** `color [mask] is touching [color]?`: only this sprite's pixels of the mask color count. */
     fun colorTouchingColor(mask: Any?, color: Any?): Boolean =
-        touchingColor(Cast.toArgb(color) and 0xFFFFFF, Cast.toArgb(mask) and 0xFFFFFF)
+        sensesColor(Cast.toArgb(color) and 0xFFFFFF, Cast.toArgb(mask) and 0xFFFFFF)
 
     fun distanceTo(option: Any?): Double {
         val p = targetPosition(option) ?: return 10000.0
