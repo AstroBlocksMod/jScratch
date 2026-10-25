@@ -241,7 +241,8 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         return Probe(inverse, sil, nearest)
     }
 
-    internal class Probe(inverse: AffineTransform, private val sil: Silhouette, private val nearest: Boolean) {
+    internal class Probe(inverse: AffineTransform, private val sil: Silhouette, private val nearest: Boolean) :
+        ColorLayer {
         private val m00 = inverse.scaleX
         private val m01 = inverse.shearX
         private val m02 = inverse.translateX
@@ -250,15 +251,26 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         private val m12 = inverse.translateY
 
         /** Whether the stage point ([x], [y]), in Scratch coordinates, lands on an opaque pixel. */
-        fun hits(x: Double, y: Double): Boolean {
+        fun hits(x: Double, y: Double): Boolean =
+            toImage(x, y) { px, py -> if (nearest) sil.isTouchingNearest(px, py) else sil.isTouchingLinear(px, py) }
+
+        /** The costume's own color at ([x], [y]), without effects. scratch-render samples colors by nearest neighbor. */
+        override fun colorAt(x: Double, y: Double): Int = toImage(x, y) { px, py -> sil.colorAtNearest(px, py) }
+
+        private inline fun <R> toImage(x: Double, y: Double, sample: (Double, Double) -> R): R {
             val sx = Runtime.STAGE_WIDTH / 2.0 + x
             val sy = Runtime.STAGE_HEIGHT / 2.0 - y
             var px = m00 * sx + m01 * sy + m02
             var py = m10 * sx + m11 * sy + m12
             if (Math.abs(px) < sil.width * 1e-6) px = 0.0
             if (Math.abs(py) < sil.height * 1e-6) py = 0.0
-            return if (nearest) sil.isTouchingNearest(px, py) else sil.isTouchingLinear(px, py)
+            return sample(px, py)
         }
+    }
+
+    /** A sprite with a ghost effect, as color sensing sees it. */
+    private class Faded(private val probe: Probe, private val keep: Double) : ColorLayer {
+        override fun colorAt(x: Double, y: Double): Int = ColorSensing.fade(probe.colorAt(x, y), keep)
     }
 
     /**
@@ -304,6 +316,46 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
                 py++
             }
             px++
+        }
+        return false
+    }
+
+    /**
+     * `touching color` and, with a [mask], `color is touching color`. Like scratch-render's CPU path,
+     * it walks the whole pixels of this sprite's bounds. Wherever this sprite is opaque (or, with a
+     * mask, has the mask color, ghost ignored), it blends what everything else draws there and stops
+     * at the first match. The pen layer covers the whole stage, so scratch-render's union of candidate
+     * bounds is always these bounds. Unlike `touching` a sprite, this works while hidden.
+     */
+    private fun sensesColor(rgb: Int, mask: Int): Boolean {
+        val bounds = touchingBounds() ?: return false
+        val mine = probe() ?: return false
+        val layers = ArrayList<ColorLayer>()
+        for (i in rt.sprites.indices.reversed()) {
+            val other = rt.sprites[i]
+            // A fully ghosted sprite adds nothing to the blend, so skip sampling it.
+            if (other === this || !other.visible || other.ghost >= 100) continue
+            val ob = other.touchingBounds() ?: continue
+            if (!ob.intersects(bounds)) continue
+            val p = other.probe() ?: continue
+            layers.add(if (other.ghost > 0) Faded(p, 1 - other.ghost / 100.0) else p)
+        }
+        layers.add(rt.pen)
+        if (!isStage) rt.stage.probe()?.let { layers.add(it) }
+        var y = bounds.bottom
+        while (y <= bounds.top) {
+            var x = bounds.left
+            while (x <= bounds.right) {
+                val inside =
+                    if (mask == ColorSensing.NO_MASK) {
+                        mine.hits(x, y)
+                    } else {
+                        ColorSensing.maskMatches(mine.colorAt(x, y), mask)
+                    }
+                if (inside && ColorSensing.colorMatches(ColorSensing.blend(layers, x, y), rgb)) return true
+                x++
+            }
+            y++
         }
         return false
     }
@@ -706,10 +758,11 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         }
     }
 
-    fun touchingColor(color: Any?): Boolean {
-        rt.unsupported("sensing_touchingcolor")
-        return false
-    }
+    fun touchingColor(color: Any?): Boolean = sensesColor(Cast.toArgb(color) and 0xFFFFFF, ColorSensing.NO_MASK)
+
+    /** `color [mask] is touching [color]?`: only this sprite's pixels of the mask color count. */
+    fun colorTouchingColor(mask: Any?, color: Any?): Boolean =
+        sensesColor(Cast.toArgb(color) and 0xFFFFFF, Cast.toArgb(mask) and 0xFFFFFF)
 
     fun distanceTo(option: Any?): Double {
         val p = targetPosition(option) ?: return 10000.0

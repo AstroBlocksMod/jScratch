@@ -76,7 +76,7 @@ class PenState {
 }
 
 /** The pen layer: a bitmap between the backdrop and the sprites. */
-class PenLayer(val scale: Int = 2) {
+class PenLayer(val scale: Int = 2) : ColorLayer {
     val image: BufferedImage =
         BufferedImage(Runtime.STAGE_WIDTH * scale, Runtime.STAGE_HEIGHT * scale, BufferedImage.TYPE_INT_ARGB)
 
@@ -88,6 +88,16 @@ class PenLayer(val scale: Int = 2) {
         g.fillRect(0, 0, image.width, image.height)
         g.dispose()
         dirty = true
+    }
+
+    /** Samples the layer like scratch-render's pen silhouette, which spans the stage at any resolution. */
+    override fun colorAt(x: Double, y: Double): Int {
+        val lx = (Runtime.STAGE_WIDTH / 2.0 + x) / Runtime.STAGE_WIDTH
+        val ly = (Runtime.STAGE_HEIGHT / 2.0 - y) / Runtime.STAGE_HEIGHT
+        if (lx < 0 || ly < 0 || lx > 1 || ly > 1) return 0
+        val px = Math.floor(lx * (image.width - 1)).toInt()
+        val py = Math.floor(ly * (image.height - 1)).toInt()
+        return ColorSensing.premultiply(image.getRGB(px, py))
     }
 
     fun line(x0: Double, y0: Double, x1: Double, y1: Double, pen: PenState) {
