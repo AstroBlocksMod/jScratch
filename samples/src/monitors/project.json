@@ -1,0 +1,321 @@
+{
+  "targets": [
+    {
+      "isStage": true,
+      "name": "Stage",
+      "variables": {
+        "var_score": ["score", 0],
+        "var_later": ["later", "hi"],
+        "var_gone": ["gone", 1],
+        "var_big": ["big", 7],
+        "var_speed": ["speed", 5]
+      },
+      "lists": {
+        "list_items": ["items", ["a", "b"]],
+        "list_hidden": ["hiddenlist", ["x"]]
+      },
+      "broadcasts": {},
+      "blocks": {},
+      "comments": {},
+      "currentCostume": 0,
+      "costumes": [
+        {
+          "name": "Blue Sky",
+          "bitmapResolution": 1,
+          "dataFormat": "svg",
+          "assetId": "e7c147730f19d284bcd7b3f00af19bb6",
+          "md5ext": "e7c147730f19d284bcd7b3f00af19bb6.svg",
+          "rotationCenterX": 240,
+          "rotationCenterY": 180
+        }
+      ],
+      "sounds": [],
+      "volume": 100,
+      "layerOrder": 0,
+      "tempo": 60,
+      "videoTransparency": 50,
+      "videoState": "on",
+      "textToSpeechLanguage": null
+    },
+    {
+      "isStage": false,
+      "name": "Cat",
+      "variables": {
+        "var_lives": ["lives", 0]
+      },
+      "lists": {},
+      "broadcasts": {},
+      "blocks": {
+        "hat": {
+          "opcode": "event_whenflagclicked",
+          "next": "s1",
+          "parent": null,
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": true,
+          "x": 20,
+          "y": 20
+        },
+        "s1": {
+          "opcode": "data_setvariableto",
+          "next": "s2",
+          "parent": "hat",
+          "inputs": {
+            "VALUE": [1, [10, "42"]]
+          },
+          "fields": {
+            "VARIABLE": ["score", "var_score"]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "s2": {
+          "opcode": "data_setvariableto",
+          "next": "s3",
+          "parent": "s1",
+          "inputs": {
+            "VALUE": [1, [10, "3"]]
+          },
+          "fields": {
+            "VARIABLE": ["lives", "var_lives"]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "s3": {
+          "opcode": "data_addtolist",
+          "next": "s4",
+          "parent": "s2",
+          "inputs": {
+            "ITEM": [1, [10, "c"]]
+          },
+          "fields": {
+            "LIST": ["items", "list_items"]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "s4": {
+          "opcode": "data_showvariable",
+          "next": "s5",
+          "parent": "s3",
+          "inputs": {},
+          "fields": {
+            "VARIABLE": ["later", "var_later"]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "s5": {
+          "opcode": "data_hidevariable",
+          "next": "s6",
+          "parent": "s4",
+          "inputs": {},
+          "fields": {
+            "VARIABLE": ["gone", "var_gone"]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "s6": {
+          "opcode": "data_hidelist",
+          "next": "s7",
+          "parent": "s5",
+          "inputs": {},
+          "fields": {
+            "LIST": ["hiddenlist", "list_hidden"]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "s7": {
+          "opcode": "motion_gotoxy",
+          "next": "s8",
+          "parent": "s6",
+          "inputs": {
+            "X": [1, [4, "100"]],
+            "Y": [1, [4, "0"]]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "s8": {
+          "opcode": "looks_say",
+          "next": null,
+          "parent": "s7",
+          "inputs": {
+            "MESSAGE": [1, [10, "done"]]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        }
+      },
+      "comments": {},
+      "currentCostume": 0,
+      "costumes": [
+        {
+          "name": "Cat",
+          "bitmapResolution": 1,
+          "dataFormat": "svg",
+          "assetId": "6ac3a6339b85092fa9b1694f2da7779d",
+          "md5ext": "6ac3a6339b85092fa9b1694f2da7779d.svg",
+          "rotationCenterX": 48,
+          "rotationCenterY": 50
+        }
+      ],
+      "sounds": [],
+      "volume": 100,
+      "layerOrder": 1,
+      "visible": false,
+      "x": 0,
+      "y": 0,
+      "size": 100,
+      "direction": 90,
+      "draggable": false,
+      "rotationStyle": "all around"
+    }
+  ],
+  "monitors": [
+    {
+      "id": "var_score",
+      "mode": "default",
+      "opcode": "data_variable",
+      "params": {"VARIABLE": "score"},
+      "spriteName": null,
+      "value": 0,
+      "width": 0,
+      "height": 0,
+      "x": 5,
+      "y": 5,
+      "visible": true,
+      "sliderMin": 0,
+      "sliderMax": 100,
+      "isDiscrete": true
+    },
+    {
+      "id": "var_gone",
+      "mode": "default",
+      "opcode": "data_variable",
+      "params": {"VARIABLE": "gone"},
+      "spriteName": null,
+      "value": 1,
+      "width": 0,
+      "height": 0,
+      "x": 5,
+      "y": 300,
+      "visible": true,
+      "sliderMin": 0,
+      "sliderMax": 100,
+      "isDiscrete": true
+    },
+    {
+      "id": "var_big",
+      "mode": "large",
+      "opcode": "data_variable",
+      "params": {"VARIABLE": "big"},
+      "spriteName": null,
+      "value": 7,
+      "width": 0,
+      "height": 0,
+      "x": 250,
+      "y": 5,
+      "visible": true,
+      "sliderMin": 0,
+      "sliderMax": 100,
+      "isDiscrete": true
+    },
+    {
+      "id": "var_speed",
+      "mode": "slider",
+      "opcode": "data_variable",
+      "params": {"VARIABLE": "speed"},
+      "spriteName": null,
+      "value": 5,
+      "width": 0,
+      "height": 0,
+      "x": 250,
+      "y": 60,
+      "visible": true,
+      "sliderMin": 0,
+      "sliderMax": 10,
+      "isDiscrete": true
+    },
+    {
+      "id": "list_items",
+      "mode": "list",
+      "opcode": "data_listcontents",
+      "params": {"LIST": "items"},
+      "spriteName": null,
+      "value": ["a", "b"],
+      "width": 110,
+      "height": 170,
+      "x": 360,
+      "y": 120,
+      "visible": true
+    },
+    {
+      "id": "list_hidden",
+      "mode": "list",
+      "opcode": "data_listcontents",
+      "params": {"LIST": "hiddenlist"},
+      "spriteName": null,
+      "value": ["x"],
+      "width": 100,
+      "height": 80,
+      "x": 130,
+      "y": 250,
+      "visible": true
+    },
+    {
+      "id": "var_lives",
+      "mode": "default",
+      "opcode": "data_variable",
+      "params": {"VARIABLE": "lives"},
+      "spriteName": "Cat",
+      "value": 0,
+      "width": 0,
+      "height": 0,
+      "x": 5,
+      "y": 120,
+      "visible": true,
+      "sliderMin": 0,
+      "sliderMax": 100,
+      "isDiscrete": true
+    },
+    {
+      "id": "cat_xposition",
+      "mode": "default",
+      "opcode": "motion_xposition",
+      "params": {},
+      "spriteName": "Cat",
+      "value": 0,
+      "width": 0,
+      "height": 0,
+      "x": 5,
+      "y": 150,
+      "visible": true
+    },
+    {
+      "id": "timer",
+      "mode": "default",
+      "opcode": "sensing_timer",
+      "params": {},
+      "spriteName": null,
+      "value": 0,
+      "width": 0,
+      "height": 0,
+      "x": 5,
+      "y": 180,
+      "visible": true
+    }
+  ],
+  "extensions": [],
+  "meta": {
+    "semver": "3.0.0",
+    "vm": "0.2.0",
+    "agent": "jScratch sample"
+  }
+}

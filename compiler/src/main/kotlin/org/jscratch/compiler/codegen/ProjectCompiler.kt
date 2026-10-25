@@ -13,8 +13,20 @@ class GeneratedProject(
     val warnings: List<String>,
 )
 
-/** A variable or list and where it lives in generated code. */
-class VarSlot(val owner: String, val field: String, val isStatic: Boolean, val isList: Boolean, val name: String)
+/**
+ * A variable or list and where it lives in generated code. [index] numbers the slots of one target, variables
+ * first and then lists, and [monitor] is the slot's entry in the monitor table, or -1 when it has none.
+ */
+class VarSlot(
+    val owner: String,
+    val field: String,
+    val isStatic: Boolean,
+    val isList: Boolean,
+    val name: String,
+    val index: Int,
+) {
+    var monitor: Int = -1
+}
 
 /** Everything target compilers share: class names and the global variable table. */
 class ProjectContext(val project: Project) {
@@ -24,21 +36,29 @@ class ProjectContext(val project: Project) {
     private val stageVarsByName = HashMap<String, VarSlot>()
     val stageSlots = ArrayList<VarSlot>()
     val resources = LinkedHashMap<String, ByteArray>()
+    val monitors: List<MonitorDef> = Monitors.build(project) { warn(it) }
+    private val monitorsByVar = HashMap<Pair<Target, String>, Int>()
 
     init {
+        for ((i, m) in monitors.withIndex()) {
+            if (m.varId != null) monitorsByVar[m.owner to m.varId] = i
+        }
+        if (monitors.isNotEmpty()) resources[Monitors.RESOURCE] = Monitors.encode(monitors).toByteArray(Charsets.UTF_8)
         val names = Names()
         for (t in project.targets) {
             classNames[t] = if (t.isStage) RT.STAGE_CLASS else "${RT.PACKAGE}/${names.unique("Sprite_", t.name)}"
         }
         val fieldNames = Names()
         for (v in project.stage.variables.values) {
-            val slot = VarSlot(RT.STAGE_CLASS, fieldNames.unique("v_", v.name), true, false, v.name)
+            val slot = VarSlot(RT.STAGE_CLASS, fieldNames.unique("v_", v.name), true, false, v.name, stageSlots.size)
+            slot.monitor = monitorIndex(project.stage, v.id)
             stageVars[v.id] = slot
             stageVarsByName[v.name] = slot
             stageSlots.add(slot)
         }
         for (l in project.stage.lists.values) {
-            val slot = VarSlot(RT.STAGE_CLASS, fieldNames.unique("l_", l.name), true, true, l.name)
+            val slot = VarSlot(RT.STAGE_CLASS, fieldNames.unique("l_", l.name), true, true, l.name, stageSlots.size)
+            slot.monitor = monitorIndex(project.stage, l.id)
             stageVars[l.id] = slot
             stageVarsByName["list:" + l.name] = slot
             stageSlots.add(slot)
@@ -46,6 +66,9 @@ class ProjectContext(val project: Project) {
     }
 
     fun globalById(id: String): VarSlot? = stageVars[id]
+
+    /** The monitor of [target]'s variable or list [id], or -1. */
+    fun monitorIndex(target: Target, id: String): Int = monitorsByVar[target to id] ?: -1
 
     fun globalByName(name: String, isList: Boolean): VarSlot? = stageVarsByName[if (isList) "list:$name" else name]
 

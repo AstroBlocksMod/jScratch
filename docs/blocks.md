@@ -53,7 +53,20 @@ Every operator block: arithmetic, pick random, comparisons, and, or, not, join, 
 
 ## Variables and lists
 
-set, change, show and hide (monitors are not drawn), all list blocks: add, delete, delete all, insert, replace, item, item number, length, contains, and the list reporter. Cloud variables behave as ordinary variables.
+set, change, show and hide variable, all list blocks: add, delete, delete all, insert, replace, item, item number, length, contains, show and hide list, and the list reporter. Cloud variables behave as ordinary variables.
+
+## Monitors
+
+Monitors are drawn the way the Scratch player draws them, with scratch-gui's sizes, colors and labels, on top of the sprites and say bubbles.
+
+- **Variables** show as a normal readout, a large readout or a slider, whichever the project saved. Dragging a slider sets the variable, snapping to whole numbers or to hundredths like in Scratch.
+- **Lists** show their items with index numbers and the length, at the size saved in the project. The mouse wheel scrolls a long list.
+- **Built-in reporters** with a checkbox in the editor can be monitored too: x position, y position, direction, costume and backdrop number or name, size, volume, answer, timer, current date and time, username and loudness.
+- Numbers are rounded to six decimal places for display, as in Scratch.
+- show and hide variable and show and hide list work on every variable and list, including ones that never had a monitor. A monitor shown for the first time is placed where scratch-gui would place it, in the first free spot from the top left.
+- Clicks on a monitor do not reach the project, so they do not trigger `when stage clicked` or `mouse down?`.
+
+Not supported: dragging monitors, their right-click menu, editing or resizing lists in a list monitor, and monitors of extension blocks such as the Music tempo. A value too wide for the stage is cut off at the edge instead of wrapping.
 
 ## Pen
 
@@ -65,6 +78,5 @@ Music, Text to Speech, Translate, Video Sensing, Makey Makey and hardware extens
 
 ## Known limitations
 
-- Variable monitors and list monitors are not drawn.
 - A single script longer than the JVM's 64 KiB method limit will fail to compile. Very large lists are stored as resources, so they are fine.
 - Turbo mode and custom frame rates are not available.

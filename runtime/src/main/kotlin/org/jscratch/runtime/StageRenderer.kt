@@ -23,7 +23,7 @@ class DrawItem(
     val bounds: Bounds?,
 )
 
-class FrameSnapshot(val backdrop: DrawItem?, val items: List<DrawItem>)
+class FrameSnapshot(val backdrop: DrawItem?, val items: List<DrawItem>, val monitors: List<MonitorItem>)
 
 /** Draws a [FrameSnapshot] with Java2D. Shared by the window and by headless screenshots. */
 object StageRenderer {
@@ -43,7 +43,7 @@ object StageRenderer {
             stage.drawnImage()?.let { img ->
                 stage.renderTransform()?.let { at -> DrawItem(img, at, 1f, "", false, null) }
             }
-        return FrameSnapshot(backdrop, items)
+        return FrameSnapshot(backdrop, items, MonitorView.layout(rt))
     }
 
     /** Renders the stage into [g], whose transform must already map stage pixels (480 x 360) to the device. */
@@ -68,6 +68,8 @@ object StageRenderer {
         for (item in snap.items) {
             if (item.sayText.isNotEmpty()) drawBubble(g, item)
         }
+        // Monitors sit in a layer above the stage canvas in scratch-gui, so above sprites and bubbles too.
+        for (m in snap.monitors) MonitorView.draw(g, m)
     }
 
     /** Renders a frame to an image at [scale] times the stage size. */

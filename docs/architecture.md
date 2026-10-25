@@ -20,8 +20,8 @@ flowchart LR
 2. **Parsing and validation.** `project.json` goes to [scratch-parser](https://github.com/scratchfoundation/scratch-parser), the Scratch Foundation's JavaScript parser. The `sb3js` module bundles its `lib/parse` and `lib/validate` (JSON parsing with Scratch's control-character cleanup, then validation against the official sb3 JSON schema) into one script with esbuild. On the JVM that script runs inside [Rhino](https://github.com/mozilla/rhino); in the browser it is loaded by the page. The `ProjectJson` interface hides the difference.
 3. **JSON.** Plain JSON (the validated project handed back by scratch-parser, and the argument lists inside custom block mutations) is parsed by kotlinx-serialization on the JVM and by `JSON.parse` in the browser. Both produce the small `JsonValue` tree in `compiler/.../json/JsonTree.kt`, which is all the model mapping sees.
 4. **Model.** The tree is mapped onto the model in `Model.kt`, whose shape follows ScratchEverywhere's `sb3.cpp`: a list of targets, each with variables, lists, broadcasts, costumes, sounds and a block table keyed by block id. Inputs are decoded into literals, variable and list references, broadcast references or block references.
-5. **Code generation.** `ProjectCompiler` assigns a class name per target and a field per variable. `TargetCompiler` then emits one class per target with ASM. The class extends the runtime's `Stage` or `Sprite`, and its constructor fills in position, costumes, sounds, variable values and hat registrations.
-6. **JAR assembly.** `JarWriter` writes the manifest, the generated classes, list data resources, the used assets and every entry of the runtime JAR.
+5. **Code generation.** `ProjectCompiler` assigns a class name per target and a field per variable, and builds the monitor table: every monitor saved in the project, plus a hidden one for each variable and list without one, so the show blocks can show any of them. `TargetCompiler` then emits one class per target with ASM. The class extends the runtime's `Stage` or `Sprite`, and its constructor fills in position, costumes, sounds, variable values and hat registrations.
+6. **JAR assembly.** `JarWriter` writes the manifest, the generated classes, list data resources, the monitor table (`data/monitors.txt`, one tab-separated line per monitor), the used assets and every entry of the runtime JAR.
 
 ## Generated classes
 
@@ -36,6 +36,8 @@ flowchart LR
 | Custom block | `private void proc_N(Object... args)`, wrapped in `enterWarp` and `exitWarp` when "run without screen refresh" is on |
 | Clone support | `newInstance()` and `copyLocalsFrom(Target)` overrides |
 | `sensing_of` variables | `lookupVariable(String)` override, a chain of string comparisons |
+| Monitored variables and lists | `monitorSlot(int)` and `setMonitorSlot(int, Object)` overrides, a `lookupswitch` over the slot numbers in the monitor table |
+| show and hide variable or list | `Runtime.setMonitorVisible(int, boolean)` with the monitor's index |
 
 Script dispatch goes through `runScript(int)`, a `tableswitch` over the script methods. The runtime starts a script by creating a `ScriptThread` for a target and a script id, so the runtime never needs reflection or lambdas.
 
@@ -71,7 +73,9 @@ Stopping a script sets a `killed` flag; the next time the script resumes it thro
 
 ## Rendering and input
 
-`StageRenderer` draws a `FrameSnapshot` (the images, transforms, ghost alpha and say bubbles of every visible sprite) with Java2D. The scheduler creates a snapshot after each frame and the Swing panel paints the latest one, so painting never touches live script state. Vector costumes are rasterized once with [JSVG](https://github.com/weisj/jsvg) at twice the stage resolution. The pen is a bitmap layer between the backdrop and the sprites.
+`StageRenderer` draws a `FrameSnapshot` (the images, transforms, ghost alpha and say bubbles of every visible sprite, and every visible monitor) with Java2D. The scheduler creates a snapshot after each frame and the Swing panel paints the latest one, so painting never touches live script state.
+
+Monitors are split the same way. `Monitor` holds the state the scripts change (visibility, and the position once placed) and reads its value from the target through `monitorSlot` or the reporter's runtime method. `MonitorView` measures each visible monitor with scratch-gui's CSS sizes, places any that were never placed with scratch-gui's `getInitialPosition`, and puts the result in the snapshot as plain data: text, colors and a rectangle in stage pixels. A list monitor copies only the rows in view. The window hit-tests those rectangles, so dragging a slider posts the new value to the scheduler as an event instead of writing the variable from the Swing thread. Vector costumes are rasterized once with [JSVG](https://github.com/weisj/jsvg) at twice the stage resolution. The pen is a bitmap layer between the backdrop and the sprites.
 
 Graphic effects other than ghost live in `Effects.kt`, a port of scratch-render's sprite shader and its CPU twin `EffectTransform`. When a target has any of them on, `EffectedCostume` draws its costume image once through the effects: for every pixel it moves the texture coordinate the way mosaic, pixelate, whirl and fisheye do, samples the premultiplied costume bilinearly with clamped edges like a WebGL texture, then applies color and brightness in HSV with scratch-render's byte rounding. The renderer and stamps use that image, and the target keeps it until the costume or an effect value changes. Clones share their parent's image until they change something. Ghost stays an alpha composite at draw time.
 

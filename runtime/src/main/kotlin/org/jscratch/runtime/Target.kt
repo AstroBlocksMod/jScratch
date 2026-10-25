@@ -82,6 +82,12 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
     /** Looks up a variable of this target by its Scratch name (for `sensing_of`). Null when unknown. */
     open fun lookupVariable(name: String): Any? = null
 
+    /** Reads the variable or list a monitor shows, by the slot number the compiler gave it. */
+    open fun monitorSlot(slot: Int): Any? = null
+
+    /** Sets a variable from a slider monitor. */
+    open fun setMonitorSlot(slot: Int, value: Any?) {}
+
     // ---- setup called from generated constructors -----------------------------------------------
 
     fun addCostume(

@@ -53,11 +53,22 @@ class Sb3Parser(private val json: ProjectJson) {
         if (targets.none { it.isStage }) throw Sb3Exception("project has no stage")
         val monitors =
             root["monitors"]?.asArray?.items?.map { m ->
+                val params = LinkedHashMap<String, String>()
+                m["params"]?.asObject?.fields?.forEach { (k, v) -> params[k] = v.toText() }
                 Monitor(
                     id = m["id"]?.asString ?: "",
                     opcode = m["opcode"]?.asString ?: "",
+                    mode = m["mode"]?.asString ?: "default",
+                    params = params,
                     spriteName = m["spriteName"]?.asString,
+                    x = m["x"]?.asDouble ?: Double.NaN,
+                    y = m["y"]?.asDouble ?: Double.NaN,
+                    width = m["width"]?.asDouble ?: 0.0,
+                    height = m["height"]?.asDouble ?: 0.0,
                     visible = m["visible"]?.asBoolean ?: false,
+                    sliderMin = m["sliderMin"]?.asDouble ?: 0.0,
+                    sliderMax = m["sliderMax"]?.asDouble ?: 100.0,
+                    isDiscrete = m["isDiscrete"]?.asBoolean ?: true,
                 )
             } ?: emptyList()
         val extensions = root["extensions"]?.asArray?.items?.mapNotNull { it.asString } ?: emptyList()

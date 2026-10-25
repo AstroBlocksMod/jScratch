@@ -25,6 +25,9 @@ class Runtime {
     val assets = Assets()
     val pen = PenLayer()
 
+    /** Every monitor of the project, in the compiler's order, which is also the order they are placed in. */
+    val monitors: ArrayList<Monitor> = ArrayList()
+
     val headlessFrames: Int = Integer.getInteger("jscratch.headless", -1)
     val headless: Boolean get() = headlessFrames >= 0
     val sounds = Sounds(enabled = !headless)
@@ -63,6 +66,8 @@ class Runtime {
         object GreenFlag : Event()
 
         object StopAll : Event()
+
+        class MonitorValue(val index: Int, val value: Double) : Event()
     }
 
     // ---- setup ----------------------------------------------------------------------------------
@@ -78,6 +83,10 @@ class Runtime {
 
     fun run() {
         sprites.sortBy { it.layerOrder }
+        for (m in MonitorData.load()) {
+            m.target = if (m.spriteName.isEmpty()) stage else spriteNamed(m.spriteName) ?: stage
+            monitors.add(m)
+        }
         for (t in allTargets()) t.costumes.forEach { assets.load(it) }
         sounds.loadAll(allTargets().flatMap { it.sounds })
         if (headless) {
@@ -168,6 +177,7 @@ class Runtime {
                 }
                 is Event.StopAll -> stopAllInternal()
                 is Event.KeyDown -> startHats(HAT_KEY, e.key, null)
+                is Event.MonitorValue -> monitors.getOrNull(e.index)?.let { it.target.setMonitorSlot(it.slot, e.value) }
                 is Event.Click -> {
                     val hit = sprites.asReversed().firstOrNull { it.ghost < 100.0 && it.touchingPoint(e.x, e.y) }
                     if (hit != null) startHats(HAT_CLICKED, "", hit) else startHats(HAT_CLICKED, "", stage)
@@ -183,6 +193,11 @@ class Runtime {
                 pendingQuestion = null
             }
         }
+    }
+
+    /** `show variable`, `hide variable`, `show list` and `hide list`. */
+    fun setMonitorVisible(index: Int, visible: Boolean) {
+        monitors.getOrNull(index)?.visible = visible
     }
 
     fun requestRedraw() {
@@ -374,6 +389,11 @@ class Runtime {
             mouseDown = down
             if (down) events.add(Event.Click(mouseX, mouseY))
         }
+    }
+
+    /** A slider monitor was dragged to [value]. */
+    fun postMonitorValue(index: Int, value: Double) {
+        events.add(Event.MonitorValue(index, value))
     }
 
     fun postGreenFlag() {
