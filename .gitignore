@@ -7,6 +7,7 @@ out/
 *.iml
 .DS_Store
 site/
+docs/assets/mockups/
 .playwright-cli/
 target/
 *.log

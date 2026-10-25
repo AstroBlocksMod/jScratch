@@ -1,0 +1,9 @@
+/* Block mockups keep their natural size, so blocks look the same size in every
+   picture. Wide ones scroll sideways instead of shrinking. */
+.md-typeset p:has(> img[src*="assets/mockups/"]) {
+  overflow-x: auto;
+}
+
+.md-typeset img[src*="assets/mockups/"] {
+  max-width: none;
+}

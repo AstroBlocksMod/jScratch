@@ -1,0 +1,8 @@
+define (fibonacci (n :: custom-arg))
+if <(n :: custom-arg) < (2)> then
+return (n :: custom-arg)
+end
+return ((fibonacci ((n :: custom-arg) - (1)) :: custom) + (fibonacci ((n :: custom-arg) - (2)) :: custom))
+
+when flag clicked
+say (fibonacci (20) :: custom)

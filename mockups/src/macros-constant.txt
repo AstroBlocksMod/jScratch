@@ -1,0 +1,10 @@
+define macro (tile size :: macros)
+expand to (32) :: macros cap
+
+define macro (columns :: macros)
+expand to (15) :: macros cap
+
+define draw tile (index :: custom-arg)
+go to x (((((index :: custom-arg) - (1)) mod (columns :: macros)) * (tile size :: macros)) - (224)) y ((160) - (([floor v] of (((index :: custom-arg) - (1)) / (columns :: macros))) * (tile size :: macros)))
+switch costume to (item (index :: custom-arg) of [map v])
+stamp

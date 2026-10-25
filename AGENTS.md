@@ -15,6 +15,7 @@ Modules:
 - `samples/`: sample projects as directories under `src/`, zipped into `.sb3` files by the build and used by the end-to-end tests.
 - `benchmarks/`: CPU-heavy projects under `projects/` (each with a `benchmark.properties` holding its description and expected `say` output, all sharing the costumes in `assets/`), a Kotlin runner that times them on jScratch, `js/run.js` that times them on scratch-vm and TurboWarp in Node, and a report that merges the results.
 - `docs/`: Zensical documentation, configured by `zensical.toml` at the root.
+- `mockups/`: block mockups for the docs as mockblocks text in `src/`. `npm run build` there renders them to SVG in `docs/assets/mockups/`, which git ignores, so build them before `zensical build` or `zensical serve`.
 
 The compiler never depends on the runtime module. It only knows runtime class and method names, listed in `RT` in `compiler/.../codegen/Names.kt`. When you change a runtime method that generated code calls, update the descriptor in `TargetCompiler` too, and the other way around.
 
@@ -63,7 +64,7 @@ Use modern code practices:
 
 Always update the docs if necessary when changing or adding code. If the docs already contain outdated information, expand your scope to cover that info too.
 
-The docs are a Zensical site: `zensical.toml` at the root, pages in `docs/`. `zensical build` validates the config and writes `site/` (ignored by git). Pages: `index.md`, `getting-started.md`, `blocks.md` (supported blocks, keep in step with `TargetCompiler`), `web-playground.md`, `architecture.md`, `development.md`, `benchmarks.md` (method and latest results), `roadmap.md`.
+The docs are a Zensical site: `zensical.toml` at the root, pages in `docs/`. `zensical build` validates the config and writes `site/` (ignored by git). Pages: `index.md`, `getting-started.md`, `blocks.md` (supported blocks, keep in step with `TargetCompiler`), `web-playground.md`, `architecture.md`, `development.md`, `benchmarks.md` (method and latest results), `roadmap.md`, `language-features.md` (mockups of the planned language features).
 
 When a roadmap item is finished, check it off (`- [x]`) where it is. DO NOT move it into an earlier section like "Done: the MVP". The roadmap shows how each goal is progressing, so finished items stay with the section they belong to.
 

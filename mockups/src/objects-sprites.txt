@@ -1,0 +1,9 @@
+when I start as a clone
+set [me v] to (new [Enemy])
+add (me) to [enemies v]
+forever
+say (call [describe] on (me) :: objects reporter)
+if <(field [health] of (me)) < (1)> then
+delete this clone
+end
+end

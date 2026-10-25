@@ -1,0 +1,22 @@
+class [Particle]
+field [x] = (mouse x)
+field [y] = (mouse y)
+field [speed x] = (pick random (-3) to (3))
+field [speed y] = (pick random (2) to (6))
+field [age] = (0)
+method (update :: objects)
+change field [x] of (this) by (field [speed x] of (this)) :: objects
+change field [y] of (this) by (field [speed y] of (this)) :: objects
+change field [speed y] of (this) by (-0.3) :: objects
+change field [age] of (this) by (1) :: objects
+end
+method (draw :: objects)
+set pen (transparency v) to ((field [age] of (this)) * (2))
+go to x (field [x] of (this)) y (field [y] of (this))
+pen down
+pen up
+end
+method (is old :: objects)
+return <(field [age] of (this)) > (50)>
+end
+end

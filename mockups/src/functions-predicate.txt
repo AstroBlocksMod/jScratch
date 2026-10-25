@@ -1,0 +1,11 @@
+define <(n :: custom-arg) is between (low :: custom-arg) and (high :: custom-arg)>
+return <<not <(n :: custom-arg) < (low :: custom-arg)>> and <not <(n :: custom-arg) > (high :: custom-arg)>>>
+
+when flag clicked
+forever
+if <<(x position) is between (-240) and (240) :: custom> and <(y position) is between (-180) and (180) :: custom>> then
+move (5) steps
+else
+point towards (mouse-pointer v)
+end
+end

@@ -1,0 +1,5 @@
+when flag clicked
+forever
+set x to ((x position) + (((mouse x) - (x position)) * (0.1)))
+set y to ((y position) + (((mouse y) - (y position)) * (0.1)))
+end

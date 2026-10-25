@@ -1,0 +1,7 @@
+define macro (for each (item :: macros) in (list :: macros) (body :: macros) :: macros)
+local [index] = (1)
+repeat (length of (list :: macros) :: list)
+set (item :: macros) to (item (index) of (list :: macros) :: list) :: variables
+body :: macros
+change [index v] by (1)
+end

@@ -1,0 +1,8 @@
+define distance to x (x :: custom-arg) y (y :: custom-arg)
+set [dx v] to ((x :: custom-arg) - (x position))
+set [dy v] to ((y :: custom-arg) - (y position))
+set [result v] to ([sqrt v] of (((dx) * (dx)) + ((dy) * (dy))))
+
+when flag clicked
+distance to x (0) y (0) :: custom
+say (join [I am ] (join (result) [ steps from the center])) for (2) seconds

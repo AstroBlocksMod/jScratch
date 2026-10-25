@@ -1,0 +1,18 @@
+class [Enemy]
+field [health] = (3)
+field [name] = [slime]
+method (take damage (amount :: custom-arg) :: objects)
+change field [health] of (this) by ((0) - (amount :: custom-arg)) :: objects
+if <(field [health] of (this)) < (1)> then
+broadcast [enemy defeated v]
+end
+end
+method (describe :: objects)
+return (join (field [name] of (this)) (join [ with ] (join (field [health] of (this)) [ health])))
+end
+end
+
+when this sprite clicked
+set [target v] to (new [Enemy])
+call [take damage] on (target) with (2) :: objects
+say (call [describe] on (target) :: objects reporter) for (2) seconds
