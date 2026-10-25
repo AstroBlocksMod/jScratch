@@ -13,6 +13,7 @@
 | `samples/` | Sample projects as directories under `src/`, zipped into `.sb3` files by the build. |
 | `benchmarks/` | CPU-heavy projects under `projects/` sharing the costumes in `assets/`, the jScratch runner and report in Kotlin, and `js/run.js`, which runs the same projects on scratch-vm and TurboWarp in Node. See [Benchmarks](benchmarks.md). |
 | `docs/` | This documentation, built with Zensical. |
+| `mockups/` | Block mockups for the docs, written as [mockblocks](https://github.com/AstroBlocksMod/mockblocks) text in `src/` and rendered to SVG when the docs are built. See [Docs](#docs). |
 
 ## Everyday commands
 
@@ -36,7 +37,7 @@ Each workflow runs only when a file it depends on changes, so a docs-only change
 
 The `CI` workflow in `.github/workflows/ci.yml` runs on pull requests and pushes to `main` that touch a module, the Gradle setup, `.editorconfig` or `mise.toml`. It installs the tools in `mise.toml` with `jdx/mise-action`, then runs `./gradlew build` on JDK 21 and JDK 25, so both the oldest supported JDK and the current one are covered. When a test fails, the HTML test reports are attached to the run as an artifact. CI never deploys anything; publishing the site is the `Pages` workflow's job (see [Deployment](web-playground.md#deployment)).
 
-The `Docs` workflow in `.github/workflows/docs.yml` runs on pull requests and pushes to `main` that touch `docs/` or `zensical.toml`, and builds the docs with `zensical build --strict`.
+The `Docs` workflow in `.github/workflows/docs.yml` runs on pull requests and pushes to `main` that touch `docs/`, `mockups/` or `zensical.toml`. It renders the block mockups and builds the docs with `zensical build --strict`. It runs on macOS, see [Block mockups](#block-mockups) for why.
 
 The `Benchmarks` workflow in `.github/workflows/benchmarks.yml` runs `./gradlew :benchmarks:benchmark` on pushes to `main` that touch the benchmarks, a module they compile or run with (`runtime`, `sb3js`, `compiler`, `compiler-jvm`) or the Gradle setup, and on demand from the Actions tab, where the number of runs and the projects can be chosen. The report shows up on the run's summary page, and the raw results are attached as an artifact. Shared runners are noisy, so the job only fails when jScratch gives a wrong result, not when it gets slower.
 
@@ -76,11 +77,20 @@ To update dr_libs, change the tags in the version catalog and run `./gradlew :ru
 The documentation is a [Zensical](https://zensical.org) site configured in `zensical.toml`.
 
 ```sh
-uv tool install zensical   # once
-zensical serve             # live preview
-zensical build             # static site in site/
+uv tool install zensical                # once
+(cd mockups && npm ci && npm run build) # render the block mockups
+zensical serve                          # live preview
+zensical build                          # static site in site/
 ```
 
 Pushes to `main` that change the docs or the playground publish them to [jscratch.hermits.cc](https://jscratch.hermits.cc/) through the `Pages` workflow. The workflow builds the docs with `zensical build --strict`, so fix any warnings before pushing. See [Deployment](web-playground.md#deployment).
 
 Diagrams are written as Mermaid code blocks. Keep the docs in step with the code: when a block, option or module changes, update the matching page in the same change.
+
+### Block mockups
+
+Pictures of blocks, such as the ones on [Language features](language-features.md), are made with [mockblocks](https://github.com/AstroBlocksMod/mockblocks), a fork of scratchblocks that can draw blocks that do not exist yet. Each picture is a text file in `mockups/src/` written in the scratchblocks syntax, with the planned blocks coming from mockblocks' bundled `jscratch` pack. `npm run build` in `mockups/` turns every file into an SVG in `docs/assets/mockups/`, and a page shows it as an ordinary image: `![...](assets/mockups/name.svg)`.
+
+The SVGs are build output, so git ignores them and the `Docs` and `Pages` workflows render them before building the site. Run the build again after editing a mockup, and before `zensical serve` in a fresh checkout, or the images will be missing.
+
+mockblocks is not on npm, so `mockups/package.json` installs it from GitHub at a fixed commit. To update it, change the commit in `package.json`, run `npm install` in `mockups/` and commit both files. mockblocks sizes each block from the fonts installed on the machine, so the SVGs are rendered on macOS, where Helvetica Neue is available. That is the font Scratch uses and the one the SVGs ask for, and on Linux the blocks would come out sized for a different font.

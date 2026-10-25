@@ -2,14 +2,15 @@ name: Pages
 
 # Builds the docs and the playground into one site: the docs at the root of
 # jscratch.hermits.cc and the playground under /playground/. Runs only when a
-# file that goes into the site changes: the docs, or a module the playground is
-# built from.
+# file that goes into the site changes: the docs, the block mockups, or a module
+# the playground is built from.
 
 on:
   push:
     branches: [main]
     paths:
       - "docs/**"
+      - "mockups/**"
       - "zensical.toml"
       - "web/**"
       - "compiler/**"
@@ -35,7 +36,33 @@ env:
   ZENSICAL_VERSION: "0.0.72"
 
 jobs:
+  # The block mockups are sized with the fonts installed on the runner, and only
+  # macOS has Helvetica Neue, the font Scratch uses.
+  mockups:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: mockups/package-lock.json
+
+      - name: Render block mockups
+        working-directory: mockups
+        run: |
+          npm ci
+          npm run build
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: mockups
+          path: docs/assets/mockups/
+          if-no-files-found: error
+
   build:
+    needs: mockups
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -54,6 +81,11 @@ jobs:
       # compiler never reaches the playground.
       - name: Build and test
         run: ./gradlew build
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: mockups
+          path: docs/assets/mockups/
 
       - uses: astral-sh/setup-uv@v10.3.2
 

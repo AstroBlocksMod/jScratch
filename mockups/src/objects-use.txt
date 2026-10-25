@@ -1,0 +1,17 @@
+when flag clicked
+delete all of [particles v]
+forever
+erase all
+if <mouse down?> then
+add (new [Particle]) to [particles v]
+end
+for each [p v] in [particles v] :: macros c
+call [update] on (p)
+call [draw] on (p)
+end
+if <(length of [particles v]) > (0)> then
+if <call [is old] on (item (1) of [particles v]) :: objects boolean> then
+delete (1) of [particles v]
+end
+end
+end

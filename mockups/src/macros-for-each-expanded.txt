@@ -1,0 +1,9 @@
+when I receive [check hits v]
+local [index] = (1)
+repeat (length of [enemies v])
+set [enemy v] to (item (index) of [enemies v])
+if <touching (enemy) ?> then
+change [score v] by (10)
+end
+change [index v] by (1)
+end

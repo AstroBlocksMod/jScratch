@@ -1,0 +1,6 @@
+when I receive [check hits v]
+for each [enemy v] in [enemies v] :: macros c
+if <touching (enemy) ?> then
+change [score v] by (10)
+end
+end

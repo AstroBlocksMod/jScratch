@@ -1,0 +1,10 @@
+define macro (debug log (message :: macros) :: macros)
+if <(debug mode :: macros) = [on]> at compile time :: macros c
+add (join (join (timer) [: ]) (message :: macros)) to [log v]
+end
+
+define macro (debug mode :: macros)
+expand to [off] :: macros cap
+
+when flag clicked
+debug log [game started] :: macros

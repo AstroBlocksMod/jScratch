@@ -1,0 +1,14 @@
+{
+  "name": "jscratch-mockups",
+  "private": true,
+  "description": "Renders the block mockups in src/ to SVG images for the docs.",
+  "scripts": {
+    "build": "mockblocks --pack jscratch --scale 0.75 --out-dir ../docs/assets/mockups src/*.txt"
+  },
+  "devDependencies": {
+    "mockblocks": "https://codeload.github.com/AstroBlocksMod/mockblocks/tar.gz/ea3d8ae1d3fd97a86ef2f60205755a1c63818269"
+  },
+  "allowScripts": {
+    "canvas@3.2.3": true
+  }
+}

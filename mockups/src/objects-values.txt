@@ -1,0 +1,13 @@
+define (stronger of (a :: custom-arg) and (b :: custom-arg))
+if <(field [health] of (a :: custom-arg) :: objects) > (field [health] of (b :: custom-arg) :: objects)> then
+return (a :: custom-arg)
+end
+return (b :: custom-arg)
+
+when I receive [pick a target v]
+if <(length of [enemies v]) > (1)> then
+if <<(item (1) of [enemies v]) is a [Enemy] :: objects boolean> and <(item (2) of [enemies v]) is a [Enemy] :: objects boolean>> then
+set [target v] to (stronger of (item (1) of [enemies v]) and (item (2) of [enemies v]) :: custom)
+set field [name] of (target) to [boss] :: objects
+end
+end

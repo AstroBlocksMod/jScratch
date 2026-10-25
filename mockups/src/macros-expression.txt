@@ -1,0 +1,8 @@
+define macro (lerp from (a :: macros) to (b :: macros) by (t :: macros) :: macros)
+expand to ((a :: macros) + (((b :: macros) - (a :: macros)) * (t :: macros))) :: macros cap
+
+when flag clicked
+forever
+set x to (lerp from (x position) to (mouse x) by (0.1) :: macros)
+set y to (lerp from (y position) to (mouse y) by (0.1) :: macros)
+end

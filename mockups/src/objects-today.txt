@@ -1,0 +1,24 @@
+when flag clicked
+delete all of [particle x v]
+delete all of [particle y v]
+delete all of [particle speed x v]
+delete all of [particle speed y v]
+forever
+erase all
+if <mouse down?> then
+add (mouse x) to [particle x v]
+add (mouse y) to [particle y v]
+add (pick random (-3) to (3)) to [particle speed x v]
+add (pick random (2) to (6)) to [particle speed y v]
+end
+set [i v] to (1)
+repeat (length of [particle x v])
+replace item (i) of [particle x v] with ((item (i) of [particle x v]) + (item (i) of [particle speed x v]))
+replace item (i) of [particle y v] with ((item (i) of [particle y v]) + (item (i) of [particle speed y v]))
+replace item (i) of [particle speed y v] with ((item (i) of [particle speed y v]) - (0.3))
+go to x (item (i) of [particle x v]) y (item (i) of [particle y v])
+pen down
+pen up
+change [i v] by (1)
+end
+end

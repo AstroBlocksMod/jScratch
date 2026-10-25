@@ -1,0 +1,21 @@
+define draw branch (length :: custom-arg) depth (depth :: custom-arg)
+if <(depth :: custom-arg) > (0)> then
+local [start x] = (x position)
+local [start y] = (y position)
+local [start direction] = (direction)
+pen down
+move (length :: custom-arg) steps
+turn right (25) degrees
+draw branch ((length :: custom-arg) * (0.7)) depth ((depth :: custom-arg) - (1)) :: custom
+turn left (50) degrees
+draw branch ((length :: custom-arg) * (0.7)) depth ((depth :: custom-arg) - (1)) :: custom
+pen up
+go to x (start x) y (start y)
+point in direction (start direction)
+end
+
+when flag clicked
+erase all
+go to x (0) y (-170)
+point in direction (0)
+draw branch (100) depth (9) :: custom

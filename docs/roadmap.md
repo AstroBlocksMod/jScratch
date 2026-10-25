@@ -91,7 +91,7 @@ With these in place, a project could become a Minecraft mod through blocks that 
 
 ### Advanced language features
 
-Scratch is easy to start with, but larger projects outgrow it: custom blocks cannot return values, there are no local variables, and clones are the only way to have more than one of something. The goal is a richer language on top of Scratch that stays a strict superset of it. Every Scratch project must compile and behave exactly as it does today, and the new features only come into play when a project uses them.
+Scratch is easy to start with, but larger projects outgrow it: custom blocks cannot return values, there are no local variables, and clones are the only way to have more than one of something. The goal is a richer language on top of Scratch that stays a strict superset of it. Every Scratch project must compile and behave exactly as it does today, and the new features only come into play when a project uses them. [Language features](language-features.md) has mockups of what the blocks could look like.
 
 - [ ] **Functions.** Custom blocks that report a value, local variables scoped to a script or a custom block, and recursion that does not need a list as a manual stack.
 - [ ] **Macros.** Blocks that expand into other blocks at compile time, so repeated patterns can be written once without the cost of a call at run time.

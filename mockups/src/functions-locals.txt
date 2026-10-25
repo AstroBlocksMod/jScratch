@@ -1,0 +1,10 @@
+define (count vowels in (text :: custom-arg))
+local [count] = (0)
+local [i] = (1)
+repeat (length of (text :: custom-arg))
+if <[aeiou] contains (letter (i) of (text :: custom-arg))?> then
+change [count v] by (1)
+end
+change [i v] by (1)
+end
+return (count)

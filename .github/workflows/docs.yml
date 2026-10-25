@@ -1,13 +1,15 @@
 name: Docs
 
 # Checks that the docs build without warnings. Runs only when the docs change.
-# Deploying is the Pages workflow's job.
+# Deploying is the Pages workflow's job. Runs on macOS because the block mockups
+# are sized with the fonts installed on the runner, and Linux has no Helvetica Neue.
 
 on:
   push:
     branches: [main]
     paths: &paths
       - "docs/**"
+      - "mockups/**"
       - "zensical.toml"
       - ".github/workflows/docs.yml"
   pull_request:
@@ -27,9 +29,21 @@ env:
 jobs:
   docs:
     name: Docs
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: mockups/package-lock.json
+
+      - name: Render block mockups
+        working-directory: mockups
+        run: |
+          npm ci
+          npm run build
 
       - uses: astral-sh/setup-uv@v10.3.2
 

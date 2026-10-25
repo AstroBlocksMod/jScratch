@@ -5,6 +5,7 @@ site_url = "https://jscratch.hermits.cc/"
 repo_url = "https://github.com/AstroBlocksMod/jScratch"
 repo_name = "AstroBlocksMod/jScratch"
 copyright = "jScratch is free software under the GPL-3.0"
+extra_css = ["stylesheets/extra.css"]
 
 nav = [
   { "Overview" = "index.md" },
@@ -16,6 +17,7 @@ nav = [
   { "Development" = "development.md" },
   { "Benchmarks" = "benchmarks.md" },
   { "Roadmap" = "roadmap.md" },
+  { "Language features" = "language-features.md" },
 ]
 
 [project.theme]
