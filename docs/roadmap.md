@@ -89,6 +89,14 @@ Compiled projects are already JVM classes, so the goal is to let them work with 
 
 With these in place, a project could become a Minecraft mod through blocks that bind to Fabric, or a desktop app with a JavaFX interface.
 
+### Advanced language features
+
+Scratch is easy to start with, but larger projects outgrow it: custom blocks cannot return values, there are no local variables, and clones are the only way to have more than one of something. The goal is a richer language on top of Scratch that stays a strict superset of it. Every Scratch project must compile and behave exactly as it does today, and the new features only come into play when a project uses them.
+
+- [ ] **Functions.** Custom blocks that report a value, local variables scoped to a script or a custom block, and recursion that does not need a list as a manual stack.
+- [ ] **Macros.** Blocks that expand into other blocks at compile time, so repeated patterns can be written once without the cost of a call at run time.
+- [ ] **Objects.** Classes with their own fields and methods, and instances that can be created, passed around and stored in variables and lists. Sprites and clones keep working as they do now, and could later be described as classes themselves.
+
 ### Desktop IDE
 
 - [ ] **A full desktop editor.** Edit blocks, costumes and sounds, then compile and run the project in one click without leaving the editor.
