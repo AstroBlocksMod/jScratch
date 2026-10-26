@@ -26,7 +26,10 @@ var log = require("./headless/log");
 
 // Sprite names the VM refuses to give a sprite (virtual-machine.js).
 var RESERVED_NAMES = ["_mouse_", "_stage_", "_edge_", "_myself_", "_random_"];
-var MD5_NAME = /^[0-9a-f]{32}\.[0-9a-z]+$/i;
+// How the Scratch server names an asset, and how an .sb2 archive does. scratch-vm
+// treats an MD5 without an extension as a PNG, so the server name may lack one.
+var MD5_NAME = /^([0-9a-f]{32})(?:\.([0-9a-z]+))?$/i;
+var ARCHIVE_NAME = /^\d+\.[0-9a-z]+$/i;
 
 /**
  * Converts a Scratch 1.4 project, given as the bytes of its .sb file.
@@ -56,17 +59,19 @@ function convertSb2(projectJson, names, datas) {
     var json = parseSb2(projectJson);
     var storage = new ScratchStorage();
     var archived = {};
+    // Only an archive from the Scratch 2 editor is looked up by index. Without one,
+    // scratch-vm would first look every asset up in it and report each as missing.
     var hasArchiveNames = false;
     for (var i = 0; i < names.length; i++) {
       var name = names[i];
-      var data = datas[i];
-      if (MD5_NAME.test(name)) {
-        var parts = name.toLowerCase().split(".");
-        var type = assetType(storage, parts[1]);
-        if (type) storage.cache(type, parts[1], data, parts[0]);
+      var md5 = MD5_NAME.exec(name);
+      if (md5) {
+        var ext = (md5[2] || "png").toLowerCase();
+        var type = assetType(storage, ext);
+        if (type) storage.cache(type, ext, datas[i], md5[1].toLowerCase());
       } else {
-        archived[name] = data;
-        hasArchiveNames = true;
+        archived[name] = datas[i];
+        if (ARCHIVE_NAME.test(name)) hasArchiveNames = true;
       }
     }
     return { json: json, zip: hasArchiveNames ? new FakeZip(archived) : null, storage: storage };

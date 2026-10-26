@@ -108,6 +108,18 @@ class ScratchDownloaderTest {
     }
 
     @Test
+    fun jsonThatIsNoProjectIsRejected() {
+        val server =
+            mapOf(
+                "https://api.scratch.mit.edu/projects/9" to meta,
+                "https://projects.scratch.mit.edu/9?token=t0k3n" to """{"code":"NotFound","message":""}""",
+            )
+        val e =
+            assertFailsWith<DownloadException> { ScratchDownloader(json) { server[it]?.toByteArray() }.download("9") }
+        assertTrue(e.message!!.contains("not a Scratch project"), e.message)
+    }
+
+    @Test
     fun archivedScratch2ProjectsPassThrough() {
         val sb2 = Archives.writeProject("""{"objName":"Stage","children":[]}""".toByteArray(), emptyMap())
         val project =

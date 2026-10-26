@@ -1,9 +1,11 @@
 package org.jscratch.cli
 
 import org.jscratch.compiler.Archives
+import org.jscratch.compiler.convert.OldProjects
 import org.jscratch.compiler.convert.ProjectFormat
 import org.jscratch.compiler.json.JsonValue
 import org.jscratch.compiler.json.ProjectJson
+import org.jscratch.compiler.sb3.Sb3Exception
 import java.io.IOException
 import java.net.URI
 import java.net.http.HttpClient
@@ -34,7 +36,7 @@ class DownloadedProject(
  * Downloads shared projects from scratch.mit.edu the way the Scratch player does:
  * the project API hands out a short-lived token, the project server returns
  * `project.json` for that token, and every costume and sound comes from the asset
- * server by its MD5. The pieces are zipped into an ordinary .sb3.
+ * server by its MD5. For a Scratch 3 project, the pieces are zipped into an ordinary .sb3.
  *
  * Projects last saved by older editors come back as they were stored. A Scratch 1.4
  * project is its .sb file, and one uploaded from the Scratch 2 offline editor is its
@@ -61,26 +63,26 @@ class ScratchDownloader(private val json: ProjectJson, private val fetch: (Strin
         fun project(format: ProjectFormat, data: ByteArray, warnings: List<String> = emptyList()) =
             DownloadedProject(id, title, author, format, data, warnings)
 
-        if (projectBytes.startsWith("ScratchV0")) return project(ProjectFormat.SB1, projectBytes)
-        // Projects uploaded from the Scratch 2 offline editor are stored as a whole archive.
-        if (Archives.isZip(projectBytes)) {
-            val archived =
-                Archives.read(projectBytes)["project.json"]
-                    ?: throw DownloadException("the archive for project $id has no project.json")
-            return project(format(parseJson(archived, "the project archive")), projectBytes)
+        // A Scratch 1.4 project, or one uploaded from the Scratch 2 offline editor as a whole archive.
+        if (OldProjects.isFile(projectBytes)) {
+            val format =
+                try {
+                    OldProjects.detect(projectBytes, json)
+                } catch (e: Sb3Exception) {
+                    throw DownloadException("project $id: ${e.message}")
+                } ?: throw DownloadException("the archive for project $id holds no Scratch project")
+            return project(format, projectBytes)
         }
 
         val project = parseJson(projectBytes, "the project server")
-        val format = format(project)
+        val format =
+            OldProjects.format(project)
+                ?: throw DownloadException("the project server returned something that is not a Scratch project")
         val names = if (format == ProjectFormat.SB3) assetNames(project) else sb2AssetNames(project)
         val warnings = ArrayList<String>()
         val assets = fetchAssets(names, warnings)
         return project(format, Archives.writeProject(projectBytes, assets), warnings)
     }
-
-    /** Scratch 3 keeps its sprites in "targets"; Scratch 2 nests them under the stage. */
-    private fun format(project: JsonValue) =
-        if (project["targets"]?.asArray != null) ProjectFormat.SB3 else ProjectFormat.SB2
 
     private fun parseJson(bytes: ByteArray, source: String): JsonValue = try {
         json.parse(bytes.toString(Charsets.UTF_8))
@@ -218,8 +220,5 @@ class ScratchDownloader(private val json: ProjectJson, private val fetch: (Strin
                 )
             }
         }
-
-        private fun ByteArray.startsWith(prefix: String): Boolean =
-            size >= prefix.length && prefix.indices.all { this[it] == prefix[it].code.toByte() }
     }
 }

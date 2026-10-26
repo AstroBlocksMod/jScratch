@@ -35,7 +35,6 @@ class ConvertOldProjectsTest {
         val old = OldProjects.read(oldProjects.getValue("hello.sb2").readBytes(), json)
         assertIs<OldProject.Sb2>(old)
         val converted = OldProjects.toSb3(old, converter)
-        assertEquals(ProjectFormat.SB2, converted.from)
         assertEquals(emptyList(), converted.warnings, "unexpected conversion warnings")
 
         val sb3 = Sb3Parser(json).readSb3(converted.sb3)
@@ -97,7 +96,6 @@ class ConvertOldProjectsTest {
         val old = OldProjects.read(oldProjects.getValue("default.sb").readBytes(), json)
         assertIs<OldProject.Sb1>(old)
         val converted = OldProjects.toSb3(old, converter)
-        assertEquals(ProjectFormat.SB1, converted.from)
         assertEquals(emptyList(), converted.warnings, "unexpected conversion warnings")
 
         val sb3 = Sb3Parser(json).readSb3(converted.sb3)
@@ -122,9 +120,42 @@ class ConvertOldProjectsTest {
         runHeadless(result.jar, frames = 2)
     }
 
+    /**
+     * A Scratch 2 project from the Scratch server comes with its assets named by MD5, the way
+     * the downloader packs it. scratch-vm treats an MD5 without an extension as a PNG.
+     */
     @Test
-    fun leavesScratch3ProjectsAlone() {
+    fun convertsScratch2ProjectWithAssetsNamedByMd5() {
+        val archived = OldProjects.read(oldProjects.getValue("hello.sb2").readBytes(), json)
+        assertIs<OldProject.Sb2>(archived)
+        val byMd5 =
+            archived.files.map { (name, data) ->
+                val md5 = md5(data)
+                // The base image of the Title costume, without its extension.
+                (if (name == "2.png") md5 else "$md5.${name.substringAfter('.')}") to data
+            }
+        val converted = OldProjects.toSb3(OldProject.Sb2(archived.projectJson, byMd5.toMap()), converter)
+        assertEquals(emptyList(), converted.warnings, "unexpected conversion warnings")
+        val project = Sb3Parser(json).readSb3(converted.sb3).project
+        assertEquals(listOf("Blue Sky", "Title"), project.stage.costumes.map { it.name })
+        assertEquals(listOf("6ac3a6339b85092fa9b1694f2da7779d.svg"), project.sprites.first().costumes.map { it.md5ext })
+    }
+
+    @Test
+    fun recognizesFormats() {
+        assertEquals(ProjectFormat.SB3, OldProjects.detect(File(samplesDir, "hello.sb3").readBytes(), json))
+        assertEquals(ProjectFormat.SB2, OldProjects.detect(oldProjects.getValue("hello.sb2").readBytes(), json))
+        assertEquals(ProjectFormat.SB1, OldProjects.detect(oldProjects.getValue("default.sb").readBytes(), json))
+        assertNull(OldProjects.detect("just some text".toByteArray(), json))
         assertNull(OldProjects.read(File(samplesDir, "hello.sb3").readBytes(), json))
+    }
+
+    @Test
+    fun reportsDamagedArchives() {
+        // Cut off inside project.json, the first entry.
+        val damaged = oldProjects.getValue("hello.sb2").readBytes().copyOf(200)
+        val e = assertFailsWith<Sb3Exception> { OldProjects.read(damaged, json) }
+        assertTrue(e.message!!.startsWith("the project archive is damaged"), e.message)
     }
 
     @Test

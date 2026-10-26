@@ -22,17 +22,35 @@ object Archives {
             while (true) {
                 val entry = zip.nextEntry ?: break
                 if (entry.isDirectory) continue
-                val out = ByteArrayOutputStream()
-                val buf = ByteArray(16 * 1024)
-                while (true) {
-                    val n = zip.read(buf)
-                    if (n < 0) break
-                    out.write(buf, 0, n)
-                }
-                entries[entry.name.substringAfterLast('/')] = out.toByteArray()
+                entries[entry.name.substringAfterLast('/')] = readEntry(zip)
             }
         }
         return entries
+    }
+
+    /**
+     * The file called [name] in a zip archive, matched like [read] matches names, or null.
+     * Stops at that file, so an archive that keeps it first (Scratch writes `project.json`
+     * first) is not inflated any further.
+     */
+    fun read(bytes: ByteArray, name: String): ByteArray? {
+        ZipInputStream(ByteArrayInputStream(bytes)).use { zip ->
+            while (true) {
+                val entry = zip.nextEntry ?: return null
+                if (!entry.isDirectory && entry.name.substringAfterLast('/') == name) return readEntry(zip)
+            }
+        }
+    }
+
+    private fun readEntry(zip: ZipInputStream): ByteArray {
+        val out = ByteArrayOutputStream()
+        val buf = ByteArray(16 * 1024)
+        while (true) {
+            val n = zip.read(buf)
+            if (n < 0) break
+            out.write(buf, 0, n)
+        }
+        return out.toByteArray()
     }
 
     /** A project archive as Scratch 2 and 3 write them: `project.json` first, then the assets. */

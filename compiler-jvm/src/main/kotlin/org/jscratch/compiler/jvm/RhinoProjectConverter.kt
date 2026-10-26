@@ -10,6 +10,7 @@ import org.mozilla.javascript.Function
 import org.mozilla.javascript.RhinoException
 import org.mozilla.javascript.Scriptable
 import org.mozilla.javascript.ScriptableObject
+import org.mozilla.javascript.Undefined
 import org.mozilla.javascript.typedarrays.NativeArrayBuffer
 import org.mozilla.javascript.typedarrays.NativeArrayBufferView
 
@@ -74,6 +75,8 @@ class RhinoProjectConverter : ProjectConverter {
         var value: Any? = null
         var error: Any? = null
         var settled = false
+        // A promise can be rejected with undefined, so the error alone does not tell.
+        var rejected = false
         val then = ScriptableObject.getProperty(promise, "then") as Function
         then.call(
             cx,
@@ -86,14 +89,15 @@ class RhinoProjectConverter : ProjectConverter {
                 },
                 callback {
                     error = it
+                    rejected = true
                     settled = true
                 },
             ),
         )
         cx.processMicrotasks()
         if (!settled) throw failed(project, "the converter did not finish")
-        error?.let { throw failed(project, message(it)) }
-        return value as Scriptable
+        if (rejected) throw failed(project, message(error))
+        return value as? Scriptable ?: throw failed(project, "the converter returned nothing")
     }
 
     private fun callback(body: (Any?) -> Unit) = object : BaseFunction() {
@@ -104,6 +108,7 @@ class RhinoProjectConverter : ProjectConverter {
     }
 
     private fun message(error: Any?): String {
+        if (error == null || error is Undefined) return "unknown error"
         if (error is Scriptable) {
             val message = ScriptableObject.getProperty(error, "message")
             if (message is CharSequence) return message.toString()

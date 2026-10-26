@@ -2,8 +2,10 @@ package org.jscratch.cli
 
 import org.jscratch.compiler.JScratch
 import org.jscratch.compiler.convert.OldProjects
+import org.jscratch.compiler.convert.ProjectFormat
 import org.jscratch.compiler.jvm.RhinoProjectConverter
 import org.jscratch.compiler.jvm.RhinoProjectJson
+import org.jscratch.compiler.sb3.Sb3Exception
 import java.io.File
 import kotlin.system.exitProcess
 
@@ -73,6 +75,7 @@ fun main(args: Array<String>) {
     if (convertOnly && (run || dump || !includeRuntime)) {
         fail("--convert writes an .sb3 instead of a JAR; drop --run, --dump and --no-runtime")
     }
+    if (convertOnly && saveSb3 != null) fail("--convert already writes the .sb3; name it with -o instead of --save-sb3")
     val json = RhinoProjectJson()
     // A local file wins over a project ID, so a file named "123" still compiles.
     val inFile = File(arg)
@@ -101,11 +104,24 @@ fun main(args: Array<String>) {
         outBase = File(projectId)
     }
 
-    val old = OldProjects.read(data, json)
+    val sb3File = if (convertOnly) output ?: File("${outBase.path}.sb3") else saveSb3
+    // An old project saved under an .sb3 name would otherwise be replaced by its conversion.
+    if (projectId == null && sb3File != null && sb3File.canonicalFile == inFile.canonicalFile) {
+        fail("writing ${sb3File.path} would replace the input project")
+    }
+    val old =
+        try {
+            OldProjects.read(data, json)
+        } catch (e: Sb3Exception) {
+            fail("${if (projectId == null) inFile.path else "project $projectId"}: ${e.message}")
+        }
     val sb3: ByteArray
     if (old == null) {
         if (projectId == null && (convertOnly || saveSb3 != null)) {
-            fail("${inFile.path} is already a Scratch 3 project, so there is nothing to convert or save")
+            if (OldProjects.detect(data, json) == ProjectFormat.SB3) {
+                fail("${inFile.path} is already a Scratch 3 project, so there is nothing to convert or save")
+            }
+            fail("${inFile.path} is not a Scratch 1.4 or Scratch 2 project")
         }
         sb3 = data
     } else {
@@ -119,7 +135,6 @@ fun main(args: Array<String>) {
         for (w in converted.warnings) System.err.println("warning: $w")
         sb3 = converted.sb3
     }
-    val sb3File = if (convertOnly) output ?: File("${outBase.path}.sb3") else saveSb3
     sb3File?.let {
         it.absoluteFile.parentFile?.mkdirs()
         it.writeBytes(sb3)
