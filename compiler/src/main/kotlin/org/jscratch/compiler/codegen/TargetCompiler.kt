@@ -680,7 +680,21 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
             "sound_changevolumeby" -> {
                 thisCall(st, "changeVolume", "(D)V") { emitExpr(st, b.inputs["VOLUME"], VType.NUM) }
             }
-            "sound_seteffectto", "sound_changeeffectby", "sound_cleareffects" -> {}
+            "sound_seteffectto" -> {
+                thisCall(st, "setSoundEffect", "(${RT.D_STRING}D)V") {
+                    mv.visitLdcInsn(field(b, "EFFECT"))
+                    emitExpr(st, b.inputs["VALUE"], VType.NUM)
+                }
+            }
+            "sound_changeeffectby" -> {
+                thisCall(st, "changeSoundEffect", "(${RT.D_STRING}D)V") {
+                    mv.visitLdcInsn(field(b, "EFFECT"))
+                    emitExpr(st, b.inputs["VALUE"], VType.NUM)
+                }
+            }
+            "sound_cleareffects" -> {
+                thisCall(st, "clearSoundEffects", "()V") {}
+            }
 
             // events
             "event_broadcast" -> {

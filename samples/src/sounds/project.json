@@ -5,7 +5,10 @@
       "name": "Stage",
       "variables": {},
       "lists": {},
-      "broadcasts": {},
+      "broadcasts": {
+        "bc_bend": "bend",
+        "bc_hush": "hush"
+      },
       "blocks": {},
       "comments": {},
       "currentCostume": 0,
@@ -208,7 +211,7 @@
         },
         "s5": {
           "opcode": "looks_say",
-          "next": null,
+          "next": "e1",
           "parent": "s4",
           "inputs": {
             "MESSAGE": [
@@ -275,6 +278,913 @@
           "fields": {},
           "shadow": false,
           "topLevel": false
+        },
+        "e1": {
+          "opcode": "sound_seteffectto",
+          "next": "e2",
+          "parent": "s5",
+          "inputs": {
+            "VALUE": [
+              1,
+              [
+                4,
+                "120"
+              ]
+            ]
+          },
+          "fields": {
+            "EFFECT": [
+              "PITCH",
+              null
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "e2": {
+          "opcode": "sensing_resettimer",
+          "next": "e4",
+          "parent": "e1",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q3": {
+          "opcode": "sound_sounds_menu",
+          "next": null,
+          "parent": "e4",
+          "inputs": {},
+          "fields": {
+            "SOUND_MENU": [
+              "beep",
+              null
+            ]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "e4": {
+          "opcode": "sound_playuntildone",
+          "next": "e8",
+          "parent": "e2",
+          "inputs": {
+            "SOUND_MENU": [
+              1,
+              "q3"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q5": {
+          "opcode": "sensing_timer",
+          "next": null,
+          "parent": "q6",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q6": {
+          "opcode": "operator_multiply",
+          "next": null,
+          "parent": "q7",
+          "inputs": {
+            "NUM1": [
+              3,
+              "q5",
+              [
+                4,
+                ""
+              ]
+            ],
+            "NUM2": [
+              1,
+              [
+                4,
+                "100"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q7": {
+          "opcode": "operator_round",
+          "next": null,
+          "parent": "e8",
+          "inputs": {
+            "NUM": [
+              3,
+              "q6",
+              [
+                4,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "e8": {
+          "opcode": "looks_say",
+          "next": "e9",
+          "parent": "e4",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "q7",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "e9": {
+          "opcode": "sound_changeeffectby",
+          "next": "e10",
+          "parent": "e8",
+          "inputs": {
+            "VALUE": [
+              1,
+              [
+                4,
+                "-240"
+              ]
+            ]
+          },
+          "fields": {
+            "EFFECT": [
+              "PITCH",
+              null
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "e10": {
+          "opcode": "sensing_resettimer",
+          "next": "e12",
+          "parent": "e9",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q11": {
+          "opcode": "sound_sounds_menu",
+          "next": null,
+          "parent": "e12",
+          "inputs": {},
+          "fields": {
+            "SOUND_MENU": [
+              "beep",
+              null
+            ]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "e12": {
+          "opcode": "sound_playuntildone",
+          "next": "e16",
+          "parent": "e10",
+          "inputs": {
+            "SOUND_MENU": [
+              1,
+              "q11"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q13": {
+          "opcode": "sensing_timer",
+          "next": null,
+          "parent": "q14",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q14": {
+          "opcode": "operator_multiply",
+          "next": null,
+          "parent": "q15",
+          "inputs": {
+            "NUM1": [
+              3,
+              "q13",
+              [
+                4,
+                ""
+              ]
+            ],
+            "NUM2": [
+              1,
+              [
+                4,
+                "10"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q15": {
+          "opcode": "operator_round",
+          "next": null,
+          "parent": "e16",
+          "inputs": {
+            "NUM": [
+              3,
+              "q14",
+              [
+                4,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "e16": {
+          "opcode": "looks_say",
+          "next": "e17",
+          "parent": "e12",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "q15",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "e17": {
+          "opcode": "sound_cleareffects",
+          "next": "e18",
+          "parent": "e16",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "e18": {
+          "opcode": "sensing_resettimer",
+          "next": "e20",
+          "parent": "e17",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q19": {
+          "opcode": "sound_sounds_menu",
+          "next": null,
+          "parent": "e20",
+          "inputs": {},
+          "fields": {
+            "SOUND_MENU": [
+              "beep",
+              null
+            ]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "e20": {
+          "opcode": "sound_playuntildone",
+          "next": "e24",
+          "parent": "e18",
+          "inputs": {
+            "SOUND_MENU": [
+              1,
+              "q19"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q21": {
+          "opcode": "sensing_timer",
+          "next": null,
+          "parent": "q22",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q22": {
+          "opcode": "operator_multiply",
+          "next": null,
+          "parent": "q23",
+          "inputs": {
+            "NUM1": [
+              3,
+              "q21",
+              [
+                4,
+                ""
+              ]
+            ],
+            "NUM2": [
+              1,
+              [
+                4,
+                "10"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q23": {
+          "opcode": "operator_round",
+          "next": null,
+          "parent": "e24",
+          "inputs": {
+            "NUM": [
+              3,
+              "q22",
+              [
+                4,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "e24": {
+          "opcode": "looks_say",
+          "next": "e25",
+          "parent": "e20",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "q23",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "e25": {
+          "opcode": "sensing_resettimer",
+          "next": "e26",
+          "parent": "e24",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "e26": {
+          "opcode": "procedures_call",
+          "next": "e30",
+          "parent": "e25",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false,
+          "mutation": {
+            "tagName": "mutation",
+            "children": [],
+            "proccode": "quiet",
+            "argumentids": "[]",
+            "warp": "true"
+          }
+        },
+        "q27": {
+          "opcode": "sensing_timer",
+          "next": null,
+          "parent": "q28",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q28": {
+          "opcode": "operator_multiply",
+          "next": null,
+          "parent": "q29",
+          "inputs": {
+            "NUM1": [
+              3,
+              "q27",
+              [
+                4,
+                ""
+              ]
+            ],
+            "NUM2": [
+              1,
+              [
+                4,
+                "30"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q29": {
+          "opcode": "operator_round",
+          "next": null,
+          "parent": "e30",
+          "inputs": {
+            "NUM": [
+              3,
+              "q28",
+              [
+                4,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "e30": {
+          "opcode": "looks_say",
+          "next": "e31",
+          "parent": "e26",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "q29",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "e31": {
+          "opcode": "sound_cleareffects",
+          "next": "e32",
+          "parent": "e30",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "e32": {
+          "opcode": "sensing_resettimer",
+          "next": "e33",
+          "parent": "e31",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "e33": {
+          "opcode": "event_broadcast",
+          "next": "e35",
+          "parent": "e32",
+          "inputs": {
+            "BROADCAST_INPUT": [
+              1,
+              [
+                11,
+                "bend",
+                "bc_bend"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q34": {
+          "opcode": "sound_sounds_menu",
+          "next": null,
+          "parent": "e35",
+          "inputs": {},
+          "fields": {
+            "SOUND_MENU": [
+              "beep",
+              null
+            ]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "e35": {
+          "opcode": "sound_playuntildone",
+          "next": "e39",
+          "parent": "e33",
+          "inputs": {
+            "SOUND_MENU": [
+              1,
+              "q34"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q36": {
+          "opcode": "sensing_timer",
+          "next": null,
+          "parent": "q37",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q37": {
+          "opcode": "operator_multiply",
+          "next": null,
+          "parent": "q38",
+          "inputs": {
+            "NUM1": [
+              3,
+              "q36",
+              [
+                4,
+                ""
+              ]
+            ],
+            "NUM2": [
+              1,
+              [
+                4,
+                "100"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q38": {
+          "opcode": "operator_round",
+          "next": null,
+          "parent": "e39",
+          "inputs": {
+            "NUM": [
+              3,
+              "q37",
+              [
+                4,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "e39": {
+          "opcode": "looks_say",
+          "next": "e40",
+          "parent": "e35",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "q38",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "e40": {
+          "opcode": "sound_cleareffects",
+          "next": "e41",
+          "parent": "e39",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "e41": {
+          "opcode": "sensing_resettimer",
+          "next": "e42",
+          "parent": "e40",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "e42": {
+          "opcode": "event_broadcast",
+          "next": "e44",
+          "parent": "e41",
+          "inputs": {
+            "BROADCAST_INPUT": [
+              1,
+              [
+                11,
+                "hush",
+                "bc_hush"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q43": {
+          "opcode": "sound_sounds_menu",
+          "next": null,
+          "parent": "e44",
+          "inputs": {},
+          "fields": {
+            "SOUND_MENU": [
+              "beep",
+              null
+            ]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "e44": {
+          "opcode": "sound_playuntildone",
+          "next": "e48",
+          "parent": "e42",
+          "inputs": {
+            "SOUND_MENU": [
+              1,
+              "q43"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q45": {
+          "opcode": "sensing_timer",
+          "next": null,
+          "parent": "q46",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q46": {
+          "opcode": "operator_multiply",
+          "next": null,
+          "parent": "q47",
+          "inputs": {
+            "NUM1": [
+              3,
+              "q45",
+              [
+                4,
+                ""
+              ]
+            ],
+            "NUM2": [
+              1,
+              [
+                4,
+                "100"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q47": {
+          "opcode": "operator_round",
+          "next": null,
+          "parent": "e48",
+          "inputs": {
+            "NUM": [
+              3,
+              "q46",
+              [
+                4,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "e48": {
+          "opcode": "looks_say",
+          "next": null,
+          "parent": "e44",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "q47",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "p49": {
+          "opcode": "procedures_prototype",
+          "next": null,
+          "parent": "h50",
+          "inputs": {},
+          "fields": {},
+          "shadow": true,
+          "topLevel": false,
+          "mutation": {
+            "tagName": "mutation",
+            "children": [],
+            "proccode": "quiet",
+            "argumentids": "[]",
+            "warp": "true",
+            "argumentnames": "[]",
+            "argumentdefaults": "[]"
+          }
+        },
+        "h50": {
+          "opcode": "procedures_definition",
+          "next": "e51",
+          "parent": null,
+          "inputs": {
+            "custom_block": [
+              1,
+              "p49"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": true,
+          "x": 420,
+          "y": 20
+        },
+        "e51": {
+          "opcode": "sound_setvolumeto",
+          "next": "e52",
+          "parent": "h50",
+          "inputs": {
+            "VOLUME": [
+              1,
+              [
+                4,
+                "50"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "e52": {
+          "opcode": "sound_seteffectto",
+          "next": null,
+          "parent": "e51",
+          "inputs": {
+            "VALUE": [
+              1,
+              [
+                4,
+                "-50"
+              ]
+            ]
+          },
+          "fields": {
+            "EFFECT": [
+              "PAN",
+              null
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "e53": {
+          "opcode": "control_wait",
+          "next": "e54",
+          "parent": "h55",
+          "inputs": {
+            "DURATION": [
+              1,
+              [
+                5,
+                "0.28"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "e54": {
+          "opcode": "sound_seteffectto",
+          "next": null,
+          "parent": "e53",
+          "inputs": {
+            "VALUE": [
+              1,
+              [
+                4,
+                "120"
+              ]
+            ]
+          },
+          "fields": {
+            "EFFECT": [
+              "PITCH",
+              null
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "h55": {
+          "opcode": "event_whenbroadcastreceived",
+          "next": "e53",
+          "parent": null,
+          "inputs": {},
+          "fields": {
+            "BROADCAST_OPTION": [
+              "bend",
+              "bc_bend"
+            ]
+          },
+          "shadow": false,
+          "topLevel": true,
+          "x": 420,
+          "y": 220
+        },
+        "e56": {
+          "opcode": "control_wait",
+          "next": "e57",
+          "parent": "h58",
+          "inputs": {
+            "DURATION": [
+              1,
+              [
+                5,
+                "0.15"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "e57": {
+          "opcode": "sound_stopallsounds",
+          "next": null,
+          "parent": "e56",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "h58": {
+          "opcode": "event_whenbroadcastreceived",
+          "next": "e56",
+          "parent": null,
+          "inputs": {},
+          "fields": {
+            "BROADCAST_OPTION": [
+              "hush",
+              "bc_hush"
+            ]
+          },
+          "shadow": false,
+          "topLevel": true,
+          "x": 420,
+          "y": 420
         }
       },
       "comments": {},

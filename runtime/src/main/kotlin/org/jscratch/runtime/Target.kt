@@ -46,6 +46,12 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
 
     @JvmField var volume: Double = 100.0
 
+    /** The pitch sound effect, -360 to 360. */
+    @JvmField var pitch: Double = 0.0
+
+    /** The pan sound effect, -100 (left) to 100 (right). */
+    @JvmField var pan: Double = 0.0
+
     @JvmField var ghost: Double = 0.0
 
     /** Every graphic effect besides [ghost]. */
@@ -127,6 +133,8 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         rotationStyle = src.rotationStyle
         currentCostume = src.currentCostume
         volume = src.volume
+        pitch = src.pitch
+        pan = src.pan
         ghost = src.ghost
         effects = src.effects
         effected = src.effected
@@ -901,24 +909,74 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
 
     fun playSound(option: Any?) {
         val s = soundFor(option) ?: return
-        rt.sounds.play(s, volume)
+        rt.sounds.play(s, this)
     }
 
+    /**
+     * Waits until the sound has played to its end on the runtime clock, at the rate the pitch
+     * effect sets in each frame, so changing the pitch while it plays changes the wait too. Stop
+     * all sounds ends the wait, as it does in Scratch.
+     */
     fun playSoundUntilDone(option: Any?) {
         val s = soundFor(option) ?: return
-        val secs = rt.sounds.play(s, volume)
-        if (secs > 0) rt.wait(secs)
+        val stops = rt.sounds.stops
+        val length = rt.sounds.play(s, this) * 1000.0
+        if (length <= 0) return
+        // Played milliseconds are counted from the last pitch change, so a steady pitch adds no rounding.
+        var played = 0.0
+        var since = rt.nowMillis()
+        var rate = SoundMix.rate(pitch)
+        rt.requestRedraw()
+        while (played + (rt.nowMillis() - since) * rate < length && rt.sounds.stops == stops) {
+            rt.yieldTick()
+            val now = SoundMix.rate(pitch)
+            if (now != rate) {
+                val t = rt.nowMillis()
+                played += (t - since) * rate
+                since = t
+                rate = now
+            }
+        }
     }
 
     fun stopAllSounds() = rt.sounds.stopAll()
 
+    /** Volume and sound effect blocks wait for the next frame, even without screen refresh, as in scratch-vm. */
     fun setVolume(v: Double) {
         volume = v.coerceIn(0.0, 100.0)
+        rt.sounds.update(this)
+        rt.yieldFrame()
     }
 
     fun changeVolume(d: Double) = setVolume(volume + d)
 
     fun getVolume(): Double = volume
+
+    fun setSoundEffect(effect: String, value: Double) {
+        when (effect.lowercase()) {
+            "pitch" -> pitch = value.coerceIn(-360.0, 360.0)
+            "pan" -> pan = value.coerceIn(-100.0, 100.0)
+            else -> return unknownSoundEffect(effect)
+        }
+        rt.sounds.update(this)
+        rt.yieldFrame()
+    }
+
+    fun changeSoundEffect(effect: String, delta: Double) {
+        when (effect.lowercase()) {
+            "pitch" -> setSoundEffect(effect, pitch + delta)
+            "pan" -> setSoundEffect(effect, pan + delta)
+            else -> unknownSoundEffect(effect)
+        }
+    }
+
+    private fun unknownSoundEffect(effect: String) = Log.warn("Unknown sound effect '$effect'; it does nothing.")
+
+    fun clearSoundEffects() {
+        pitch = 0.0
+        pan = 0.0
+        rt.sounds.update(this)
+    }
 
     // ---- pen ------------------------------------------------------------------------------------
 

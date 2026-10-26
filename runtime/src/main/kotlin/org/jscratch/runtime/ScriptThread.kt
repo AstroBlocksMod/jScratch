@@ -80,6 +80,15 @@ class ScriptThread(val runtime: Runtime, val target: Target, val scriptId: Int) 
         if (killed) throw StopScript()
     }
 
+    /** Called from inside the script: waits for the next frame, in warp mode too. */
+    fun yieldFrame() {
+        tickYield = true
+        yieldPermit.release()
+        runPermit.acquireUninterruptibly()
+        if (warpDepth > 0) warpStartNanos = System.nanoTime()
+        if (killed) throw StopScript()
+    }
+
     fun enterWarp() {
         if (warpDepth == 0) warpStartNanos = System.nanoTime()
         warpDepth++

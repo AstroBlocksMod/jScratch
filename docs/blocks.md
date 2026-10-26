@@ -27,7 +27,9 @@ Graphic effects: set effect to, change effect by and clear graphic effects, for 
 
 ## Sound
 
-play sound, play sound until done, stop all sounds, set and change volume, volume. MP3 and WAV sounds play, including the ADPCM WAV files common in projects that started in Scratch 2. Sounds up to 10 seconds long are decoded when the project starts, and longer ones while they play. The timer restarts with every green flag, as in Scratch. Sound effects (pitch, pan) are ignored.
+play sound, play sound until done, stop all sounds, set and change volume, volume. MP3 and WAV sounds play, including the ADPCM WAV files common in projects that started in Scratch 2. Sounds up to 10 seconds long are decoded when the project starts, and longer ones while they play. The timer restarts with every green flag, as in Scratch.
+
+Sound effects: set effect to, change effect by and clear sound effects, for pitch and pan, with the math of scratch-audio. Pitch goes from -360 to 360, and 10 is one semitone, so 120 plays an octave higher and twice as fast. Pan goes from -100 (left) to 100 (right). A changed volume or effect also applies to the sounds the sprite is already playing, and "play sound until done" waits longer or shorter with the pitch, even when it changes in the middle of the sound. Stop all sounds ends "play sound until done". Clones start with their parent's volume and effects, and the green flag and stop clear the effects. As in Scratch, set and change volume and set and change effect wait for the next frame, even inside a custom block that runs without screen refresh.
 
 ## Events
 

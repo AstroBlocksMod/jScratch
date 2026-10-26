@@ -253,6 +253,14 @@ class Runtime {
         ScriptThread.current()?.yieldNow(true)
     }
 
+    /**
+     * Called from inside a script: waits for the next frame even in "run without screen refresh",
+     * like a block in scratch-vm that returns a promise.
+     */
+    fun yieldFrame() {
+        ScriptThread.current()?.yieldFrame()
+    }
+
     fun wait(seconds: Double) {
         val durationMs = Math.max(0.0, seconds * 1000.0)
         val end = nowMillis() + durationMs
@@ -284,8 +292,9 @@ class Runtime {
         for (t in threads) t.killed = true
         for (t in allTargets()) {
             t.clearSay()
-            // scratch-vm clears graphic effects on stop, and so on every green flag.
+            // scratch-vm clears graphic and sound effects on stop, and so on every green flag.
             t.clearEffects()
+            t.clearSoundEffects()
         }
         sprites.removeAll { it.isClone }
         sounds.stopAll()
