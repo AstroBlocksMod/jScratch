@@ -22,8 +22,9 @@ class ScriptThread(
     /** Whether the script starts with an edge-activated hat, whose condition decides whether it runs at all. */
     private val edgeHat: Boolean = false,
 ) {
-    private val runPermit = Semaphore(0)
-    private val yieldPermit = Semaphore(0)
+    // Made in [start], so a hat that does not fire allocates nothing but this object.
+    private lateinit var runPermit: Semaphore
+    private lateinit var yieldPermit: Semaphore
 
     @Volatile var done: Boolean = false
         private set
@@ -49,6 +50,8 @@ class ScriptThread(
             done = true
             return false
         }
+        runPermit = Semaphore(0)
+        yieldPermit = Semaphore(0)
         Thread.ofVirtual().name("script-${target.name}-$scriptId").start {
             current.set(this)
             runPermit.acquireUninterruptibly()

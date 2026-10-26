@@ -605,7 +605,7 @@
         },
         "l1": {
           "opcode": "looks_say",
-          "next": null,
+          "next": "l4",
           "parent": "h5",
           "inputs": {
             "MESSAGE": [
@@ -650,6 +650,54 @@
           "opcode": "sensing_loudness",
           "next": null,
           "parent": "l2",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "l4": {
+          "opcode": "looks_say",
+          "next": null,
+          "parent": "l1",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "l5",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "l5": {
+          "opcode": "operator_join",
+          "next": null,
+          "parent": "l4",
+          "inputs": {
+            "STRING1": [
+              1,
+              [
+                10,
+                "loud "
+              ]
+            ],
+            "STRING2": [
+              2,
+              "l6"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "l6": {
+          "opcode": "sensing_loud",
+          "next": null,
+          "parent": "l5",
           "inputs": {},
           "fields": {},
           "shadow": false,

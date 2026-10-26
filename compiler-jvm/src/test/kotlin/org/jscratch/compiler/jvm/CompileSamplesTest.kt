@@ -207,6 +207,7 @@ class CompileSamplesTest {
             listOf(
                 "timer was already greater",
                 "loudness -1",
+                "loud false",
                 "touch 1",
                 "timer 16",
                 "touch 2",

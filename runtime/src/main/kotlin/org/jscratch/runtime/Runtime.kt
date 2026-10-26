@@ -10,8 +10,8 @@ import java.util.concurrent.ConcurrentLinkedQueue
  *
  * Headless mode (`-Djscratch.headless=<frames>`) runs up to the given number of
  * frames with a virtual clock and no window, printing every `say` to stdout. It
- * stops early when no script is left running and no edge-activated hat is waiting
- * for its condition to turn true. With `-Djscratch.screenshot=<file.png>`
+ * stops early when no script is left running and no edge-activated hat can still
+ * fire. With `-Djscratch.screenshot=<file.png>`
  * it also saves the final frame, and `-Djscratch.timing=true` prints the frame
  * count and wall time to stderr. The tests and the benchmarks rely on these.
  */
@@ -254,16 +254,23 @@ class Runtime {
      */
     private fun startEdgeHats() {
         if (!hasEdgeHats) return
-        for (t in allTargets()) {
-            for (h in t.hats) {
-                if (h.kind != HAT_EDGE) continue
-                if (threads.any { it.target === t && it.scriptId == h.scriptId && !it.done && !it.killed }) continue
-                threads.add(ScriptThread(this, t, h.scriptId, edgeHat = true))
-            }
+        startEdgeHats(stage)
+        for (s in sprites) startEdgeHats(s)
+    }
+
+    private fun startEdgeHats(t: Target) {
+        for (h in t.hats) {
+            if (h.kind != HAT_EDGE) continue
+            // Nothing else starts these scripts, so the hat's own last thread tells whether its script runs.
+            val running = h.thread
+            if (running != null && !running.done && !running.killed) continue
+            val thread = ScriptThread(this, t, h.scriptId, edgeHat = true)
+            h.thread = thread
+            threads.add(thread)
         }
     }
 
-    /** Whether some edge-activated hat could still fire: its condition was false last time, or never checked. */
+    /** Whether some edge-activated hat could still fire in a headless run with no script running. */
     private fun edgeHatWaiting(): Boolean = hasEdgeHats && allTargets().any { it.edgeHatWaiting() }
 
     private fun startScript(target: Target, scriptId: Int): ScriptThread {

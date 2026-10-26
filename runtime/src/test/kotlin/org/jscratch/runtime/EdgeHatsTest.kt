@@ -2,7 +2,9 @@ package org.jscratch.runtime
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 /** When edge-activated hats like `when timer greater than` start their script, frame by frame. */
 class EdgeHatsTest {
@@ -11,7 +13,7 @@ class EdgeHatsTest {
     }
 
     /** A sprite with one edge-activated hat whose condition the test sets, and a script that can be held running. */
-    private class Cat(rt: Runtime) : Sprite(rt, "Cat") {
+    private class Cat(rt: Runtime, private val watches: String = "timer") : Sprite(rt, "Cat") {
         @Volatile var condition = false
 
         @Volatile var hold = false
@@ -19,7 +21,7 @@ class EdgeHatsTest {
         @Volatile var runs = 0
 
         init {
-            registerHat(Runtime.HAT_EDGE, "", 0)
+            registerHat(Runtime.HAT_EDGE, watches, 0)
         }
 
         override fun hatPredicate(id: Int): Boolean = condition
@@ -29,7 +31,7 @@ class EdgeHatsTest {
             while (hold) rt.yieldTick()
         }
 
-        override fun newInstance(): Target = Cat(rt)
+        override fun newInstance(): Target = Cat(rt, watches)
     }
 
     private val rt: Runtime
@@ -95,6 +97,20 @@ class EdgeHatsTest {
         clone.condition = true
         rt.frame()
         assertEquals(0, clone.runs)
+    }
+
+    @Test
+    fun headlessRunsWaitOnlyForHatsThatCanStillFire() {
+        val toucher = Cat(rt, "touching")
+        rt.addTarget(toucher)
+        assertTrue(cat.edgeHatWaiting(), "never checked")
+        assertTrue(toucher.edgeHatWaiting(), "never checked")
+        rt.frame()
+        assertTrue(cat.edgeHatWaiting(), "the timer keeps going, so a false timer hat can still fire")
+        assertFalse(toucher.edgeHatWaiting(), "nothing moves without scripts, so a false touching hat stays false")
+        cat.condition = true
+        rt.frame()
+        assertFalse(cat.edgeHatWaiting())
     }
 
     @Test

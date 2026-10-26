@@ -193,7 +193,16 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
         "event_whenbroadcastreceived" -> RT.HAT_BROADCAST to (b.fields["BROADCAST_OPTION"]?.value ?: "")
         "event_whenbackdropswitchesto" -> RT.HAT_BACKDROP to (b.fields["BACKDROP"]?.value ?: "")
         "control_start_as_clone" -> RT.HAT_CLONE_START to ""
-        "event_whengreaterthan", "event_whentouchingobject" -> RT.HAT_EDGE to ""
+        "event_whentouchingobject" -> RT.HAT_EDGE to "touching"
+        "event_whengreaterthan" -> {
+            val menu = field(b, "WHENGREATERTHANMENU").lowercase()
+            if (menu == "timer" || menu == "loudness") {
+                RT.HAT_EDGE to menu
+            } else {
+                ctx.warn("Hat block 'when $menu greater than' is not supported; its script never runs")
+                null
+            }
+        }
         else -> {
             null
         }
@@ -365,7 +374,7 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
         mv.visitLookupSwitchInsn(dflt, edges.map { it.id }.toIntArray(), labels)
         for ((i, s) in edges.withIndex()) {
             mv.visitLabel(labels[i])
-            emitHatCondition(st, s.hat)
+            emitHatCondition(st, s)
             mv.visitInsn(IRETURN)
         }
         mv.visitLabel(dflt)
@@ -375,26 +384,19 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
         mv.visitEnd()
     }
 
-    /** Leaves the condition of an edge-activated [hat] on the stack as a boolean. */
-    private fun emitHatCondition(st: MethodState, hat: Block) {
+    /** Leaves the condition of an edge-activated hat on the stack as a boolean. */
+    private fun emitHatCondition(st: MethodState, s: ScriptInfo) {
         val mv = st.mv
-        if (hat.opcode == "event_whentouchingobject") {
+        val hat = s.hat
+        if (s.hatArg == "touching") {
             mv.visitVarInsn(ALOAD, 0)
             emitExpr(st, hat.inputs["TOUCHINGOBJECTMENU"], VType.ANY)
             mv.visitMethodInsn(INVOKEVIRTUAL, RT.TARGET, "touching", "(${RT.D_OBJECT})Z", false)
             return
         }
-        val measure =
-            when (field(hat, "WHENGREATERTHANMENU").lowercase()) {
-                "timer" -> "timer"
-                "loudness" -> "loudness"
-                else -> {
-                    mv.visitInsn(ICONST_0)
-                    return
-                }
-            }
+        // `timer` or `loudness`, which are also the names of the runtime methods.
         mv.visitVarInsn(ALOAD, 0)
-        mv.visitMethodInsn(INVOKEVIRTUAL, RT.TARGET, measure, "()D", false)
+        mv.visitMethodInsn(INVOKEVIRTUAL, RT.TARGET, s.hatArg, "()D", false)
         emitExpr(st, hat.inputs["VALUE"], VType.NUM)
         val yes = Label()
         val end = Label()

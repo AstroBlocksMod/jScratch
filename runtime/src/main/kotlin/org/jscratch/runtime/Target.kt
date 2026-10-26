@@ -15,7 +15,10 @@ class Bounds(val left: Double, val right: Double, val top: Double, val bottom: D
     fun intersects(o: Bounds): Boolean = left <= o.right && right >= o.left && bottom <= o.top && top >= o.bottom
 }
 
-class Hat(val kind: Int, val arg: String, val scriptId: Int)
+class Hat(val kind: Int, val arg: String, val scriptId: Int) {
+    /** The last thread an edge-activated hat queued, so checking whether its script still runs is one lookup. */
+    internal var thread: ScriptThread? = null
+}
 
 /**
  * Base class of every compiled sprite and of the stage. The compiler emits one
@@ -111,15 +114,24 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
             try {
                 hatPredicate(id)
             } catch (e: RuntimeException) {
-                Log.warn("The hat of script $id in '$name' failed: $e")
+                // The same text every frame, so the log prints it once.
+                Log.warn("The condition of script $id in '$name' failed with ${e.javaClass.name} and counts as false")
                 false
             }
         val old = edgeValues.put(id, value)
         return value && old != true
     }
 
-    /** Whether an edge-activated hat of this target was false when last checked, or never checked yet. */
-    internal fun edgeHatWaiting(): Boolean = hats.any { it.kind == Runtime.HAT_EDGE && edgeValues[it.scriptId] != true }
+    /**
+     * Whether an edge-activated hat of this target could still fire in a headless run with no script
+     * running: it was never checked, or it watches the timer, which keeps going, and was false. Without
+     * scripts or a mouse nothing moves, so a touching hat stays as it is, and loudness is always -1.
+     */
+    internal fun edgeHatWaiting(): Boolean = hats.any {
+        if (it.kind != Runtime.HAT_EDGE) return@any false
+        val value = edgeValues[it.scriptId]
+        value == null || (it.arg == "timer" && !value)
+    }
 
     /** Forgets every hat condition, which the green flag does, so hats that are already true fire again. */
     fun clearEdgeValues() {
