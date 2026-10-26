@@ -8,12 +8,13 @@ The compiler handles the blocks below. Anything else compiles to a no-op with a 
 | --- | --- |
 | when green flag clicked | Also runs on launch. |
 | when key pressed | Fires on key down, repeats with the OS key repeat. "any" works. |
-| when this sprite clicked, when stage clicked | A click hits the topmost sprite with an opaque pixel under the mouse. Sprites with a ghost effect of 100 do not catch clicks. |
+| when this sprite clicked, when stage clicked | A click hits the topmost sprite with an opaque pixel under the mouse. Sprites with a ghost effect of 100 do not catch clicks. A draggable sprite is clicked when the mouse goes up instead of down, and not at all when the press dragged it, as in Scratch. |
 | when I receive | Case-insensitive match like Scratch. |
 | when backdrop switches to | Fires on every switch, even to the same backdrop. |
 | when I start as a clone | |
 | define (custom blocks) | Arguments, defaults and "run without screen refresh" are honored. |
-| when loudness or timer greater than | Not supported. The script never runs. |
+| when timer greater than, when loudness greater than | Checked at the start of every frame, and the script runs when the condition turns true, as in Scratch. The value can be any reporter. A script that is still running is not started again, and its condition is not checked until it ends. A condition that is true from the start fires once, and again after every green flag. |
+| when touching | The same edge rule, with the same sprite, mouse pointer and edge choices as the touching block. It is hidden in the Scratch 3 editor but loads from projects that use it. |
 
 ## Motion
 
@@ -41,15 +42,25 @@ broadcast, broadcast and wait. Broadcasts restart scripts that are already runni
 
 wait, repeat, forever, if, if else, wait until, repeat until, while, stop (all, this script, other scripts in sprite), create clone of, delete this clone. Clones are capped at 300.
 
+A few hidden legacy control blocks are not in the editor's palette but still load from projects, and they work too. For each sets its variable to 1, 2, 3 and so on while it is below the value, which is read again before every round, and waits for the next frame after each round like repeat. The counter blocks (counter, increment counter, clear counter) share one counter between all sprites, which only starts over when the project starts, as in Scratch. All at once runs the blocks inside it, as in Scratch 3.
+
 ## Sensing
 
-touching (mouse, edge, sprite), touching color, color is touching color, distance to, ask and wait with answer, key pressed, mouse down, mouse x and y, timer, reset timer, "of" (sprite and stage properties and variables), current date and time, days since 2000.
+touching (mouse, edge, sprite), touching color, color is touching color, distance to, ask and wait with answer, key pressed, mouse down, mouse x and y, loudness, timer, reset timer, "of" (sprite and stage properties and variables), current date and time, days since 2000, set drag mode, username, online?, and the hidden legacy loud? block (loudness above 10).
+
+Loudness listens to the default microphone through `javax.sound.sampled`, which opens the first time a project asks for the loudness, as in Scratch. It is measured the way scratch-audio does it, once a frame: the RMS of the last 2048 samples, falling no faster than 40% a frame, mapped to 0 through 100. It is -1 until the microphone is open, for good when there is none, and always in headless mode. On macOS the app that starts Java (the terminal or editor, for example) needs microphone access, which is under Privacy & Security in System Settings. Without it macOS hands out only silence, so the loudness also stays at -1 until the microphone hears something, and after two seconds of silence the runtime prints a note about the permission.
 
 Touching a sprite or the mouse is pixel-accurate: it compares the opaque pixels of the costumes as they are drawn, with rotation, size and the effects that move pixels (fisheye, whirl, pixelate, mosaic) applied, the way scratch-render does. The mouse counts as the whole stage pixel under it. Ghost and the other color effects do not change what a sprite touches. Touching the edge, if on edge bounce and fencing use tight bounds, the box around the costume's opaque pixels as the effects draw them, so transparent padding in a costume does not count. A costume with no opaque pixels at all touches nothing, not even the edge, and is not fenced.
 
 Touching color looks at what the stage shows under every opaque pixel of the sprite: the other sprites in front to back order (with all their effects), the pen layer, the backdrop (with the stage's effects) and the white stage behind it. Color is touching color only looks under the sprite's pixels that have the first color after its own color and brightness effects, ignoring its ghost effect. Colors match loosely, like in Scratch: the top 5 bits of red and green and the top 4 bits of blue have to agree, and the first color of color is touching color needs the top 6 bits of each channel. Both blocks work while the sprite is hidden, as in Scratch 3.
 
-Not supported: loudness (reports -1), username (reports an empty string), video sensing, drag mode (ignored).
+Set drag mode works like dragging in the Scratch player. Pressing on a draggable sprite picks it up once the mouse moves more than 3 pixels of the window or stays down for 400 ms. Set drag mode on the stage does nothing, as in Scratch. The sprite jumps to the front and follows the mouse, keeping the spot where it was grabbed under the pointer, and stays inside the stage like any sprite. While it is being dragged, scripts cannot move it, the pen does not draw, and other sprites do not touch it, though it can still touch them. Sprites saved as draggable in the project start that way, and clones copy the setting.
+
+Username reports the value of the `jscratch.username` system property (`java -Djscratch.username=ada -jar game.jar`), and an empty string without it, like a Scratch project run by someone who is not signed in.
+
+Online? is true when the computer has a network connection, the way a browser's `navigator.onLine` sees it: some network interface other than loopback is up with an address that is not link-local. It is checked at most once a second.
+
+Not supported: video sensing.
 
 ## Operators
 
@@ -65,7 +76,7 @@ Monitors are drawn the way the Scratch player draws them, with scratch-gui's siz
 
 - **Variables** show as a normal readout, a large readout or a slider, whichever the project saved. Dragging a slider's bar sets the variable, snapping to whole numbers or to hundredths like in Scratch.
 - **Lists** show their items with index numbers and the length, at the size saved in the project. The mouse wheel scrolls a long list.
-- **Built-in reporters** with a checkbox in the editor can be monitored too: x position, y position, direction, costume and backdrop number or name, size, volume, answer, timer, current date and time, username and loudness.
+- **Built-in reporters** with a checkbox in the editor can be monitored too: x position, y position, direction, costume and backdrop number or name, size, volume, answer, timer, current date and time, username, online and loudness.
 - Numbers are rounded to six decimal places for display, as in Scratch.
 - show and hide variable and show and hide list work on every variable and list, including ones that never had a monitor and ones a block uses without declaring them. A monitor shown for the first time is placed where scratch-gui would place it, in the first free spot from the top left.
 - Clicks on a monitor do not reach the project, so they do not trigger `when stage clicked` or `mouse down?`.
@@ -75,6 +86,10 @@ Not supported: dragging monitors, their right-click menu, editing or resizing li
 ## Pen
 
 clear, stamp, pen down, pen up, set pen color to color, set and change color parameter (color, saturation, brightness, transparency), set and change pen size, plus the legacy hue and shade blocks.
+
+## Legacy blocks that do nothing
+
+A few hidden legacy blocks still load in Scratch 3 but do nothing there: scroll right, scroll up, align scene, hide all sprites, set stretch and change stretch do nothing, and x scroll, y scroll and user id report an empty value. jScratch does the same, without the warning it gives for blocks it does not support.
 
 ## Extensions
 

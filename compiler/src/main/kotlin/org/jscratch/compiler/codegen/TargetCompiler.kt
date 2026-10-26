@@ -23,7 +23,9 @@ import org.objectweb.asm.Opcodes.DCMPL
 import org.objectweb.asm.Opcodes.DCONST_0
 import org.objectweb.asm.Opcodes.DCONST_1
 import org.objectweb.asm.Opcodes.DDIV
+import org.objectweb.asm.Opcodes.DLOAD
 import org.objectweb.asm.Opcodes.DMUL
+import org.objectweb.asm.Opcodes.DSTORE
 import org.objectweb.asm.Opcodes.DSUB
 import org.objectweb.asm.Opcodes.DUP
 import org.objectweb.asm.Opcodes.DUP_X1
@@ -35,6 +37,7 @@ import org.objectweb.asm.Opcodes.IAND
 import org.objectweb.asm.Opcodes.ICONST_0
 import org.objectweb.asm.Opcodes.ICONST_1
 import org.objectweb.asm.Opcodes.IFEQ
+import org.objectweb.asm.Opcodes.IFGE
 import org.objectweb.asm.Opcodes.IFGT
 import org.objectweb.asm.Opcodes.IFLE
 import org.objectweb.asm.Opcodes.IFLT
@@ -45,6 +48,7 @@ import org.objectweb.asm.Opcodes.INVOKESPECIAL
 import org.objectweb.asm.Opcodes.INVOKESTATIC
 import org.objectweb.asm.Opcodes.INVOKEVIRTUAL
 import org.objectweb.asm.Opcodes.IOR
+import org.objectweb.asm.Opcodes.IRETURN
 import org.objectweb.asm.Opcodes.ISTORE
 import org.objectweb.asm.Opcodes.IXOR
 import org.objectweb.asm.Opcodes.NEW
@@ -120,6 +124,7 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
         if (target.isStage) emitStaticInit()
         emitConstructor()
         emitRunScript()
+        emitHatPredicate()
         for (s in scripts) emitScript(s)
         for (p in procs.values) emitProcedure(p)
         if (!target.isStage) {
@@ -191,9 +196,15 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
         "event_whenbroadcastreceived" -> RT.HAT_BROADCAST to (b.fields["BROADCAST_OPTION"]?.value ?: "")
         "event_whenbackdropswitchesto" -> RT.HAT_BACKDROP to (b.fields["BACKDROP"]?.value ?: "")
         "control_start_as_clone" -> RT.HAT_CLONE_START to ""
-        "event_whengreaterthan", "event_whentouchingobject" -> {
-            ctx.warn("Hat block '${b.opcode}' is not supported yet; its script never runs")
-            null
+        "event_whentouchingobject" -> RT.HAT_EDGE to "touching"
+        "event_whengreaterthan" -> {
+            val menu = field(b, "WHENGREATERTHANMENU").lowercase()
+            if (menu == "timer" || menu == "loudness") {
+                RT.HAT_EDGE to menu
+            } else {
+                ctx.warn("Hat block 'when $menu greater than' is not supported; its script never runs")
+                null
+            }
         }
         else -> {
             null
@@ -348,6 +359,57 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
         mv.visitInsn(RETURN)
         mv.visitMaxs(0, 0)
         mv.visitEnd()
+    }
+
+    /**
+     * The condition of every edge-activated hat, by script number. The runtime calls it on the scheduler
+     * thread once a frame and starts the script when the condition turns true.
+     */
+    private fun emitHatPredicate() {
+        val edges = scripts.filter { it.hatKind == RT.HAT_EDGE }
+        if (edges.isEmpty()) return
+        val mv = cw.visitMethod(ACC_PUBLIC, "hatPredicate", "(I)Z", null, null)
+        mv.visitCode()
+        val st = MethodState(mv, null, 2)
+        val dflt = Label()
+        val labels = Array(edges.size) { Label() }
+        mv.visitVarInsn(ILOAD, 1)
+        mv.visitLookupSwitchInsn(dflt, edges.map { it.id }.toIntArray(), labels)
+        for ((i, s) in edges.withIndex()) {
+            mv.visitLabel(labels[i])
+            emitHatCondition(st, s)
+            mv.visitInsn(IRETURN)
+        }
+        mv.visitLabel(dflt)
+        mv.visitInsn(ICONST_0)
+        mv.visitInsn(IRETURN)
+        mv.visitMaxs(0, 0)
+        mv.visitEnd()
+    }
+
+    /** Leaves the condition of an edge-activated hat on the stack as a boolean. */
+    private fun emitHatCondition(st: MethodState, s: ScriptInfo) {
+        val mv = st.mv
+        val hat = s.hat
+        if (s.hatArg == "touching") {
+            mv.visitVarInsn(ALOAD, 0)
+            emitExpr(st, hat.inputs["TOUCHINGOBJECTMENU"], VType.ANY)
+            mv.visitMethodInsn(INVOKEVIRTUAL, RT.TARGET, "touching", "(${RT.D_OBJECT})Z", false)
+            return
+        }
+        // `timer` or `loudness`, which are also the names of the runtime methods.
+        mv.visitVarInsn(ALOAD, 0)
+        mv.visitMethodInsn(INVOKEVIRTUAL, RT.TARGET, s.hatArg, "()D", false)
+        emitExpr(st, hat.inputs["VALUE"], VType.NUM)
+        val yes = Label()
+        val end = Label()
+        mv.visitInsn(DCMPL)
+        mv.visitJumpInsn(IFGT, yes)
+        mv.visitInsn(ICONST_0)
+        mv.visitJumpInsn(GOTO, end)
+        mv.visitLabel(yes)
+        mv.visitInsn(ICONST_1)
+        mv.visitLabel(end)
     }
 
     private fun emitNewInstance() {
@@ -713,6 +775,15 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
                 thisCall(st, "wait", "(D)V") { emitExpr(st, b.inputs["DURATION"], VType.NUM) }
             }
             "control_repeat" -> emitRepeat(st, b)
+            "control_for_each" -> emitForEach(st, b)
+            // Hidden legacy blocks. "all at once" just runs its blocks, as in Scratch 3.
+            "control_all_at_once" -> emitSubstack(st, b, "SUBSTACK")
+            "control_incr_counter" -> thisCall(st, "incrCounter", "()V") {}
+            "control_clear_counter" -> thisCall(st, "clearCounter", "()V") {}
+            // Hidden legacy blocks that scratch-vm loads but does nothing for, so they are not worth a warning.
+            "motion_scroll_right", "motion_scroll_up", "motion_align_scene", "looks_hideallsprites",
+            "looks_setstretchto", "looks_changestretchby",
+            -> {}
             "control_forever" -> {
                 val loop = Label()
                 mv.visitLabel(loop)
@@ -824,7 +895,9 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
             "sensing_resettimer" -> {
                 thisCall(st, "resetTimer", "()V") {}
             }
-            "sensing_setdragmode" -> {}
+            "sensing_setdragmode" -> {
+                thisCall(st, "setDragMode", "(${RT.D_STRING})V") { mv.visitLdcInsn(field(b, "DRAG_MODE")) }
+            }
 
             // pen
             "pen_clear" -> {
@@ -900,6 +973,38 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
         mv.visitJumpInsn(IFLE, end)
         emitSubstack(st, b, "SUBSTACK")
         mv.visitIincInsn(counter, -1)
+        thisCall(st, "yieldLoop", "()V") {}
+        mv.visitJumpInsn(GOTO, loop)
+        mv.visitLabel(end)
+    }
+
+    /**
+     * `for each`, a hidden legacy block: sets the variable to 1, 2, 3 and so on while it is below the
+     * value, which is read again before every round, and yields after each round like `repeat`.
+     */
+    private fun emitForEach(st: MethodState, b: Block) {
+        val mv = st.mv
+        val slot = variableSlot(b, false) ?: return
+        val index = st.allocLocal(2)
+        mv.visitInsn(DCONST_0)
+        mv.visitVarInsn(DSTORE, index)
+        val loop = Label()
+        val end = Label()
+        mv.visitLabel(loop)
+        mv.visitVarInsn(DLOAD, index)
+        emitExpr(st, b.inputs["VALUE"], VType.NUM)
+        // dcmpg yields 1 for NaN, which ends the loop like a failed `<` would.
+        mv.visitInsn(DCMPG)
+        mv.visitJumpInsn(IFGE, end)
+        mv.visitVarInsn(DLOAD, index)
+        mv.visitInsn(DCONST_1)
+        mv.visitInsn(DADD)
+        mv.visitVarInsn(DSTORE, index)
+        emitSetSlot(st, slot) {
+            mv.visitVarInsn(DLOAD, index)
+            coerce(mv, VType.NUM, VType.ANY)
+        }
+        emitSubstack(st, b, "SUBSTACK")
         thisCall(st, "yieldLoop", "()V") {}
         mv.visitJumpInsn(GOTO, loop)
         mv.visitLabel(end)
@@ -1321,12 +1426,24 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
                 call("daysSince2000", "()D", VType.NUM) {}
             }
             "sensing_username" -> {
-                mv.visitLdcInsn("")
-                VType.STR
+                call("username", "()${RT.D_STRING}", VType.STR) {}
             }
             "sensing_loudness" -> {
-                pushDouble(mv, -1.0)
-                VType.NUM
+                call("loudness", "()D", VType.NUM) {}
+            }
+            "sensing_loud" -> {
+                call("loud", "()Z", VType.BOOL) {}
+            }
+            "sensing_online" -> {
+                call("online", "()Z", VType.BOOL) {}
+            }
+            "control_get_counter" -> {
+                call("counter", "()D", VType.NUM) {}
+            }
+            // Hidden legacy reporters that scratch-vm loads but that report nothing.
+            "motion_xscroll", "motion_yscroll", "sensing_userid" -> {
+                pushDefault(mv, want)
+                want
             }
             else -> {
                 ctx.warn("Unsupported reporter '${b.opcode}' in '${target.name}' reports an empty value")
@@ -1405,6 +1522,7 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
                 "motion_xposition", "motion_yposition", "motion_direction", "looks_size", "sound_volume",
                 "sensing_mousex", "sensing_mousey", "sensing_timer", "sensing_dayssince2000", "sensing_current",
                 "sensing_distanceto", "sensing_loudness", "data_lengthoflist", "data_itemnumoflist",
+                "control_get_counter",
                 -> VType.NUM
                 "operator_join", "operator_letter_of", "sensing_answer", "sensing_username", "data_listcontents",
                 -> VType.STR

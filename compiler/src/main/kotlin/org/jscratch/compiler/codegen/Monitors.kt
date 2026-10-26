@@ -147,6 +147,7 @@ object Monitors {
         "sensing_answer" -> "answer" to ""
         "sensing_loudness" -> "loudness" to ""
         "sensing_username" -> "username" to ""
+        "sensing_online" -> "online" to ""
         "sensing_timer" -> "timer" to ""
         "sensing_current" -> {
             val menu = m.params["CURRENTMENU"] ?: "YEAR"

@@ -60,7 +60,9 @@ class Monitor(
             "sensing_answer" -> rt.answer
             "sensing_timer" -> rt.timer()
             "sensing_current" -> t.current(param)
-            "sensing_loudness" -> -1.0
+            "sensing_loudness" -> rt.loudness()
+            "sensing_username" -> rt.username
+            "sensing_online" -> rt.online()
             else -> ""
         }
     }

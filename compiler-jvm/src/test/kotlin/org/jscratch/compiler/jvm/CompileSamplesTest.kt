@@ -193,6 +193,74 @@ class CompileSamplesTest {
     }
 
     /**
+     * Edge-activated hats. The Ball jumps onto the Wall at frames 6 and 18 and off it at frame 12. The
+     * timer passes 0.5 s at frame 16, and again 16 frames after the hat resets it. The hats that are true
+     * from the start fire once.
+     */
+    @Test
+    fun compilesAndRunsHatsProject() {
+        val result = JScratch.compile(File(samplesDir, "hats.sb3").readBytes(), runtimeJar.readBytes(), json)
+        assertEquals(emptyList(), result.warnings, "unexpected warnings")
+
+        val out = runHeadless(result.jar, frames = 100)
+        val expected =
+            listOf(
+                "timer was already greater",
+                "loudness -1",
+                "loud false",
+                "touch 1",
+                "timer 16",
+                "touch 2",
+                "timer 16",
+            ).map { "Ball says: $it" }
+        assertEquals(expected, out.lines().filter { it.startsWith("Ball ") })
+    }
+
+    /** Hidden legacy blocks, which are not in the editor's palette but still load from projects. */
+    @Test
+    fun compilesAndRunsLegacyProject() {
+        val result = JScratch.compile(File(samplesDir, "legacy.sb3").readBytes(), runtimeJar.readBytes(), json)
+        assertEquals(emptyList(), result.warnings, "unexpected warnings")
+
+        val out = runHeadless(result.jar, frames = 30)
+        val expected =
+            listOf(
+                // for each counts from 1 and leaves the variable at the last value
+                "each 1",
+                "each 2",
+                "each 3",
+                "after 3",
+                "counter 2",
+                "all at once",
+                // x scroll, y scroll and user id report nothing, and the other old blocks do nothing
+                "legacy []",
+                "done",
+            ).map { "Cat says: $it" }
+        assertEquals(expected, out.lines().filter { it.startsWith("Cat ") })
+    }
+
+    /**
+     * `username` reports the `jscratch.username` property, and nothing without it. Whether the machine is
+     * online varies, so the project only says whether `online?` is a boolean.
+     */
+    @Test
+    fun compilesAndRunsSensingProject() {
+        val result = JScratch.compile(File(samplesDir, "sensing.sb3").readBytes(), runtimeJar.readBytes(), json)
+        assertEquals(emptyList(), result.warnings, "unexpected warnings")
+
+        val named = runHeadless(result.jar, frames = 10, "-Djscratch.username=ada")
+        assertEquals(
+            listOf("Cat says: user: ada", "Cat says: online true"),
+            named.lines().filter { it.startsWith("Cat ") },
+        )
+        val anonymous = runHeadless(result.jar, frames = 10)
+        assertEquals(
+            listOf("Cat says: user: ", "Cat says: online true"),
+            anonymous.lines().filter { it.startsWith("Cat ") },
+        )
+    }
+
+    /**
      * Monitors from the project file, `show` and `hide` blocks, and a monitor placed automatically. The
      * screenshot is checked at spots whose layout does not depend on the font: the colored fill of each
      * value, or its absence. Coordinates are stage pixels from the top left; the screenshot is twice that.

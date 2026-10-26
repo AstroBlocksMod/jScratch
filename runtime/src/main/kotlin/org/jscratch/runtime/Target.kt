@@ -15,7 +15,10 @@ class Bounds(val left: Double, val right: Double, val top: Double, val bottom: D
     fun intersects(o: Bounds): Boolean = left <= o.right && right >= o.left && bottom <= o.top && top >= o.bottom
 }
 
-class Hat(val kind: Int, val arg: String, val scriptId: Int)
+class Hat(val kind: Int, val arg: String, val scriptId: Int) {
+    /** The last thread an edge-activated hat queued, so checking whether its script still runs is one lookup. */
+    internal var thread: ScriptThread? = null
+}
 
 /**
  * Base class of every compiled sprite and of the stage. The compiler emits one
@@ -37,6 +40,9 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
     @JvmField var visible: Boolean = true
 
     @JvmField var draggable: Boolean = false
+
+    /** Whether the mouse is dragging this sprite right now. */
+    @JvmField var dragging: Boolean = false
 
     @JvmField var rotationStyle: RotationStyle = RotationStyle.ALL_AROUND
 
@@ -94,6 +100,47 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
     /** Sets a variable from a slider monitor. */
     open fun setMonitorSlot(slot: Int, value: Any?) {}
 
+    /** The current condition of the edge-activated hat of script [id]. */
+    open fun hatPredicate(id: Int): Boolean = false
+
+    // ---- edge-activated hats --------------------------------------------------------------------
+
+    /** The condition of each edge-activated hat when it was last checked, by script, as scratch-vm keeps them. */
+    private var edgeValues = HashMap<Int, Boolean>()
+
+    /**
+     * Checks the condition of the edge-activated hat of script [id] and remembers it. True when the
+     * script should start: the condition is true and was false before, or was never checked.
+     */
+    internal fun edgeActivated(id: Int): Boolean {
+        val value =
+            try {
+                hatPredicate(id)
+            } catch (e: RuntimeException) {
+                // The same text every frame, so the log prints it once.
+                Log.warn("The condition of script $id in '$name' failed with ${e.javaClass.name} and counts as false")
+                false
+            }
+        val old = edgeValues.put(id, value)
+        return value && old != true
+    }
+
+    /**
+     * Whether an edge-activated hat of this target could still fire in a headless run with no script
+     * running: it was never checked, or it watches the timer, which keeps going, and was false. Without
+     * scripts or a mouse nothing moves, so a touching hat stays as it is, and loudness is always -1.
+     */
+    internal fun edgeHatWaiting(): Boolean = hats.any {
+        if (it.kind != Runtime.HAT_EDGE) return@any false
+        val value = edgeValues[it.scriptId]
+        value == null || (it.arg == "timer" && !value)
+    }
+
+    /** Forgets every hat condition, which the green flag does, so hats that are already true fire again. */
+    fun clearEdgeValues() {
+        edgeValues.clear()
+    }
+
     // ---- setup called from generated constructors -----------------------------------------------
 
     fun addCostume(
@@ -139,6 +186,8 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         effects = src.effects
         effected = src.effected
         pen.copyFrom(src.pen)
+        // A clone starts with its parent's hat conditions, so a hat that is true for both does not fire again.
+        edgeValues = HashMap(src.edgeValues)
         copyLocalsFrom(src)
     }
 
@@ -358,7 +407,8 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         var bottom = Double.POSITIVE_INFINITY
         var top = Double.NEGATIVE_INFINITY
         for (other in rt.sprites) {
-            if (other === this || other.name != spriteName || !other.visible) continue
+            // A sprite being dragged can touch others, but nothing touches it, as in Scratch 2 and 3.
+            if (other === this || other.name != spriteName || !other.visible || other.dragging) continue
             val ob = other.touchingBounds() ?: continue
             if (!ob.intersects(mine)) continue
             probes.add(other.probe() ?: continue)
@@ -453,6 +503,18 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         throw StopScript()
     }
 
+    // The hidden legacy counter blocks. Every target shares the one counter.
+
+    fun counter(): Double = rt.counter
+
+    fun incrCounter() {
+        rt.counter++
+    }
+
+    fun clearCounter() {
+        rt.counter = 0.0
+    }
+
     fun broadcast(name: Any?) {
         rt.broadcast(Cast.toString(name))
     }
@@ -463,7 +525,15 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
 
     // ---- motion ---------------------------------------------------------------------------------
 
+    /** Moves the sprite. As in Scratch, scripts cannot move a sprite while the mouse drags it. */
     fun setXY(nx: Double, ny: Double) {
+        if (!dragging) moveTo(nx, ny, true)
+    }
+
+    /** Moves the sprite where the mouse drags it. Like in Scratch, that never draws with the pen. */
+    internal fun dragTo(nx: Double, ny: Double) = moveTo(nx, ny, false)
+
+    private fun moveTo(nx: Double, ny: Double, drawPen: Boolean) {
         if (isStage) return
         var tx = if (nx.isNaN()) 0.0 else nx
         var ty = if (ny.isNaN()) 0.0 else ny
@@ -474,7 +544,7 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         val oy = y
         x = tx
         y = ty
-        if (pen.down) rt.pen.line(ox, oy, tx, ty, pen)
+        if (drawPen && pen.down) rt.pen.line(ox, oy, tx, ty, pen)
         if (visible) rt.requestRedraw()
     }
 
@@ -855,6 +925,21 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
     fun timer(): Double = rt.timer()
 
     fun resetTimer() = rt.resetTimer()
+
+    fun loudness(): Double = rt.loudness()
+
+    /** `set drag mode`: the mouse can drag a draggable sprite around the stage. */
+    fun setDragMode(mode: String) {
+        // The stage never becomes draggable, or its clicks would move to mouse up.
+        if (!isStage) draggable = mode == "draggable"
+    }
+
+    fun username(): String = rt.username
+
+    fun online(): Boolean = rt.online()
+
+    /** `loud?`, a hidden legacy block. */
+    fun loud(): Boolean = rt.loudness() > 10.0
 
     fun askAndWait(question: Any?) = rt.ask(this, Cast.toString(question))
 

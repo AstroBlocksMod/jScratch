@@ -1,5 +1,6 @@
 package org.jscratch.runtime
 
+import java.net.NetworkInterface
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 
@@ -10,7 +11,8 @@ import java.util.concurrent.ConcurrentLinkedQueue
  *
  * Headless mode (`-Djscratch.headless=<frames>`) runs up to the given number of
  * frames with a virtual clock and no window, printing every `say` to stdout. It
- * stops early when no script is left running. With `-Djscratch.screenshot=<file.png>`
+ * stops early when no script is left running and no edge-activated hat can still
+ * fire. With `-Djscratch.screenshot=<file.png>`
  * it also saves the final frame, and `-Djscratch.timing=true` prints the frame
  * count and wall time to stderr. The tests and the benchmarks rely on these.
  */
@@ -31,14 +33,51 @@ class Runtime {
     val headlessFrames: Int = Integer.getInteger("jscratch.headless", -1)
     val headless: Boolean get() = headlessFrames >= 0
     val sounds = Sounds(this)
+    private val microphone = Microphone()
+    private var loudness: Double = -1.0
+    private var loudnessFrame: Long = -1
 
     @Volatile var mouseX: Double = 0.0
 
     @Volatile var mouseY: Double = 0.0
 
     @Volatile var mouseDown: Boolean = false
+
+    /** Where the mouse went down, while the button is held over the stage. NaN when it is up. */
+    private var pressX: Double = Double.NaN
+    private var pressY: Double = Double.NaN
+    private var pressNanos: Long = 0
+
+    /** Whether the press has been held long enough to try to start a drag without moving. */
+    private var pressTimedOut: Boolean = false
+
+    /** The mouse position the last drag check saw, to tell whether the mouse moved since. */
+    private var seenX: Double = 0.0
+    private var seenY: Double = 0.0
+
+    /** Window pixels per stage unit, which the window sets as it resizes. The drag threshold is in window pixels. */
+    @Volatile var windowScale: Double = 1.0
+
+    /** The sprite the mouse is dragging, and the sprite's position relative to the mouse. */
+    private var dragged: Sprite? = null
+    private var dragOffsetX: Double = 0.0
+    private var dragOffsetY: Double = 0.0
+
+    /** What `username` reports. Projects run outside the Scratch website, so nobody is signed in unless this is set. */
+    val username: String = System.getProperty("jscratch.username", "")
+
+    /** The counter of the hidden legacy counter blocks. Like scratch-vm's, only loading the project resets it. */
+    var counter: Double = 0.0
+
+    private var online: Boolean = true
+    private var onlineCheckedNanos: Long = 0
+    private var onlineChecked: Boolean = false
+
     private val keysDown: MutableSet<String> = ConcurrentHashMap.newKeySet()
     private val events = ConcurrentLinkedQueue<Event>()
+
+    /** Whether any target has an edge-activated hat. Clones have the hats of their sprite, so this never changes. */
+    private var hasEdgeHats = false
 
     @Volatile var redrawRequested: Boolean = false
     private var frameIndex: Long = 0
@@ -64,7 +103,9 @@ class Runtime {
     sealed class Event {
         class KeyDown(val key: String) : Event()
 
-        class Click(val x: Double, val y: Double) : Event()
+        class MouseDown(val x: Double, val y: Double) : Event()
+
+        class MouseUp(val x: Double, val y: Double) : Event()
 
         object GreenFlag : Event()
 
@@ -78,6 +119,7 @@ class Runtime {
     // ---- setup ----------------------------------------------------------------------------------
 
     fun addTarget(t: Target) {
+        if (t.hats.any { it.kind == HAT_EDGE }) hasEdgeHats = true
         if (t is Stage) {
             stage = t
         } else if (t is Sprite) {
@@ -98,8 +140,9 @@ class Runtime {
             val start = System.nanoTime()
             resetTimer()
             startHats(HAT_FLAG, "", null)
-            // Stop early once every script has finished: nothing can start a new one without input.
-            while (frameIndex < headlessFrames && threads.isNotEmpty()) {
+            // Stop early once every script has finished: nothing but an edge-activated hat can start a new one
+            // without input.
+            while (frameIndex < headlessFrames && (threads.isNotEmpty() || edgeHatWaiting())) {
                 frame()
                 frameIndex++
             }
@@ -151,6 +194,7 @@ class Runtime {
     /** Runs one frame: processes input events, then steps every script until it yields. */
     fun frame() {
         processEvents()
+        startEdgeHats()
         redrawRequested = false
         val start = System.nanoTime()
         for (t in threads) t.tickYield = false
@@ -178,6 +222,7 @@ class Runtime {
                     stopAllInternal()
                     // The green flag restarts the timer, as in scratch-vm, so loading time never counts.
                     resetTimer()
+                    for (t in allTargets()) t.clearEdgeValues()
                     startHats(HAT_FLAG, "", null)
                 }
                 is Event.StopAll -> stopAllInternal()
@@ -187,12 +232,21 @@ class Runtime {
                 is Event.MonitorScroll -> monitors.getOrNull(e.index)?.let {
                     it.scroll = Math.max(0.0, it.scroll + e.delta)
                 }
-                is Event.Click -> {
-                    val hit = sprites.asReversed().firstOrNull { it.ghost < 100.0 && it.touchingPoint(e.x, e.y) }
-                    if (hit != null) startHats(HAT_CLICKED, "", hit) else startHats(HAT_CLICKED, "", stage)
+                is Event.MouseDown -> {
+                    pressX = e.x
+                    pressY = e.y
+                    pressNanos = System.nanoTime()
+                    pressTimedOut = false
+                    seenX = e.x
+                    seenY = e.y
+                    // A draggable target starts its click hats when the mouse goes up instead, if it was not dragged.
+                    val hit = pick(e.x, e.y)
+                    if (!hit.draggable) startHats(HAT_CLICKED, "", hit)
                 }
+                is Event.MouseUp -> mouseUp(e.x, e.y)
             }
         }
+        updateDrag()
 
         val q = pendingQuestion
         if (q != null && !answered && window != null && !window!!.isAsking) {
@@ -202,6 +256,66 @@ class Runtime {
                 pendingQuestion = null
             }
         }
+    }
+
+    // ---- dragging -------------------------------------------------------------------------------
+    //
+    // In Scratch, scratch-gui drags sprites: a press on a draggable sprite becomes a drag once the mouse
+    // moves more than 3 pixels or stays down for 400 ms. The sprite jumps to the front and follows the
+    // mouse, and a press that became a drag is not a click.
+
+    /** The topmost sprite with an opaque pixel under the stage point, or the stage. Fully ghosted sprites are skipped. */
+    private fun pick(x: Double, y: Double): Target =
+        sprites.asReversed().firstOrNull { it.ghost < 100.0 && it.touchingPoint(x, y) } ?: stage
+
+    /** Starts or continues a drag, once a frame while the mouse is held. */
+    private fun updateDrag() {
+        if (pressX.isNaN()) return
+        // scratch-gui tries to start a drag on every mouse move past the threshold, not while the mouse rests.
+        val moved = mouseX != seenX || mouseY != seenY
+        seenX = mouseX
+        seenY = mouseY
+        if (dragged == null) {
+            if (moved && movedFromPress(mouseX, mouseY)) {
+                startDrag()
+            } else if (!pressTimedOut && System.nanoTime() - pressNanos >= DRAG_DELAY_NANOS) {
+                // scratch-gui tries this once, so a sprite passing under a mouse held still is not picked up.
+                pressTimedOut = true
+                startDrag()
+            }
+        }
+        dragged?.dragTo(mouseX + dragOffsetX, mouseY + dragOffsetY)
+    }
+
+    private fun movedFromPress(x: Double, y: Double): Boolean =
+        Math.hypot(x - pressX, y - pressY) * windowScale > DRAG_THRESHOLD
+
+    /** Picks up the sprite where the mouse went down, if it is draggable. */
+    private fun startDrag() {
+        val hit = pick(pressX, pressY) as? Sprite ?: return
+        if (!hit.draggable) return
+        moveToLayer(hit, true)
+        hit.dragging = true
+        dragged = hit
+        dragOffsetX = hit.x - pressX
+        dragOffsetY = hit.y - pressY
+    }
+
+    private fun mouseUp(x: Double, y: Double) {
+        if (pressX.isNaN()) return
+        // A press released this far away became a drag on the way, even if no frame saw the mouse move.
+        if (dragged == null && movedFromPress(x, y)) startDrag()
+        pressX = Double.NaN
+        pressY = Double.NaN
+        val drag = dragged
+        if (drag != null) {
+            drag.dragTo(x + dragOffsetX, y + dragOffsetY)
+            drag.dragging = false
+            dragged = null
+            return
+        }
+        val hit = pick(x, y)
+        if (hit.draggable) startHats(HAT_CLICKED, "", hit)
     }
 
     /** `show variable`, `hide variable`, `show list` and `hide list`. */
@@ -235,6 +349,32 @@ class Runtime {
         }
         return started
     }
+
+    /**
+     * Queues a thread for every edge-activated hat whose script is not running, as scratch-vm does at the
+     * start of every frame. Each thread checks its hat's condition when it first steps and only runs the
+     * script when the condition has just turned true.
+     */
+    private fun startEdgeHats() {
+        if (!hasEdgeHats) return
+        startEdgeHats(stage)
+        for (s in sprites) startEdgeHats(s)
+    }
+
+    private fun startEdgeHats(t: Target) {
+        for (h in t.hats) {
+            if (h.kind != HAT_EDGE) continue
+            // Nothing else starts these scripts, so the hat's own last thread tells whether its script runs.
+            val running = h.thread
+            if (running != null && !running.done && !running.killed) continue
+            val thread = ScriptThread(this, t, h.scriptId, edgeHat = true)
+            h.thread = thread
+            threads.add(thread)
+        }
+    }
+
+    /** Whether some edge-activated hat could still fire in a headless run with no script running. */
+    private fun edgeHatWaiting(): Boolean = hasEdgeHats && allTargets().any { it.edgeHatWaiting() }
 
     private fun startScript(target: Target, scriptId: Int): ScriptThread {
         for (t in threads) {
@@ -365,6 +505,41 @@ class Runtime {
         timerStartMs = nowMillis()
     }
 
+    /**
+     * `online?`: whether the computer has a network connection, like a browser's `navigator.onLine`,
+     * which the Scratch block reports. That means some network interface other than loopback is up
+     * with an address that is not link-local, since macOS keeps link-local ones like AirDrop's up even
+     * offline. Listing the interfaces takes a moment, so the answer is kept for a second.
+     */
+    fun online(): Boolean {
+        val now = System.nanoTime()
+        if (!onlineChecked || now - onlineCheckedNanos >= 1_000_000_000L) {
+            onlineChecked = true
+            onlineCheckedNanos = now
+            online =
+                try {
+                    NetworkInterface.networkInterfaces().anyMatch { nif ->
+                        nif.isUp && !nif.isLoopback &&
+                            nif.inetAddresses().anyMatch { !it.isLoopbackAddress && !it.isLinkLocalAddress }
+                    }
+                } catch (_: Exception) {
+                    // Like TurboWarp outside a browser: when there is no way to tell, assume a connection.
+                    true
+                }
+        }
+        return online
+    }
+
+    /** Microphone loudness from 0 to 100, measured once a frame like scratch-vm does, or -1 without a microphone. */
+    fun loudness(): Double {
+        if (headless) return -1.0
+        if (loudnessFrame != frameIndex) {
+            loudnessFrame = frameIndex
+            loudness = microphone.loudness()
+        }
+        return loudness
+    }
+
     fun keyPressed(key: Any?): Boolean {
         val k = Keys.normalize(key)
         if (k == "any") return keysDown.isNotEmpty()
@@ -409,7 +584,7 @@ class Runtime {
         mouseY = y.coerceIn(-STAGE_HEIGHT / 2.0, STAGE_HEIGHT / 2.0)
         if (down != null) {
             mouseDown = down
-            if (down) events.add(Event.Click(mouseX, mouseY))
+            events.add(if (down) Event.MouseDown(mouseX, mouseY) else Event.MouseUp(mouseX, mouseY))
         }
     }
 
@@ -438,11 +613,18 @@ class Runtime {
         const val MAX_CLONES = 300
         private const val WORK_TIME_NANOS = 750L * 1_000_000L / FPS
 
+        /** How far the mouse moves, in window pixels, before a press on a draggable sprite becomes a drag. */
+        private const val DRAG_THRESHOLD = 3.0
+
+        /** How long a press stays still before it becomes a drag anyway. */
+        private const val DRAG_DELAY_NANOS = 400_000_000L
+
         const val HAT_FLAG = 0
         const val HAT_KEY = 1
         const val HAT_CLICKED = 2
         const val HAT_BROADCAST = 3
         const val HAT_BACKDROP = 4
         const val HAT_CLONE_START = 5
+        const val HAT_EDGE = 6
     }
 }

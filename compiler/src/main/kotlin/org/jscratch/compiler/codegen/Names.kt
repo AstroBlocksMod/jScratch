@@ -61,4 +61,10 @@ object RT {
     const val HAT_BROADCAST = 3
     const val HAT_BACKDROP = 4
     const val HAT_CLONE_START = 5
+
+    /**
+     * `when timer greater than`, `when loudness greater than` and `when touching`, checked every frame. The
+     * hat's argument is what it watches: `timer`, `loudness` or `touching`.
+     */
+    const val HAT_EDGE = 6
 }

@@ -33,6 +33,7 @@ flowchart LR
 | Sprite variable | `public Object` field on the sprite class (clones copy it) |
 | List | `ScratchList` field; large initial contents live in `data/*.txt` resources |
 | Hat script | `private void script_N()` registered through `registerHat(kind, arg, N)` |
+| Condition of `when timer greater than`, `when loudness greater than` and `when touching` | `hatPredicate(int)` override, a `lookupswitch` over the numbers of those scripts |
 | Custom block | `private void proc_N(Object... args)`, wrapped in `enterWarp` and `exitWarp` when "run without screen refresh" is on |
 | Clone support | `newInstance()` and `copyLocalsFrom(Target)` overrides |
 | `sensing_of` variables | `lookupVariable(String)` override, a chain of string comparisons |
@@ -71,6 +72,8 @@ Within one frame the scheduler keeps re-stepping loop-yielded scripts until 75 p
 
 Stopping a script sets a `killed` flag; the next time the script resumes it throws `StopScript`, which unwinds the virtual thread. "Run without screen refresh" increments a warp counter on the current script so yields return immediately, with the same 500 ms safety valve as Scratch.
 
+Edge-activated hats (`when timer greater than`, `when loudness greater than` and `when touching`) work like they do in scratch-vm. At the start of every frame the scheduler queues a `ScriptThread` for each of these hats whose script is not already running. When the thread first steps, it calls the hat's `hatPredicate` and compares the result with the value the target kept from the last check, and only a change from false to true (or a first check that is true) runs the script. The check happens on the scheduler thread, and a `ScriptThread` only starts its virtual thread once the script really runs, so a hat that does not fire costs one method call per frame. Each hat remembers the last thread it queued, so finding out whether its script still runs takes no search through the running scripts. Clones start with a copy of their parent's hat values, as scratch-vm's `makeClone` gives them, and the green flag forgets them all, so a condition that is already true fires again.
+
 ## Rendering and input
 
 `StageRenderer` draws a `FrameSnapshot` (the images, transforms, ghost alpha and say bubbles of every visible sprite, and every visible monitor) with Java2D. The scheduler creates a snapshot after each frame and the Swing panel paints the latest one, so painting never touches live script state. Vector costumes are rasterized once with [JSVG](https://github.com/weisj/jsvg) at twice the stage resolution. The pen is a bitmap layer between the backdrop and the sprites.
@@ -83,7 +86,7 @@ Collision follows scratch-render. Each costume image gets a `Silhouette`, built 
 
 Color sensing follows scratch-render's CPU path and never reads the window. It walks the whole stage pixels inside the sprite's bounds and, at each pixel where the sprite is opaque (or has the mask color for `color is touching color`), samples every other layer by nearest neighbor through the same inverse transforms and graphic effects: the visible sprites whose bounds overlap, front to back, then the pen layer, then the backdrop. The premultiplied colors are blended the way `gl.blendFunc(ONE, ONE_MINUS_SRC_ALPHA)` would, over white, rounding each channel after every step as scratch-render's byte arrays do, and the first pixel whose blend matches ends the search. The silhouette only copies a costume's colors out of its image the first time a color block needs them, and a premultiplied copy the first time a graphic effect other than ghost draws it. Costumes that use neither keep just the bit mask.
 
-Input events from Swing are queued and applied at the start of the next frame on the scheduler thread, which is where hats are started.
+Input events from Swing are queued and applied at the start of the next frame on the scheduler thread, which is where hats are started. Dragging happens there too, as scratch-gui does it in the Scratch player: the runtime remembers where the mouse went down, picks up a draggable sprite once the mouse moved far enough or was held long enough, and moves it with the mouse once a frame, past the check that keeps scripts from moving a sprite that is being dragged.
 
 ## Sound
 

@@ -23,8 +23,8 @@ These are the gaps most likely to break a project downloaded from the Scratch we
 - [x] **Graphic effects.** Color, brightness, fisheye, whirl, pixelate and mosaic, applied per sprite in the renderer the way scratch-render does.
 - [x] **Monitors.** Draw variable and list monitors, and make the show and hide blocks control them. Monitors go into the frame snapshot as data, like sprites, instead of being Swing components in the window, so the [pluggable renderers](#then-performance-and-robustness) below can draw them too.
 - [x] **Sound effects.** Pitch and pan, plus clear sound effects.
-- [ ] **Remaining hats.** `when timer greater than` first, since it needs no microphone. Loudness follows if microphone input proves workable through `javax.sound.sampled`.
-- [ ] **Small sensing blocks.** Drag mode for draggable sprites, and a `username` that can be set with a system property.
+- [x] **Remaining hats.** `when timer greater than` first, since it needs no microphone. Loudness follows if microphone input proves workable through `javax.sound.sampled`.
+- [x] **Small sensing blocks.** Drag mode for draggable sprites, and a `username` that can be set with a system property.
 
 ## Then: performance and robustness
 
