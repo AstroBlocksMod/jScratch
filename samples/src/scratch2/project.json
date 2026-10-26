@@ -155,7 +155,7 @@
         },
         "n1": {
           "opcode": "control_for_each",
-          "next": "d1",
+          "next": "l1",
           "parent": "a1",
           "inputs": {
             "VALUE": [
@@ -179,10 +179,119 @@
           "shadow": false,
           "topLevel": false
         },
+        "l1": {
+          "opcode": "motion_scroll_right",
+          "next": "l2",
+          "parent": "n1",
+          "inputs": {
+            "DISTANCE": [
+              1,
+              [
+                4,
+                "10"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "l2": {
+          "opcode": "motion_scroll_up",
+          "next": "l3",
+          "parent": "l1",
+          "inputs": {
+            "DISTANCE": [
+              1,
+              [
+                4,
+                "10"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "l3": {
+          "opcode": "motion_align_scene",
+          "next": "l4",
+          "parent": "l2",
+          "inputs": {},
+          "fields": {
+            "ALIGNMENT": [
+              "bottom-left",
+              null
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "l4": {
+          "opcode": "looks_hideallsprites",
+          "next": "l5",
+          "parent": "l3",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "l5": {
+          "opcode": "looks_setstretchto",
+          "next": "l6",
+          "parent": "l4",
+          "inputs": {
+            "STRETCH": [
+              1,
+              [
+                4,
+                "50"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "l6": {
+          "opcode": "looks_changestretchby",
+          "next": "l7",
+          "parent": "l5",
+          "inputs": {
+            "CHANGE": [
+              1,
+              [
+                4,
+                "10"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "l7": {
+          "opcode": "looks_say",
+          "next": "d1",
+          "parent": "l6",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "l8",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
         "d1": {
           "opcode": "looks_say",
           "next": null,
-          "parent": "n1",
+          "parent": "l7",
           "inputs": {
             "MESSAGE": [
               1,
@@ -336,6 +445,135 @@
               ]
             ]
           },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "l8": {
+          "opcode": "operator_join",
+          "next": null,
+          "parent": "l7",
+          "inputs": {
+            "STRING1": [
+              1,
+              [
+                10,
+                "legacy ["
+              ]
+            ],
+            "STRING2": [
+              3,
+              "l9",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "l9": {
+          "opcode": "operator_join",
+          "next": null,
+          "parent": "l8",
+          "inputs": {
+            "STRING1": [
+              3,
+              "l10",
+              [
+                10,
+                ""
+              ]
+            ],
+            "STRING2": [
+              3,
+              "l11",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "l10": {
+          "opcode": "motion_xscroll",
+          "next": null,
+          "parent": "l9",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "l11": {
+          "opcode": "operator_join",
+          "next": null,
+          "parent": "l9",
+          "inputs": {
+            "STRING1": [
+              3,
+              "l12",
+              [
+                10,
+                ""
+              ]
+            ],
+            "STRING2": [
+              3,
+              "l13",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "l12": {
+          "opcode": "motion_yscroll",
+          "next": null,
+          "parent": "l11",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "l13": {
+          "opcode": "operator_join",
+          "next": null,
+          "parent": "l11",
+          "inputs": {
+            "STRING1": [
+              3,
+              "l14",
+              [
+                10,
+                ""
+              ]
+            ],
+            "STRING2": [
+              1,
+              [
+                10,
+                "]"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "l14": {
+          "opcode": "sensing_userid",
+          "next": null,
+          "parent": "l13",
+          "inputs": {},
           "fields": {},
           "shadow": false,
           "topLevel": false

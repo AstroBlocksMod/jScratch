@@ -87,6 +87,10 @@ Not supported: dragging monitors, their right-click menu, editing or resizing li
 
 clear, stamp, pen down, pen up, set pen color to color, set and change color parameter (color, saturation, brightness, transparency), set and change pen size, plus the legacy hue and shade blocks.
 
+## Older blocks that do nothing
+
+Projects from Scratch 2 and earlier can hold a few blocks that Scratch 3 still loads but ignores: scroll right, scroll up, align scene, hide all sprites, set stretch and change stretch do nothing, and x scroll, y scroll and user id report an empty value. jScratch does the same, without the warning it gives for blocks it does not support.
+
 ## Extensions
 
 Music, Text to Speech, Translate, Video Sensing, Makey Makey and hardware extensions are not supported.

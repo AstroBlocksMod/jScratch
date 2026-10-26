@@ -780,6 +780,10 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
             "control_all_at_once" -> emitSubstack(st, b, "SUBSTACK")
             "control_incr_counter" -> thisCall(st, "incrCounter", "()V") {}
             "control_clear_counter" -> thisCall(st, "clearCounter", "()V") {}
+            // Older blocks that scratch-vm loads but does nothing for, so they are not worth a warning.
+            "motion_scroll_right", "motion_scroll_up", "motion_align_scene", "looks_hideallsprites",
+            "looks_setstretchto", "looks_changestretchby",
+            -> {}
             "control_forever" -> {
                 val loop = Label()
                 mv.visitLabel(loop)
@@ -1435,6 +1439,11 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
             }
             "control_get_counter" -> {
                 call("counter", "()D", VType.NUM) {}
+            }
+            // Older reporters that scratch-vm loads but that report nothing.
+            "motion_xscroll", "motion_yscroll", "sensing_userid" -> {
+                pushDefault(mv, want)
+                want
             }
             else -> {
                 ctx.warn("Unsupported reporter '${b.opcode}' in '${target.name}' reports an empty value")

@@ -232,6 +232,8 @@ class CompileSamplesTest {
                 "after 3",
                 "counter 2",
                 "all at once",
+                // x scroll, y scroll and user id report nothing, and the other old blocks do nothing
+                "legacy []",
                 "done",
             ).map { "Cat says: $it" }
         assertEquals(expected, out.lines().filter { it.startsWith("Cat ") })
