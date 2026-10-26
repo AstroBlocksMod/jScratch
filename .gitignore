@@ -11,3 +11,4 @@ docs/assets/mockups/
 .playwright-cli/
 target/
 *.log
+.playwright-mcp/
