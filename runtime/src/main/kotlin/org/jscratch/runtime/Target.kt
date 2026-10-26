@@ -918,7 +918,8 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
 
     /** `set drag mode`: the mouse can drag a draggable sprite around the stage. */
     fun setDragMode(mode: String) {
-        draggable = mode == "draggable"
+        // The stage never becomes draggable, or its clicks would move to mouse up.
+        if (!isStage) draggable = mode == "draggable"
     }
 
     fun username(): String = rt.username

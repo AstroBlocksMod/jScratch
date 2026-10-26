@@ -50,6 +50,13 @@ class Runtime {
     /** Whether the press has been held long enough to try to start a drag without moving. */
     private var pressTimedOut: Boolean = false
 
+    /** The mouse position the last drag check saw, to tell whether the mouse moved since. */
+    private var seenX: Double = 0.0
+    private var seenY: Double = 0.0
+
+    /** Window pixels per stage unit, which the window sets as it resizes. The drag threshold is in window pixels. */
+    @Volatile var windowScale: Double = 1.0
+
     /** The sprite the mouse is dragging, and the sprite's position relative to the mouse. */
     private var dragged: Sprite? = null
     private var dragOffsetX: Double = 0.0
@@ -222,6 +229,8 @@ class Runtime {
                     pressY = e.y
                     pressNanos = System.nanoTime()
                     pressTimedOut = false
+                    seenX = e.x
+                    seenY = e.y
                     // A draggable target starts its click hats when the mouse goes up instead, if it was not dragged.
                     val hit = pick(e.x, e.y)
                     if (!hit.draggable) startHats(HAT_CLICKED, "", hit)
@@ -254,8 +263,12 @@ class Runtime {
     /** Starts or continues a drag, once a frame while the mouse is held. */
     private fun updateDrag() {
         if (pressX.isNaN()) return
+        // scratch-gui tries to start a drag on every mouse move past the threshold, not while the mouse rests.
+        val moved = mouseX != seenX || mouseY != seenY
+        seenX = mouseX
+        seenY = mouseY
         if (dragged == null) {
-            if (movedFromPress(mouseX, mouseY)) {
+            if (moved && movedFromPress(mouseX, mouseY)) {
                 startDrag()
             } else if (!pressTimedOut && System.nanoTime() - pressNanos >= DRAG_DELAY_NANOS) {
                 // scratch-gui tries this once, so a sprite passing under a mouse held still is not picked up.
@@ -266,7 +279,8 @@ class Runtime {
         dragged?.dragTo(mouseX + dragOffsetX, mouseY + dragOffsetY)
     }
 
-    private fun movedFromPress(x: Double, y: Double): Boolean = Math.hypot(x - pressX, y - pressY) > DRAG_THRESHOLD
+    private fun movedFromPress(x: Double, y: Double): Boolean =
+        Math.hypot(x - pressX, y - pressY) * windowScale > DRAG_THRESHOLD
 
     /** Picks up the sprite where the mouse went down, if it is draggable. */
     private fun startDrag() {
@@ -566,7 +580,7 @@ class Runtime {
         const val MAX_CLONES = 300
         private const val WORK_TIME_NANOS = 750L * 1_000_000L / FPS
 
-        /** How far the mouse moves, in stage units, before a press on a draggable sprite becomes a drag. */
+        /** How far the mouse moves, in window pixels, before a press on a draggable sprite becomes a drag. */
         private const val DRAG_THRESHOLD = 3.0
 
         /** How long a press stays still before it becomes a drag anyway. */

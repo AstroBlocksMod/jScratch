@@ -179,6 +179,7 @@ class StageWindow(private val rt: Runtime) {
             super.paintComponent(g0)
             val g = g0.create() as Graphics2D
             scale = Math.min(width / Runtime.STAGE_WIDTH.toDouble(), height / Runtime.STAGE_HEIGHT.toDouble())
+            rt.windowScale = scale
             offsetX = (width - Runtime.STAGE_WIDTH * scale) / 2
             offsetY = (height - Runtime.STAGE_HEIGHT * scale) / 2
             g.translate(offsetX, offsetY)

@@ -131,6 +131,35 @@ class DragTest {
     }
 
     @Test
+    fun theThresholdIsInWindowPixels() {
+        box.draggable = true
+        rt.windowScale = 3.0
+        mouse(0.0, 0.0, true)
+        // Two stage units are six pixels in a window three times the stage size.
+        mouse(2.0, 0.0)
+        assertTrue(box.dragging)
+    }
+
+    @Test
+    fun aSpritePassingUnderAMouseAtRestIsNotPickedUp() {
+        box.draggable = true
+        box.goToXY(-150.0, 0.0)
+        mouse(100.0, 100.0, true)
+        mouse(120.0, 100.0)
+        box.goToXY(100.0, 100.0)
+        mouse(120.0, 100.0)
+        assertFalse(box.dragging, "the mouse did not move since the last try")
+        mouse(121.0, 100.0)
+        assertTrue(box.dragging, "the next move tries again from where the mouse went down")
+    }
+
+    @Test
+    fun theStageNeverBecomesDraggable() {
+        rt.stage.setDragMode("draggable")
+        assertFalse(rt.stage.draggable)
+    }
+
+    @Test
     fun aPressHeldStillBecomesADrag() {
         box.draggable = true
         mouse(0.0, 0.0, true)
