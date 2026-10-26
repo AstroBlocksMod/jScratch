@@ -127,6 +127,8 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
             emitCopyLocalsFrom()
         }
         emitLookupVariable()
+        emitMonitorSlot()
+        emitSetMonitorSlot()
         cw.visitEnd()
         return cw.toByteArray()
     }
@@ -136,13 +138,15 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
     private fun collectVariables() {
         if (target.isStage) return
         for (v in target.variables.values) {
-            val slot = VarSlot(className, fieldNames.unique("v_", v.name), false, false, v.name)
+            val slot = VarSlot(className, fieldNames.unique("v_", v.name), false, false, v.name, localSlotList.size)
+            slot.monitor = ctx.monitorIndex(target, v.id)
             localSlots[v.id] = slot
             localSlotsByName[v.name] = slot
             localSlotList.add(slot)
         }
         for (l in target.lists.values) {
-            val slot = VarSlot(className, fieldNames.unique("l_", l.name), false, true, l.name)
+            val slot = VarSlot(className, fieldNames.unique("l_", l.name), false, true, l.name, localSlotList.size)
+            slot.monitor = ctx.monitorIndex(target, l.id)
             localSlots[l.id] = slot
             localSlotsByName["list:" + l.name] = slot
             localSlotList.add(slot)
@@ -402,6 +406,63 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
         mv.visitInsn(ARETURN)
         mv.visitMaxs(0, 0)
         mv.visitEnd()
+    }
+
+    /**
+     * The slots that have a monitor, in [VarSlot.index] order, which the runtime reads every frame a monitor
+     * shows. On the stage, variables created on the fly live in [localSlotList] after the declared ones.
+     */
+    private fun monitoredSlots(): List<VarSlot> =
+        (if (target.isStage) ctx.stageSlots + localSlotList else localSlotList).filter { it.monitor >= 0 }
+
+    private fun emitMonitorSlot() {
+        val slots = monitoredSlots()
+        if (slots.isEmpty()) return
+        val mv = cw.visitMethod(ACC_PUBLIC, "monitorSlot", "(I)${RT.D_OBJECT}", null, null)
+        mv.visitCode()
+        emitSlotSwitch(mv, slots) { s ->
+            emitGetSlot(mv, s)
+            mv.visitInsn(ARETURN)
+        }
+        mv.visitInsn(ACONST_NULL)
+        mv.visitInsn(ARETURN)
+        mv.visitMaxs(0, 0)
+        mv.visitEnd()
+    }
+
+    /** Sets a variable from a slider monitor. */
+    private fun emitSetMonitorSlot() {
+        val slots = monitoredSlots().filter { !it.isList }
+        if (slots.isEmpty()) return
+        val mv = cw.visitMethod(ACC_PUBLIC, "setMonitorSlot", "(I${RT.D_OBJECT})V", null, null)
+        mv.visitCode()
+        emitSlotSwitch(mv, slots) { s ->
+            if (s.isStatic) {
+                mv.visitVarInsn(ALOAD, 2)
+                mv.visitFieldInsn(PUTSTATIC, s.owner, s.field, RT.D_OBJECT)
+            } else {
+                mv.visitVarInsn(ALOAD, 0)
+                mv.visitVarInsn(ALOAD, 2)
+                mv.visitFieldInsn(PUTFIELD, s.owner, s.field, RT.D_OBJECT)
+            }
+            mv.visitInsn(RETURN)
+        }
+        mv.visitInsn(RETURN)
+        mv.visitMaxs(0, 0)
+        mv.visitEnd()
+    }
+
+    /** Switches on the int in local 1 over the slot indices; falls through when nothing matches. */
+    private fun emitSlotSwitch(mv: MethodVisitor, slots: List<VarSlot>, body: (VarSlot) -> Unit) {
+        val dflt = Label()
+        val labels = Array(slots.size) { Label() }
+        mv.visitVarInsn(ILOAD, 1)
+        mv.visitLookupSwitchInsn(dflt, slots.map { it.index }.toIntArray(), labels)
+        for ((i, s) in slots.withIndex()) {
+            mv.visitLabel(labels[i])
+            body(s)
+        }
+        mv.visitLabel(dflt)
     }
 
     private fun emitScript(s: ScriptInfo) {
@@ -711,7 +772,15 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
                     mv.visitMethodInsn(INVOKESTATIC, RT.OPS, "add", "(${RT.D_OBJECT}D)${RT.D_OBJECT}", false)
                 }
             }
-            "data_showvariable", "data_hidevariable", "data_showlist", "data_hidelist" -> {}
+            "data_showvariable", "data_hidevariable", "data_showlist", "data_hidelist" -> {
+                val slot = variableSlot(b, b.opcode.endsWith("list")) ?: return
+                if (slot.monitor < 0) return
+                mv.visitVarInsn(ALOAD, 0)
+                mv.visitFieldInsn(GETFIELD, RT.TARGET, "rt", RT.D_RUNTIME)
+                pushInt(mv, slot.monitor)
+                mv.visitInsn(if (b.opcode.startsWith("data_show")) ICONST_1 else ICONST_0)
+                mv.visitMethodInsn(INVOKEVIRTUAL, RT.RUNTIME, "setMonitorVisible", "(IZ)V", false)
+            }
             "data_addtolist" -> {
                 listCall(st, b, "add", "(${RT.D_OBJECT})V") { emitExpr(st, b.inputs["ITEM"], VType.ANY) }
             }
@@ -876,7 +945,11 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
         ctx.globalByName(name, isList)?.let { return it }
         // scratch-vm creates missing variables on the fly as sprite-local; do the same.
         ctx.warn("Variable '$name' is referenced but not declared in '${target.name}'; creating it")
-        val slot = VarSlot(className, fieldNames.unique(if (isList) "l_" else "v_", name), false, isList, name)
+        val field = fieldNames.unique(if (isList) "l_" else "v_", name)
+        // The stage numbers its declared variables in the shared table, so its extra ones come after those.
+        val index = localSlotList.size + if (target.isStage) ctx.stageSlots.size else 0
+        val slot = VarSlot(className, field, false, isList, name, index)
+        slot.monitor = ctx.addMonitor(Monitors.hidden(target, id, isList, index, name))
         if (id != null) localSlots[id] = slot
         localSlotsByName[if (isList) "list:$name" else name] = slot
         localSlotList.add(slot)

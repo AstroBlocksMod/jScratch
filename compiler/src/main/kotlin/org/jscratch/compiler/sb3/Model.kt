@@ -51,7 +51,26 @@ class Costume(
 
 class Sound(val name: String, val assetId: String, val md5ext: String, val dataFormat: String)
 
-class Monitor(val id: String, val opcode: String, val spriteName: String?, val visible: Boolean)
+/**
+ * A monitor record from `project.json`. [x] and [y] are the top-left corner in stage pixels, or NaN when
+ * the editor never placed the monitor. [width] and [height] only matter for list monitors, where 0 means
+ * the default size.
+ */
+class Monitor(
+    val id: String,
+    val opcode: String,
+    val mode: String,
+    val params: Map<String, String>,
+    val spriteName: String?,
+    val x: Double,
+    val y: Double,
+    val width: Double,
+    val height: Double,
+    val visible: Boolean,
+    val sliderMin: Double,
+    val sliderMax: Double,
+    val isDiscrete: Boolean,
+)
 
 class Block(
     val id: String,

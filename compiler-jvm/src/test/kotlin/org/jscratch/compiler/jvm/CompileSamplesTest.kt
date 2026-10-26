@@ -2,11 +2,14 @@ package org.jscratch.compiler.jvm
 
 import org.jscratch.compiler.JScratch
 import org.jscratch.compiler.sb3.Sb3Parser
+import java.awt.image.BufferedImage
 import java.io.File
 import java.nio.file.Files
 import java.util.concurrent.TimeUnit
+import javax.imageio.ImageIO
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
@@ -170,12 +173,66 @@ class CompileSamplesTest {
         assertEquals(expected, out.lines().filter { it.startsWith("Ball ") })
     }
 
-    private fun runHeadless(jar: ByteArray, frames: Int): String {
+    /**
+     * Monitors from the project file, `show` and `hide` blocks, and a monitor placed automatically. The
+     * screenshot is checked at spots whose layout does not depend on the font: the colored fill of each
+     * value, or its absence. Coordinates are stage pixels from the top left; the screenshot is twice that.
+     */
+    @Test
+    fun compilesAndRunsMonitorsProject() {
+        val result = JScratch.compile(File(samplesDir, "monitors.sb3").readBytes(), runtimeJar.readBytes(), json)
+        assertEquals(emptyList(), result.warnings, "unexpected warnings")
+
+        val png = Files.createTempFile("jscratch-monitors", ".png").toFile()
+        try {
+            val out = runHeadless(result.jar, frames = 30, "-Djscratch.screenshot=${png.path}")
+            assertEquals(listOf("Cat says: done"), out.lines().filter { it.startsWith("Cat ") })
+            val img = ImageIO.read(png)
+            val variable = 0xFF8C1A
+            val list = 0xFF661A
+
+            // Value pills of default monitors: in the record, shown by a block (placed below the first), hidden.
+            assertTrue(img.has(variable, 5, 10, 200, 22), "score monitor")
+            assertTrue(img.has(variable, 5, 37, 200, 49), "monitor shown by a block and placed automatically")
+            assertFalse(img.has(variable, 0, 300, 240, 330), "monitor hidden by a block")
+            // A large readout is filled with the category color, and a slider has a thumb.
+            assertEquals(variable, img.at(260, 15), "large monitor")
+            assertTrue(img.has(0x0075FF, 250, 78, 480, 102), "slider")
+            // Sprite-local variable and built-in reporters, each in its category color.
+            assertTrue(img.has(variable, 5, 125, 240, 137), "sprite-local monitor")
+            assertTrue(img.has(0x4C97FF, 5, 155, 240, 167), "x position monitor")
+            assertTrue(img.has(0x5CB1D6, 5, 185, 240, 197), "timer monitor")
+            // The list at (360, 120) has three rows of 24 px below a 21 px header, then empty space.
+            for (row in 0 until 3) assertEquals(list, img.at(462, 142 + 24 * row + 12), "list row ${row + 1}")
+            assertEquals(0xE5F0FF, img.at(462, 142 + 24 * 3 + 12), "below the last list row")
+            assertFalse(img.has(list, 130, 250, 232, 332), "list hidden by a block")
+        } finally {
+            png.delete()
+        }
+    }
+
+    /** RGB of the stage pixel at ([x], [y]) in a screenshot taken at twice the stage size. */
+    private fun BufferedImage.at(x: Int, y: Int): Int = getRGB(x * 2, y * 2) and 0xFFFFFF
+
+    /** Whether any pixel in the stage rectangle from ([x0], [y0]) to ([x1], [y1]) is exactly [rgb]. */
+    private fun BufferedImage.has(rgb: Int, x0: Int, y0: Int, x1: Int, y1: Int): Boolean {
+        for (y in y0 * 2 until y1 * 2) {
+            for (x in x0 * 2 until x1 * 2) {
+                if (getRGB(x, y) and 0xFFFFFF == rgb) return true
+            }
+        }
+        return false
+    }
+
+    private fun runHeadless(jar: ByteArray, frames: Int, vararg properties: String): String {
         val tmp = Files.createTempFile("jscratch-test", ".jar").toFile()
         try {
             tmp.writeBytes(jar)
+            val command =
+                listOf(java.path, "-Djscratch.headless=$frames", "-Djava.awt.headless=true") + properties +
+                    listOf("-jar", tmp.path)
             val process =
-                ProcessBuilder(java.path, "-Djscratch.headless=$frames", "-Djava.awt.headless=true", "-jar", tmp.path)
+                ProcessBuilder(command)
                     .redirectErrorStream(false)
                     .start()
             val stdout = process.inputStream.bufferedReader().readText()
