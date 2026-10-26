@@ -1,8 +1,10 @@
 package org.jscratch.runtime
 
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -60,5 +62,28 @@ class SoundsTest {
         assertFalse(finished(), "stopping the parent stopped the clone's sound")
         rt.removeClone(clone)
         assertTrue(finished(), "deleting the clone left its sound playing")
+    }
+
+    @Test
+    fun deletedCloneIsForgottenButItsSoundPlaysOn() {
+        val clone = assertNotNull(rt.createClone(cat))
+        val player = assertNotNull(rt.sounds.play(clone, 0, false))
+        val stops = player.stops
+        rt.removeClone(clone)
+        assertNull(player.target)
+        assertFalse(player.isFinished(stops, rt.nowMillis()))
+    }
+
+    @Test
+    fun notANumberCountsAsZero() {
+        cat.setSoundEffect("pitch", 50.0)
+        cat.changeSoundEffect("PITCH", Double.NaN)
+        assertEquals(50.0, cat.pitch)
+        cat.setSoundEffect("pan", Double.NaN)
+        assertEquals(0.0, cat.pan)
+        cat.changeVolume(Double.NaN)
+        assertEquals(100.0, cat.volume)
+        cat.setVolume(Double.NaN)
+        assertEquals(0.0, cat.volume)
     }
 }

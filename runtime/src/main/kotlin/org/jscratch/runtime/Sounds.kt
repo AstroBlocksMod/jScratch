@@ -135,7 +135,7 @@ class Sounds(private val rt: Runtime) {
         val player = players.getOrPut(Pair(target.javaClass, index)) { SoundPlayer() }
         val now = rt.nowMillis()
         if (player.isPlaying(now)) {
-            if (player.target === target && player.startFrame == rt.frame) {
+            if (player.target === target && player.startFrame == rt.frameCount) {
                 player.stops++
                 player.waited = untilDone
                 return player
@@ -144,7 +144,7 @@ class Sounds(private val rt: Runtime) {
         }
         val mix = SoundMix.of(target)
         val audio = if (enabled) Audio(mix) else null
-        player.start(target, sound.seconds * 1000.0, now, rt.frame, mix.rate, audio)
+        player.start(target, sound.seconds * 1000.0, now, rt.frameCount, mix.rate, audio)
         player.waited = untilDone
         if (audio != null) {
             Thread
@@ -179,6 +179,17 @@ class Sounds(private val rt: Runtime) {
         val now = rt.nowMillis()
         for (player in players.values) {
             if (player.target === target && player.waited && player.isPlaying(now)) player.stop()
+        }
+    }
+
+    /**
+     * Stops the sounds a deleted [clone] waits on, like [stopWaiting], and forgets it, so its
+     * players do not keep it in memory. Sounds it played without waiting go on playing.
+     */
+    fun remove(clone: Target) {
+        stopWaiting(clone)
+        for (player in players.values) {
+            if (player.target === clone) player.forget()
         }
     }
 
@@ -228,12 +239,15 @@ class Sounds(private val rt: Runtime) {
         @Volatile private var stopped = false
 
         /** Returns false when the sound was stopped before it could start. */
+        @Synchronized
         fun attach(v: Voice): Boolean {
             voice = v
             v.mix = mix
             return !stopped
         }
 
+        /** Synchronized with [attach], which could otherwise hand its voice the mix from before this one. */
+        @Synchronized
         fun remix(m: SoundMix) {
             mix = m
             voice?.mix = m
@@ -293,6 +307,9 @@ class SoundPlayer internal constructor() {
     fun isFinished(stops: Int, now: Double): Boolean = this.stops != stops || !isPlaying(now)
 
     internal fun start(target: Target, length: Double, now: Double, frame: Long, rate: Double, audio: Sounds.Audio?) {
+        // The clock can run out a little before the last play is heard, with some of it still in
+        // the line's buffer. Fade that out too, so it cannot outlive a later stop all sounds.
+        this.audio?.stop()
         this.target = target
         this.length = length
         played = 0.0
@@ -319,6 +336,12 @@ class SoundPlayer internal constructor() {
         stops++
         audio?.stop()
         audio = null
+    }
+
+    /** Lets go of [target] once it is deleted. */
+    internal fun forget() {
+        target = null
+        waited = false
     }
 }
 

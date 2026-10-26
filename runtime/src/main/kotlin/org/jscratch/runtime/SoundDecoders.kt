@@ -14,7 +14,6 @@ import javax.sound.sampled.AudioFormat
 
 /** Decoded audio: interleaved 16-bit little-endian samples. */
 class Pcm(val channels: Int, val sampleRate: Int, val frames: Int, val data: ByteArray) {
-    val format: AudioFormat get() = audioFormat(sampleRate, channels)
     val seconds: Double get() = frames.toDouble() / sampleRate
 }
 
@@ -43,7 +42,6 @@ class SoundStream private constructor(
     private var buffer = 0
     private var bufferFrames = 0
 
-    val format: AudioFormat get() = audioFormat(sampleRate, channels)
     val seconds: Double get() = frames.toDouble() / sampleRate
 
     /** Decodes up to [maxFrames] frames. Returns an empty array at the end of the sound. */

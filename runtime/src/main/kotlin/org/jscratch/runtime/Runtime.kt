@@ -44,7 +44,7 @@ class Runtime {
     private var frameIndex: Long = 0
 
     /** How many frames have run. */
-    val frame: Long get() = frameIndex
+    val frameCount: Long get() = frameIndex
     private var timerStartMs: Double = 0.0
 
     @Volatile var answer: String = ""
@@ -293,14 +293,16 @@ class Runtime {
 
     private fun stopAllInternal() {
         for (t in threads) t.killed = true
+        sounds.stopAll()
         for (t in allTargets()) {
             t.clearSay()
-            // scratch-vm clears graphic and sound effects on stop, and so on every green flag.
+            // scratch-vm clears graphic and sound effects on stop, and so on every green flag. The
+            // sounds are stopped already, so there is nothing to apply the cleared effects to.
             t.clearEffects()
-            t.clearSoundEffects()
+            t.pitch = 0.0
+            t.pan = 0.0
         }
         sprites.removeAll { it.isClone }
-        sounds.stopAll()
         pendingQuestion = null
         answered = true
         window?.cancelAsk()
@@ -332,7 +334,7 @@ class Runtime {
 
     fun removeClone(clone: Target) {
         sprites.remove(clone)
-        sounds.stopWaiting(clone)
+        sounds.remove(clone)
         val me = ScriptThread.current()
         for (t in threads) {
             if (t.target === clone && t !== me) t.killed = true
