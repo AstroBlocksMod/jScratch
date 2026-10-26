@@ -12,12 +12,23 @@ import javax.sound.sampled.TargetDataLine
  * the loudness is -1 until it is open, or forever when there is no microphone to open. A daemon
  * thread keeps reading from it into a ring buffer that holds the last [WINDOW] samples, the
  * stretch a Web Audio analyser looks at.
+ *
+ * When the operating system does not let the program use the microphone, macOS for one hands out
+ * nothing but zeros instead of an error. A real microphone always picks up some noise, so the
+ * loudness also stays -1, as in Scratch when the browser may not listen, until the first sample
+ * that is not exactly zero.
  */
 class Microphone {
     private val samples = FloatArray(WINDOW)
     private var next = 0
 
     @Volatile private var open = false
+
+    /** Whether the microphone delivered anything but exact silence yet. */
+    @Volatile private var heard = false
+
+    @Volatile private var openedNanos = 0L
+    private var warned = false
     private var connecting = false
     private var last = 0.0
 
@@ -32,6 +43,17 @@ class Microphone {
                 .start { record() }
         }
         if (!open) return -1.0
+        if (!heard) {
+            if (!warned && System.nanoTime() - openedNanos > SILENCE_NANOS) {
+                warned = true
+                Log.warn(
+                    "The microphone only gives silence, so loudness stays at -1. The system may not let this " +
+                        "program listen: on macOS, turn on microphone access for the app that started Java, " +
+                        "such as the terminal or editor, in System Settings under Privacy & Security.",
+                )
+            }
+            return -1.0
+        }
         var sum = 0.0
         synchronized(samples) {
             for (s in samples) sum += s * s
@@ -55,6 +77,7 @@ class Microphone {
         val channels = format.channels
         val frame = format.frameSize
         val buffer = ByteArray(frame * 512)
+        openedNanos = System.nanoTime()
         open = true
         while (true) {
             val n = line.read(buffer, 0, buffer.size)
@@ -70,7 +93,9 @@ class Microphone {
                     for (c in 0 until channels) {
                         val lo = buffer[i + 2 * c].toInt() and 0xFF
                         val hi = buffer[i + 2 * c + 1].toInt()
-                        mono += ((hi shl 8) or lo) / 32768f
+                        val sample = (hi shl 8) or lo
+                        if (sample != 0) heard = true
+                        mono += sample / 32768f
                     }
                     samples[next] = mono / channels
                     next = (next + 1) % WINDOW
@@ -102,5 +127,8 @@ class Microphone {
     companion object {
         /** The size of a Web Audio analyser's default window, which scratch-audio measures over. */
         const val WINDOW = 2048
+
+        /** How long the microphone may give only silence before the log says why loudness stays -1. */
+        private const val SILENCE_NANOS = 2_000_000_000L
     }
 }
