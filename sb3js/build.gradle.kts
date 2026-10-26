@@ -4,7 +4,7 @@ plugins {
     alias(libs.plugins.node)
 }
 
-description = "scratch-parser bundled with esbuild into one script for the browser and for Rhino."
+description = "scratch-parser and the Scratch 1.4 and 2 converter, bundled for the browser and for Rhino."
 
 node {
     version.set("26.12.0")
@@ -14,24 +14,28 @@ node {
     npmInstallCommand.set("ci")
 }
 
-val bundleFile = layout.buildDirectory.file("dist/jscratch-sb3.js")
+// jscratch-sb3.js parses every project; jscratch-convert.js converts Scratch 1.4 and 2 projects.
+val bundleFiles =
+    listOf("jscratch-sb3.js", "jscratch-convert.js").map { layout.buildDirectory.file("dist/$it") }
 
 val bundle =
     tasks.register<NpmTask>("bundle") {
         group = "build"
-        description = "Bundles src/index.js and scratch-parser into build/dist/jscratch-sb3.js."
+        description = "Bundles src/index.js and src/convert.js with their dependencies into build/dist (see build.mjs)."
         dependsOn(tasks.npmInstall)
         args.set(listOf("run", "build"))
-        inputs.files("package.json", "package-lock.json")
+        inputs.files("package.json", "package-lock.json", "build.mjs")
         inputs.dir("src")
-        outputs.file(bundleFile)
+        outputs.files(bundleFiles)
     }
 
 val sb3JsElements = configurations.consumable("sb3JsElements")
 
 artifacts {
-    add(sb3JsElements.name, bundleFile) {
-        builtBy(bundle)
+    for (file in bundleFiles) {
+        add(sb3JsElements.name, file) {
+            builtBy(bundle)
+        }
     }
 }
 

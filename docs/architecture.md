@@ -23,6 +23,34 @@ flowchart LR
 5. **Code generation.** `ProjectCompiler` assigns a class name per target and a field per variable, and builds the monitor table: every monitor saved in the project, plus a hidden one for each variable and list without one, so the show blocks can show any of them. `TargetCompiler` then emits one class per target with ASM. The class extends the runtime's `Stage` or `Sprite`, and its constructor fills in position, costumes, sounds, variable values and hat registrations.
 6. **JAR assembly.** `JarWriter` writes the manifest, the generated classes, list data resources, the monitor table (`data/monitors.txt`, one tab-separated line per monitor), the used assets and every entry of the runtime JAR.
 
+## Converting Scratch 1.4 and 2 projects
+
+Projects saved by Scratch 1.4 (`.sb`) and Scratch 2 (`.sb2`) are turned into an `.sb3` before the pipeline above starts, so the compiler only ever sees Scratch 3 projects. The conversion is the Scratch Foundation's own code, the same code the Scratch 3 editor runs when it opens an old project:
+
+```mermaid
+flowchart LR
+    sb[".sb<br>Squeak object graph"] --> sb1["scratch-sb1-converter<br>Scratch 2 JSON + images, sounds"]
+    sb2[".sb2 archive"] --> files["OldProjects<br>java.util.zip"]
+    sb1 --> import["scratch-vm sb2 importer<br>into a Runtime"]
+    files --> import
+    import --> export["scratch-vm sb3 exporter<br>project.json + assets"]
+    export --> pack["Archives<br>java.util.zip"]
+    pack --> out[".sb3 archive"]
+```
+
+`OldProjects` in the `compiler` module recognizes the old formats (a Scratch 1.4 file starts with `ScratchV0`, and a Scratch 2 `project.json` has no `targets`), unzips `.sb2` archives and zips the result. The conversion itself lives in `jscratch-convert.js`, a second bundle from the `sb3js` module. `src/convert.js` creates a scratch-vm `Runtime` without a renderer or audio engine, loads the project with scratch-vm's `sb2.deserialize`, repeats the parts of `VirtualMachine.installTargets` that matter without an editor (layer order, unique sprite names, repairing variable references) and writes the result with `sb3.serialize` and scratch-vm's asset serializer. scratch-sb1-converter first turns a Scratch 1.4 project into Scratch 2 JSON, exactly as `VirtualMachine.loadProject` does.
+
+scratch-vm expects a browser in a few places, so the build swaps those modules for small stand-ins in `sb3js/src/headless/`:
+
+- `load-costume.js` leaves costumes as they are, which is what scratch-vm itself does without a renderer, except that it draws a Scratch 1.4 text layer onto its costume with fast-png instead of a canvas.
+- `svg-renderer.js` keeps SVG costumes byte for byte instead of sanitizing them with DOMPurify. The editor sanitizes them again if the converted project is ever opened there.
+- `log.js` collects scratch-vm's warnings so the CLI and the playground can show them.
+- `scratch-fetch.js` takes the place of scratch-storage's network code, since the assets always come with the project.
+
+The build also fixes one bug: scratch-sb1-converter writes the zlib checksum at the end of every PNG little-endian instead of big-endian. Browsers never check it, but Java's ImageIO rejects such images.
+
+The bundle returns a promise. On the JVM, `RhinoProjectConverter` runs it in Rhino and runs the queued promise jobs until it settles; nothing in it waits for a timer. Rhino lacks a few ES6 features scratch-vm relies on (classes, spread in calls, async functions, `const` in loop heads), so SWC compiles the bundle down to ES5 after esbuild bundles it. Rhino's typed arrays are also big-endian unless `Context.FEATURE_LITTLE_ENDIAN` is on. Every browser is little-endian, and scratch-sb1-converter and the MD5 code read binary data through typed arrays of different widths over one buffer, so the shared Rhino setup in `Rhino.kt` turns it on. In the browser, TeaVM code cannot wait for a promise, so the playground page calls the bundle itself between two calls into the compiler (see [Web playground](web-playground.md#how-the-page-talks-to-the-compiler)).
+
 ## Generated classes
 
 | Scratch | JVM |
@@ -115,21 +143,21 @@ Whether a sound is still playing is never asked of the audio thread. The player 
 
 ```mermaid
 flowchart TD
-    sb3js["sb3js<br>scratch-parser bundle (esbuild)"]
+    sb3js["sb3js<br>scratch-parser and converter bundles"]
     runtime["runtime<br>Scratch semantics, scheduler, Swing stage"]
     compiler["compiler<br>model, codegen, JAR writer (platform neutral)"]
     compilerJvm["compiler-jvm<br>Rhino + kotlinx-serialization"]
     cli["cli<br>command line, embeds runtime JAR"]
     web["web<br>TeaVM playground, JSON.parse + page script"]
-    samples["samples<br>.sb3 built from sources"]
+    samples["samples<br>.sb3 and .sb2 built from sources"]
     benchmarks["benchmarks<br>timed against scratch-vm and TurboWarp"]
     compiler --> compilerJvm
     compiler --> web
     compilerJvm --> cli
     compilerJvm --> benchmarks
     runtime -. fat JAR compiled into each project .-> benchmarks
-    sb3js -. bundle as resource .-> compilerJvm
-    sb3js -. bundle served to the page .-> web
+    sb3js -. bundles as resources .-> compilerJvm
+    sb3js -. bundles served to the page .-> web
     runtime -. fat JAR as resource .-> cli
     runtime -. fat JAR served to the page .-> web
     samples -. test input .-> compilerJvm

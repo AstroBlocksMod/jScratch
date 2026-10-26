@@ -2,15 +2,21 @@
   "name": "jscratch-sb3js",
   "version": "0.1.0",
   "private": true,
-  "description": "scratch-parser (parse + schema validation) bundled for the browser and for Rhino on the JVM.",
+  "description": "scratch-parser (parse + schema validation) and the Scratch 1.4 and 2 converter from scratch-vm, bundled for the browser and for Rhino on the JVM.",
   "license": "GPL-3.0-only",
   "scripts": {
-    "build": "esbuild src/index.js --bundle --format=iife --global-name=jscratchSb3 --platform=browser --target=es2015 --outfile=build/dist/jscratch-sb3.js"
+    "build": "node build.mjs"
   },
   "dependencies": {
-    "scratch-parser": "6.0.1"
+    "@scratch/scratch-storage": "15.3.0",
+    "@scratch/scratch-vm": "15.3.0",
+    "events": "3.3.0",
+    "fast-png": "8.0.0",
+    "scratch-parser": "6.0.1",
+    "scratch-sb1-converter": "2.0.281"
   },
   "devDependencies": {
+    "@swc/core": "1.16.20",
     "esbuild": "0.28.2"
   }
 }

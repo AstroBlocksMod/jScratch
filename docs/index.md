@@ -14,6 +14,7 @@ java -jar my-game.jar
 - **Scratch semantics.** Values convert the way Scratch converts them, scripts yield where Scratch yields, broadcasts, clones, custom blocks with "run without screen refresh" and the pen all behave as in the editor.
 - **The official parser.** Projects are parsed and validated against the sb3 schema by [scratch-parser](https://github.com/scratchfoundation/scratch-parser), the Scratch Foundation's JavaScript parser, running in Rhino on the JVM and natively in the browser.
 - **Straight from the Scratch website.** Give the CLI a project link instead of a file and it downloads the project, costumes and sounds for you.
+- **Old projects too.** Projects from Scratch 1.4 (`.sb`) and Scratch 2 (`.sb2`) are converted to Scratch 3 with the same code the Scratch 3 editor uses, then compiled like any other.
 - **A browser playground.** The compiler itself is translated to JavaScript with [TeaVM](https://teavm.org), so you can compile a project without installing anything. [Try it](https://jscratch.hermits.cc/playground/) or read how it works in [Web playground](web-playground.md).
 
 ## Status
