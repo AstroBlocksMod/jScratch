@@ -106,6 +106,9 @@ class StageWindow(private val rt: Runtime) {
         /** The monitor the mouse went down on. Presses on monitors never reach the project, as in scratch-gui. */
         private var pressed: MonitorItem? = null
 
+        /** Whether that press landed on a slider's range input, so dragging moves the slider. */
+        private var sliding = false
+
         init {
             preferredSize = Dimension(Runtime.STAGE_WIDTH, Runtime.STAGE_HEIGHT)
             background = Color(0x30, 0x30, 0x30)
@@ -115,7 +118,7 @@ class StageWindow(private val rt: Runtime) {
                     override fun mouseMoved(e: MouseEvent) = post(e, null)
 
                     override fun mouseDragged(e: MouseEvent) {
-                        pressed?.let { slide(it, e) }
+                        if (sliding) pressed?.let { slide(it, e) }
                         post(e, null)
                     }
 
@@ -124,7 +127,8 @@ class StageWindow(private val rt: Runtime) {
                         val hit = monitorAt(e)
                         if (hit != null) {
                             pressed = hit
-                            slide(hit, e)
+                            sliding = hit.onSlider(stageX(e), stageY(e))
+                            if (sliding) slide(hit, e)
                             post(e, null)
                         } else {
                             post(e, true)
@@ -134,6 +138,7 @@ class StageWindow(private val rt: Runtime) {
                     override fun mouseReleased(e: MouseEvent) {
                         if (pressed != null) {
                             pressed = null
+                            sliding = false
                             post(e, null)
                         } else {
                             post(e, false)
@@ -142,22 +147,22 @@ class StageWindow(private val rt: Runtime) {
 
                     override fun mouseWheelMoved(e: MouseWheelEvent) {
                         val hit = monitorAt(e) ?: return
-                        if (hit.mode != Monitor.Mode.LIST) return
-                        val m = rt.monitors.getOrNull(hit.index) ?: return
-                        m.scroll = (m.scroll + e.preciseWheelRotation * MonitorView.ROW).coerceIn(0.0, hit.maxScroll)
-                        repaint()
+                        if (hit.mode == Monitor.Mode.LIST) {
+                            rt.postMonitorScroll(hit.index, e.preciseWheelRotation * MonitorView.ROW)
+                        }
                     }
 
                     private fun slide(item: MonitorItem, e: MouseEvent) {
-                        if (item.mode != Monitor.Mode.SLIDER) return
-                        rt.postMonitorValue(item.index, item.sliderValueAt((e.x - offsetX) / scale))
+                        rt.postMonitorValue(item.index, item.sliderValueAt(stageX(e)))
                     }
 
-                    private fun monitorAt(e: MouseEvent): MonitorItem? {
-                        val px = (e.x - offsetX) / scale
-                        val py = (e.y - offsetY) / scale
-                        return snapshot?.monitors?.lastOrNull { it.contains(px, py) }
-                    }
+                    private fun monitorAt(e: MouseEvent): MonitorItem? =
+                        snapshot?.monitors?.lastOrNull { it.contains(stageX(e), stageY(e)) }
+
+                    /** The mouse position in stage pixels from the top left, the monitors' coordinates. */
+                    private fun stageX(e: MouseEvent): Double = (e.x - offsetX) / scale
+
+                    private fun stageY(e: MouseEvent): Double = (e.y - offsetY) / scale
 
                     private fun post(e: MouseEvent, down: Boolean?) {
                         val sx = (e.x - offsetX) / scale - Runtime.STAGE_WIDTH / 2.0

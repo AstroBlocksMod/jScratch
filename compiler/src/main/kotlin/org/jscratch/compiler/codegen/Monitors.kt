@@ -29,8 +29,9 @@ class MonitorDef(
 
 /**
  * Builds the monitor table: every record from `project.json` the runtime can show, then a hidden monitor
- * for each variable and list that has none, so `show variable` works on any of them. The table goes into
- * the JAR as a text resource that the runtime's `MonitorData` decodes.
+ * for each variable and list that has none, so `show variable` works on any of them. Variables the code
+ * generator creates on the fly get one too, through [hidden]. The table goes into the JAR as a text
+ * resource that the runtime's `MonitorData` decodes.
  */
 object Monitors {
     const val RESOURCE = "data/monitors.txt"
@@ -41,37 +42,44 @@ object Monitors {
         val out = ArrayList<MonitorDef>()
         val monitored = HashSet<Pair<Target, String>>()
         for (m in project.monitors) {
-            val def = fromRecord(project, m)
-            if (def == null) {
-                if (m.visible) warn("Monitor for '${m.opcode}' is not supported yet; it is not shown")
-                continue
-            }
+            // A hidden record that cannot be used costs nothing, so only visible ones are worth a warning.
+            val def = fromRecord(project, m) { if (m.visible) warn(it) } ?: continue
             if (def.varId != null && !monitored.add(def.owner to def.varId)) continue
             out.add(def)
         }
         for (t in project.targets) {
             for (isList in listOf(false, true)) {
                 for (s in slots(t, isList)) {
-                    if (!monitored.add(t to s.id)) continue
-                    val opcode = if (isList) "data_listcontents" else "data_variable"
-                    out.add(
-                        MonitorDef(
-                            t, s.id, opcode, if (isList) "list" else "default", s.index, "", prefixed(t, s.name),
-                            Double.NaN, Double.NaN, 0.0, 0.0, false, 0.0, 100.0, true,
-                        ),
-                    )
+                    if (monitored.add(t to s.id)) out.add(hidden(t, s.id, isList, s.index, s.name))
                 }
             }
         }
         return out
     }
 
-    private fun fromRecord(project: Project, m: Monitor): MonitorDef? {
-        val sprite = m.spriteName?.let { name -> project.sprites.firstOrNull { it.name == name } ?: return null }
+    /** A never-placed, hidden monitor for a variable or list, for `show variable` and `show list`. */
+    fun hidden(t: Target, id: String?, isList: Boolean, slot: Int, name: String) = MonitorDef(
+        t, id, if (isList) "data_listcontents" else "data_variable", if (isList) "list" else "default", slot, "",
+        prefixed(t, name), Double.NaN, Double.NaN, 0.0, 0.0, false, 0.0, 100.0, true,
+    )
+
+    /** The usable monitor for record [m], or null after telling [reject] why there is none. */
+    private fun fromRecord(project: Project, m: Monitor, reject: (String) -> Unit): MonitorDef? {
+        val sprite = m.spriteName?.let { name ->
+            project.sprites.firstOrNull { it.name == name } ?: run {
+                reject("Monitor '${m.opcode}' belongs to sprite '$name', which is not in the project; it is not shown")
+                return null
+            }
+        }
         val owner = sprite ?: project.stage
         if (m.opcode == "data_variable" || m.opcode == "data_listcontents") {
             val isList = m.opcode == "data_listcontents"
-            val s = findSlot(project, owner, m.id, m.params[if (isList) "LIST" else "VARIABLE"], isList) ?: return null
+            val kind = if (isList) "list" else "variable"
+            val name = m.params[if (isList) "LIST" else "VARIABLE"]
+            val s = findSlot(project, owner, m.id, name, isList) ?: run {
+                reject("Monitor of $kind '${name ?: m.id}' matches no $kind in the project; it is not shown")
+                return null
+            }
             val mode = when {
                 isList -> "list"
                 m.mode == "large" || m.mode == "slider" -> m.mode
@@ -79,7 +87,10 @@ object Monitors {
             }
             return record(m, s.target, s.id, mode, s.index, "", prefixed(s.target, s.name))
         }
-        val (text, param) = builtinLabel(m) ?: return null
+        val (text, param) = builtinLabel(m) ?: run {
+            reject("Monitor for '${m.opcode}' is not supported yet; it is not shown")
+            return null
+        }
         return record(m, owner, null, if (m.mode == "large") "large" else "default", -1, param, prefixed(owner, text))
     }
 
@@ -147,8 +158,8 @@ object Monitors {
 
     /**
      * One monitor per line, fields separated by tabs: opcode, mode, sprite name (empty for the stage), slot,
-     * param, label, x, y, width, height, visible, slider min, slider max, discrete. Text fields escape
-     * backslash, tab, newline and carriage return. An unplaced monitor has empty x and y.
+     * param, label, x, y, width, height, visible, slider min, slider max, discrete. Text fields are escaped
+     * with [LineText]. An unplaced monitor has empty x and y.
      */
     fun encode(defs: List<MonitorDef>): String {
         val sb = StringBuilder()
@@ -171,7 +182,7 @@ object Monitors {
             )
             for ((i, f) in fields.withIndex()) {
                 if (i > 0) sb.append('\t')
-                escape(sb, f)
+                LineText.escape(sb, f)
             }
             sb.append('\n')
         }
@@ -179,16 +190,4 @@ object Monitors {
     }
 
     private fun number(v: Double): String = if (v.isNaN()) "" else v.toString()
-
-    private fun escape(sb: StringBuilder, s: String) {
-        for (c in s) {
-            when (c) {
-                '\\' -> sb.append("\\\\")
-                '\t' -> sb.append("\\t")
-                '\n' -> sb.append("\\n")
-                '\r' -> sb.append("\\r")
-                else -> sb.append(c)
-            }
-        }
-    }
 }

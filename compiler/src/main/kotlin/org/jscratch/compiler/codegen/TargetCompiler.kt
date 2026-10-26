@@ -408,9 +408,12 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
         mv.visitEnd()
     }
 
-    /** The slots that have a monitor, which the runtime reads by [VarSlot.index] every frame a monitor shows. */
+    /**
+     * The slots that have a monitor, in [VarSlot.index] order, which the runtime reads every frame a monitor
+     * shows. On the stage, variables created on the fly live in [localSlotList] after the declared ones.
+     */
     private fun monitoredSlots(): List<VarSlot> =
-        (if (target.isStage) ctx.stageSlots else localSlotList).filter { it.monitor >= 0 }
+        (if (target.isStage) ctx.stageSlots + localSlotList else localSlotList).filter { it.monitor >= 0 }
 
     private fun emitMonitorSlot() {
         val slots = monitoredSlots()
@@ -943,7 +946,10 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
         // scratch-vm creates missing variables on the fly as sprite-local; do the same.
         ctx.warn("Variable '$name' is referenced but not declared in '${target.name}'; creating it")
         val field = fieldNames.unique(if (isList) "l_" else "v_", name)
-        val slot = VarSlot(className, field, false, isList, name, localSlotList.size)
+        // The stage numbers its declared variables in the shared table, so its extra ones come after those.
+        val index = localSlotList.size + if (target.isStage) ctx.stageSlots.size else 0
+        val slot = VarSlot(className, field, false, isList, name, index)
+        slot.monitor = ctx.addMonitor(Monitors.hidden(target, id, isList, index, name))
         if (id != null) localSlots[id] = slot
         localSlotsByName[if (isList) "list:$name" else name] = slot
         localSlotList.add(slot)

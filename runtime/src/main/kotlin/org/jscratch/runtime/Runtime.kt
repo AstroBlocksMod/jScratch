@@ -68,6 +68,8 @@ class Runtime {
         object StopAll : Event()
 
         class MonitorValue(val index: Int, val value: Double) : Event()
+
+        class MonitorScroll(val index: Int, val delta: Double) : Event()
     }
 
     // ---- setup ----------------------------------------------------------------------------------
@@ -178,6 +180,10 @@ class Runtime {
                 is Event.StopAll -> stopAllInternal()
                 is Event.KeyDown -> startHats(HAT_KEY, e.key, null)
                 is Event.MonitorValue -> monitors.getOrNull(e.index)?.let { it.target.setMonitorSlot(it.slot, e.value) }
+                // Layout clamps the far end, since only it knows how many rows fit.
+                is Event.MonitorScroll -> monitors.getOrNull(e.index)?.let {
+                    it.scroll = Math.max(0.0, it.scroll + e.delta)
+                }
                 is Event.Click -> {
                     val hit = sprites.asReversed().firstOrNull { it.ghost < 100.0 && it.touchingPoint(e.x, e.y) }
                     if (hit != null) startHats(HAT_CLICKED, "", hit) else startHats(HAT_CLICKED, "", stage)
@@ -394,6 +400,11 @@ class Runtime {
     /** A slider monitor was dragged to [value]. */
     fun postMonitorValue(index: Int, value: Double) {
         events.add(Event.MonitorValue(index, value))
+    }
+
+    /** The mouse wheel turned over a list monitor by [delta] pixels. */
+    fun postMonitorScroll(index: Int, delta: Double) {
+        events.add(Event.MonitorScroll(index, delta))
     }
 
     fun postGreenFlag() {

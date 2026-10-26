@@ -59,14 +59,14 @@ set, change, show and hide variable, all list blocks: add, delete, delete all, i
 
 Monitors are drawn the way the Scratch player draws them, with scratch-gui's sizes, colors and labels, on top of the sprites and say bubbles.
 
-- **Variables** show as a normal readout, a large readout or a slider, whichever the project saved. Dragging a slider sets the variable, snapping to whole numbers or to hundredths like in Scratch.
+- **Variables** show as a normal readout, a large readout or a slider, whichever the project saved. Dragging a slider's bar sets the variable, snapping to whole numbers or to hundredths like in Scratch.
 - **Lists** show their items with index numbers and the length, at the size saved in the project. The mouse wheel scrolls a long list.
 - **Built-in reporters** with a checkbox in the editor can be monitored too: x position, y position, direction, costume and backdrop number or name, size, volume, answer, timer, current date and time, username and loudness.
 - Numbers are rounded to six decimal places for display, as in Scratch.
-- show and hide variable and show and hide list work on every variable and list, including ones that never had a monitor. A monitor shown for the first time is placed where scratch-gui would place it, in the first free spot from the top left.
+- show and hide variable and show and hide list work on every variable and list, including ones that never had a monitor and ones a block uses without declaring them. A monitor shown for the first time is placed where scratch-gui would place it, in the first free spot from the top left.
 - Clicks on a monitor do not reach the project, so they do not trigger `when stage clicked` or `mouse down?`.
 
-Not supported: dragging monitors, their right-click menu, editing or resizing lists in a list monitor, and monitors of extension blocks such as the Music tempo. A value too wide for the stage is cut off at the edge instead of wrapping.
+Not supported: dragging monitors, their right-click menu, editing or resizing lists in a list monitor, and monitors of extension blocks such as the Music tempo. A value too wide or too tall for the stage is cut off at the edge instead of wrapping.
 
 ## Pen
 

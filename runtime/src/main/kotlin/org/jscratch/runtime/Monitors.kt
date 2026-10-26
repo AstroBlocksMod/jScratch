@@ -34,8 +34,11 @@ class Monitor(
 
     @Volatile var visible: Boolean = visible
 
-    /** How far a list monitor's rows are scrolled, in pixels. The window changes it on the mouse wheel. */
-    @Volatile var scroll: Double = 0.0
+    /**
+     * How far a list monitor's rows are scrolled, in pixels. Only the scheduler thread touches it: the
+     * window posts wheel turns as events, and layout clamps it to the list's length.
+     */
+    var scroll: Double = 0.0
 
     lateinit var target: Target
 
@@ -73,7 +76,7 @@ class Monitor(
 
 /**
  * Decodes the monitor table the compiler stores at [RESOURCE]: one monitor per line, tab-separated fields
- * with `\\`, `\t`, `\n` and `\r` escapes. See `Monitors.encode` in the compiler for the field order.
+ * escaped as [LineText] describes. See `Monitors.encode` in the compiler for the field order.
  */
 internal object MonitorData {
     const val RESOURCE = "data/monitors.txt"
@@ -87,7 +90,7 @@ internal object MonitorData {
         val out = ArrayList<Monitor>()
         for (line in text.split('\n')) {
             if (line.isEmpty()) continue
-            val f = line.split('\t').map { unescape(it) }
+            val f = line.split('\t').map { LineText.unescape(it) }
             if (f.size < 14) continue
             val mode = when (f[1]) {
                 "large" -> Monitor.Mode.LARGE
@@ -118,26 +121,4 @@ internal object MonitorData {
     }
 
     private fun number(s: String, fallback: Double): Double = s.toDoubleOrNull() ?: fallback
-
-    private fun unescape(s: String): String {
-        if (!s.contains('\\')) return s
-        val sb = StringBuilder(s.length)
-        var i = 0
-        while (i < s.length) {
-            val c = s[i]
-            if (c == '\\' && i + 1 < s.length) {
-                when (s[i + 1]) {
-                    't' -> sb.append('\t')
-                    'n' -> sb.append('\n')
-                    'r' -> sb.append('\r')
-                    else -> sb.append(s[i + 1])
-                }
-                i += 2
-            } else {
-                sb.append(c)
-                i++
-            }
-        }
-        return sb.toString()
-    }
 }

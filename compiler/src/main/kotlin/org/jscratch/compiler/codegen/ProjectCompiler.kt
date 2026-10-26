@@ -36,14 +36,13 @@ class ProjectContext(val project: Project) {
     private val stageVarsByName = HashMap<String, VarSlot>()
     val stageSlots = ArrayList<VarSlot>()
     val resources = LinkedHashMap<String, ByteArray>()
-    val monitors: List<MonitorDef> = Monitors.build(project) { warn(it) }
+    val monitors: ArrayList<MonitorDef> = ArrayList(Monitors.build(project) { warn(it) })
     private val monitorsByVar = HashMap<Pair<Target, String>, Int>()
 
     init {
         for ((i, m) in monitors.withIndex()) {
             if (m.varId != null) monitorsByVar[m.owner to m.varId] = i
         }
-        if (monitors.isNotEmpty()) resources[Monitors.RESOURCE] = Monitors.encode(monitors).toByteArray(Charsets.UTF_8)
         val names = Names()
         for (t in project.targets) {
             classNames[t] = if (t.isStage) RT.STAGE_CLASS else "${RT.PACKAGE}/${names.unique("Sprite_", t.name)}"
@@ -69,6 +68,12 @@ class ProjectContext(val project: Project) {
 
     /** The monitor of [target]'s variable or list [id], or -1. */
     fun monitorIndex(target: Target, id: String): Int = monitorsByVar[target to id] ?: -1
+
+    /** Adds a monitor for a variable the code generator created on the fly, and returns its index. */
+    fun addMonitor(def: MonitorDef): Int {
+        monitors.add(def)
+        return monitors.size - 1
+    }
 
     fun globalByName(name: String, isList: Boolean): VarSlot? = stageVarsByName[if (isList) "list:$name" else name]
 
@@ -102,6 +107,10 @@ object ProjectCompiler {
             classes[name] = TargetCompiler(ctx, t, name).compile()
         }
         classes[RT.MAIN] = mainClass(ctx)
+        // Written last, since compiling the targets can add monitors for variables created on the fly.
+        if (ctx.monitors.isNotEmpty()) {
+            ctx.resources[Monitors.RESOURCE] = Monitors.encode(ctx.monitors).toByteArray(Charsets.UTF_8)
+        }
         return GeneratedProject(classes, ctx.resources, RT.MAIN, ctx.warnings)
     }
 

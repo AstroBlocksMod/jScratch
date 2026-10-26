@@ -69,8 +69,39 @@ class MonitorsTest {
         assertEquals(1.23, fine.sliderValueAt(at))
     }
 
+    @Test
+    fun onlyTheSliderRowMovesTheSlider() {
+        val m = slider(isDiscrete = true)
+        // The label and value row is 14 px below the 1 px border and 3 px padding, so the input starts at 18.
+        assertFalse(m.onSlider(10.0, 10.0), "label")
+        assertFalse(m.onSlider(m.sliderLeft, m.sliderTop - 1), "just above the input")
+        assertTrue(m.onSlider(m.sliderLeft, m.sliderTop + 10), "the bar")
+        assertTrue(m.onSlider(m.sliderRight, m.sliderTop + 10), "the far end of the bar")
+        assertFalse(m.copy(Monitor.Mode.DEFAULT).onSlider(m.sliderLeft, m.sliderTop + 10), "not a slider")
+    }
+
+    @Test
+    fun listBodyFillsTheSpaceBetweenHeaderAndFooter() {
+        // A list saved as 100 by 200 is 202 px tall with its border; the header takes 21 and the footer 20.
+        assertEquals(159.0, MonitorView.bodyHeight(202.0))
+        assertEquals(0.0, MonitorView.maxScroll(6, 202.0), "six rows of 24 px fit in 159")
+        assertEquals(7 * 24.0 - 159, MonitorView.maxScroll(7, 202.0))
+    }
+
+    @Test
+    fun linesUnescapeLikeTheCompilerEscapes() {
+        assertEquals("a\tb\nc\\d\re", LineText.unescape("a\\tb\\nc\\\\d\\re"))
+        assertEquals("plain", LineText.unescape("plain"))
+        assertEquals("ends\\", LineText.unescape("ends\\"), "a lone trailing backslash stays")
+    }
+
     private fun slider(isDiscrete: Boolean) = MonitorItem(
-        0, Monitor.Mode.SLIDER, 0, 0.0, 0.0, 150.0, 42.0, "a", 10.0, listOf("0"), 0, 0, emptyList(), 0.0, 0.0,
-        0.0, 10.0, isDiscrete,
+        0, Monitor.Mode.SLIDER, 0, 0.0, 0.0, 150.0, 42.0, "a", 10.0, listOf("0"), doubleArrayOf(7.0), 40.0, 0, 0,
+        emptyList(), DoubleArray(0), 0.0, 0.0, 0.0, 0.0, 10.0, isDiscrete,
+    )
+
+    private fun MonitorItem.copy(mode: Monitor.Mode) = MonitorItem(
+        index, mode, color, x, y, width, height, label, labelWidth, lines, lineWidths, valueWidth, itemCount,
+        firstRow, rows, rowIndexWidths, lengthWidth, scroll, number, sliderMin, sliderMax, isDiscrete,
     )
 }
