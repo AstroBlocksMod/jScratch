@@ -42,11 +42,11 @@ broadcast, broadcast and wait. Broadcasts restart scripts that are already runni
 
 wait, repeat, forever, if, if else, wait until, repeat until, while, stop (all, this script, other scripts in sprite), create clone of, delete this clone. Clones are capped at 300.
 
-The editor hides a few control blocks that still load from Scratch 2 projects, and they work too. For each sets its variable to 1, 2, 3 and so on while it is below the value, which is read again before every round, and waits for the next frame after each round like repeat. The counter blocks (counter, increment counter, clear counter) share one counter between all sprites, which only starts over when the project starts, as in Scratch. All at once runs the blocks inside it, as in Scratch 3.
+A few hidden legacy control blocks are not in the editor's palette but still load from projects, and they work too. For each sets its variable to 1, 2, 3 and so on while it is below the value, which is read again before every round, and waits for the next frame after each round like repeat. The counter blocks (counter, increment counter, clear counter) share one counter between all sprites, which only starts over when the project starts, as in Scratch. All at once runs the blocks inside it, as in Scratch 3.
 
 ## Sensing
 
-touching (mouse, edge, sprite), touching color, color is touching color, distance to, ask and wait with answer, key pressed, mouse down, mouse x and y, loudness, timer, reset timer, "of" (sprite and stage properties and variables), current date and time, days since 2000, set drag mode, username, online?, and loud? from Scratch 2 projects (loudness above 10).
+touching (mouse, edge, sprite), touching color, color is touching color, distance to, ask and wait with answer, key pressed, mouse down, mouse x and y, loudness, timer, reset timer, "of" (sprite and stage properties and variables), current date and time, days since 2000, set drag mode, username, online?, and the hidden legacy loud? block (loudness above 10).
 
 Loudness listens to the default microphone through `javax.sound.sampled`, which opens the first time a project asks for the loudness, as in Scratch. It is measured the way scratch-audio does it, once a frame: the RMS of the last 2048 samples, falling no faster than 40% a frame, mapped to 0 through 100. It is -1 until the microphone is open, for good when there is none, and always in headless mode. On macOS the app that starts Java (the terminal or editor, for example) needs microphone access, which is under Privacy & Security in System Settings. Without it macOS hands out only silence, so the loudness also stays at -1 until the microphone hears something, and after two seconds of silence the runtime prints a note about the permission.
 
@@ -87,9 +87,9 @@ Not supported: dragging monitors, their right-click menu, editing or resizing li
 
 clear, stamp, pen down, pen up, set pen color to color, set and change color parameter (color, saturation, brightness, transparency), set and change pen size, plus the legacy hue and shade blocks.
 
-## Older blocks that do nothing
+## Legacy blocks that do nothing
 
-Projects from Scratch 2 and earlier can hold a few blocks that Scratch 3 still loads but ignores: scroll right, scroll up, align scene, hide all sprites, set stretch and change stretch do nothing, and x scroll, y scroll and user id report an empty value. jScratch does the same, without the warning it gives for blocks it does not support.
+A few hidden legacy blocks still load in Scratch 3 but do nothing there: scroll right, scroll up, align scene, hide all sprites, set stretch and change stretch do nothing, and x scroll, y scroll and user id report an empty value. jScratch does the same, without the warning it gives for blocks it does not support.
 
 ## Extensions
 

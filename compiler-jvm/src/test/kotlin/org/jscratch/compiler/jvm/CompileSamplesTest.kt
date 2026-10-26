@@ -216,10 +216,10 @@ class CompileSamplesTest {
         assertEquals(expected, out.lines().filter { it.startsWith("Ball ") })
     }
 
-    /** Blocks hidden in Scratch 3 that still load from Scratch 2 projects. */
+    /** Hidden legacy blocks, which are not in the editor's palette but still load from projects. */
     @Test
-    fun compilesAndRunsScratch2Project() {
-        val result = JScratch.compile(File(samplesDir, "scratch2.sb3").readBytes(), runtimeJar.readBytes(), json)
+    fun compilesAndRunsLegacyProject() {
+        val result = JScratch.compile(File(samplesDir, "legacy.sb3").readBytes(), runtimeJar.readBytes(), json)
         assertEquals(emptyList(), result.warnings, "unexpected warnings")
 
         val out = runHeadless(result.jar, frames = 30)

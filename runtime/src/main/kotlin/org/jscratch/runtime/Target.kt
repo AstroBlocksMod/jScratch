@@ -503,7 +503,7 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         throw StopScript()
     }
 
-    // The counter blocks hidden in Scratch 3 for Scratch 2 projects. Every target shares the one counter.
+    // The hidden legacy counter blocks. Every target shares the one counter.
 
     fun counter(): Double = rt.counter
 
@@ -938,7 +938,7 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
 
     fun online(): Boolean = rt.online()
 
-    /** `loud?` from Scratch 2 projects. */
+    /** `loud?`, a hidden legacy block. */
     fun loud(): Boolean = rt.loudness() > 10.0
 
     fun askAndWait(question: Any?) = rt.ask(this, Cast.toString(question))

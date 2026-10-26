@@ -776,11 +776,11 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
             }
             "control_repeat" -> emitRepeat(st, b)
             "control_for_each" -> emitForEach(st, b)
-            // Hidden blocks from Scratch 2 projects. "all at once" just runs its blocks, as in Scratch 3.
+            // Hidden legacy blocks. "all at once" just runs its blocks, as in Scratch 3.
             "control_all_at_once" -> emitSubstack(st, b, "SUBSTACK")
             "control_incr_counter" -> thisCall(st, "incrCounter", "()V") {}
             "control_clear_counter" -> thisCall(st, "clearCounter", "()V") {}
-            // Older blocks that scratch-vm loads but does nothing for, so they are not worth a warning.
+            // Hidden legacy blocks that scratch-vm loads but does nothing for, so they are not worth a warning.
             "motion_scroll_right", "motion_scroll_up", "motion_align_scene", "looks_hideallsprites",
             "looks_setstretchto", "looks_changestretchby",
             -> {}
@@ -979,7 +979,7 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
     }
 
     /**
-     * `for each` from Scratch 2 projects: sets the variable to 1, 2, 3 and so on while it is below the
+     * `for each`, a hidden legacy block: sets the variable to 1, 2, 3 and so on while it is below the
      * value, which is read again before every round, and yields after each round like `repeat`.
      */
     private fun emitForEach(st: MethodState, b: Block) {
@@ -1440,7 +1440,7 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
             "control_get_counter" -> {
                 call("counter", "()D", VType.NUM) {}
             }
-            // Older reporters that scratch-vm loads but that report nothing.
+            // Hidden legacy reporters that scratch-vm loads but that report nothing.
             "motion_xscroll", "motion_yscroll", "sensing_userid" -> {
                 pushDefault(mv, want)
                 want
