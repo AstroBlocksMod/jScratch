@@ -1,11 +1,9 @@
 package org.jscratch.compiler.sb3
 
+import org.jscratch.compiler.Archives
 import org.jscratch.compiler.json.JsonArray
 import org.jscratch.compiler.json.JsonValue
 import org.jscratch.compiler.json.ProjectJson
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.util.zip.ZipInputStream
 
 class Sb3Exception(message: String) : RuntimeException(message)
 
@@ -15,8 +13,8 @@ class Sb3File(val project: Project, val assets: Map<String, ByteArray>)
 /**
  * Reads .sb3 archives into the [Project] model.
  *
- * The archive is unzipped here with `java.util.zip`, which works both on the JVM
- * and under TeaVM. `project.json` is then handed to scratch-parser, the Scratch
+ * The archive is unzipped by [Archives] with `java.util.zip`, which works both on
+ * the JVM and under TeaVM. `project.json` is then handed to scratch-parser, the Scratch
  * Foundation's JavaScript parser, through [ProjectJson]; that parses and validates
  * it against the official sb3 schema. The resulting tree is mapped onto the model,
  * whose shape follows ScratchEverywhere's `sb3.cpp`: a flat list of targets, each
@@ -26,22 +24,7 @@ class Sb3File(val project: Project, val assets: Map<String, ByteArray>)
  */
 class Sb3Parser(private val json: ProjectJson) {
     fun readSb3(bytes: ByteArray): Sb3File {
-        val entries = HashMap<String, ByteArray>()
-        ZipInputStream(ByteArrayInputStream(bytes)).use { zip ->
-            while (true) {
-                val entry = zip.nextEntry ?: break
-                if (entry.isDirectory) continue
-                val out = ByteArrayOutputStream()
-                val buf = ByteArray(16 * 1024)
-                while (true) {
-                    val n = zip.read(buf)
-                    if (n < 0) break
-                    out.write(buf, 0, n)
-                }
-                // Some tools nest everything in a folder; keep only the file name.
-                entries[entry.name.substringAfterLast('/')] = out.toByteArray()
-            }
-        }
+        val entries = Archives.read(bytes)
         val projectJson = entries.remove("project.json") ?: throw Sb3Exception("project.json not found in archive")
         val project = parseProject(json.parseProject(projectJson.toString(Charsets.UTF_8)))
         return Sb3File(project, entries)

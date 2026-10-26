@@ -39,6 +39,20 @@ dependencyResolutionManagement {
                 includeGroup("io.github.mackron")
             }
         }
+        // Scratch 1.4 projects from scratch-sb1-converter's test fixtures, fetched by commit for the samples.
+        ivy {
+            name = "scratch-sb1-converter fixtures"
+            setUrl("https://raw.githubusercontent.com/scratchfoundation/scratch-sb1-converter/")
+            patternLayout {
+                artifact("[revision]/test/fixtures/valid/[module].[ext]")
+            }
+            metadataSources {
+                artifact()
+            }
+            content {
+                includeGroup("io.github.scratchfoundation")
+            }
+        }
     }
 }
 

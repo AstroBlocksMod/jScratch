@@ -1,5 +1,7 @@
 package org.jscratch.cli
 
+import org.jscratch.compiler.Archives
+import org.jscratch.compiler.convert.ProjectFormat
 import org.jscratch.compiler.jvm.RhinoProjectJson
 import java.io.ByteArrayInputStream
 import java.util.zip.ZipInputStream
@@ -60,12 +62,13 @@ class ScratchDownloaderTest {
                 server[url]?.toByteArray()
             }
         val project = downloader.download("42")
+        assertEquals(ProjectFormat.SB3, project.format)
         assertEquals("My Game", project.title)
         assertEquals("someone", project.author)
         assertEquals(listOf("asset cccc.png is missing from the Scratch server"), project.warnings)
         assertEquals(1, requested.count { it.endsWith("aaaa.svg/get/") }, "shared assets are fetched once")
 
-        val entries = unzip(project.sb3)
+        val entries = unzip(project.data)
         assertEquals(setOf("project.json", "aaaa.svg", "bbbb.wav"), entries.keys)
         assertContentEquals(projectJson.toByteArray(), entries["project.json"])
         assertEquals("<svg/>", entries["aaaa.svg"]!!.toString(Charsets.UTF_8))
@@ -78,39 +81,63 @@ class ScratchDownloaderTest {
     }
 
     @Test
-    fun scratch2ProjectsAreRejected() {
+    fun scratch2ProjectsComeWithTheirAssets() {
+        val sb2Json =
+            """
+            {"objName":"Stage","costumes":[{"costumeName":"b","baseLayerID":-1,"baseLayerMD5":"dddd.svg"}],
+             "sounds":[{"soundName":"pop","soundID":-1,"md5":"eeee.wav"}],
+             "children":[{"objName":"Cat","costumes":[{"costumeName":"c","baseLayerID":-1,"baseLayerMD5":"dddd.svg"},
+               {"costumeName":"d","baseLayerID":-1,"baseLayerMD5":"ffff.png","textLayerMD5":"9999.png"}]},
+              {"target":"Cat","cmd":"getVar:","param":"score"}]}
+            """.trimIndent()
         val server =
             mapOf(
                 "https://api.scratch.mit.edu/projects/9" to meta,
-                "https://projects.scratch.mit.edu/9?token=t0k3n" to """{"objName":"Stage","children":[]}""",
+                "https://projects.scratch.mit.edu/9?token=t0k3n" to sb2Json,
+                "https://assets.scratch.mit.edu/internalapi/asset/dddd.svg/get/" to "<svg/>",
+                "https://assets.scratch.mit.edu/internalapi/asset/eeee.wav/get/" to "RIFF",
+                "https://assets.scratch.mit.edu/internalapi/asset/ffff.png/get/" to "PNG",
+                "https://assets.scratch.mit.edu/internalapi/asset/9999.png/get/" to "text",
             )
-        val e =
-            assertFailsWith<DownloadException> {
-                ScratchDownloader(json) { server[it]?.toByteArray() }.download("9")
-            }
-        assertTrue(e.message!!.contains("Scratch 2"), e.message)
+        val project = ScratchDownloader(json) { server[it]?.toByteArray() }.download("9")
+        assertEquals(ProjectFormat.SB2, project.format)
+        assertEquals(emptyList(), project.warnings)
+        val entries = unzip(project.data)
+        assertEquals(setOf("project.json", "dddd.svg", "ffff.png", "9999.png", "eeee.wav"), entries.keys)
+        assertContentEquals(sb2Json.toByteArray(), entries["project.json"])
     }
 
     @Test
-    fun archivedScratch2ProjectsAreRejected() {
-        val sb2 = ScratchDownloader.zip("""{"objName":"Stage","children":[]}""".toByteArray(), emptyMap())
-        val e =
-            assertFailsWith<DownloadException> {
-                ScratchDownloader(json) { url ->
-                    if (url.startsWith("https://api.")) meta.toByteArray() else sb2
-                }.download("9")
-            }
-        assertTrue(e.message!!.contains("Scratch 2"), e.message)
+    fun archivedScratch2ProjectsPassThrough() {
+        val sb2 = Archives.writeProject("""{"objName":"Stage","children":[]}""".toByteArray(), emptyMap())
+        val project =
+            ScratchDownloader(json) { url ->
+                if (url.startsWith("https://api.")) meta.toByteArray() else sb2
+            }.download("9")
+        assertEquals(ProjectFormat.SB2, project.format)
+        assertContentEquals(sb2, project.data)
+    }
+
+    @Test
+    fun scratch14ProjectsPassThrough() {
+        val sb = "ScratchV02 and a Squeak object graph".toByteArray()
+        val project =
+            ScratchDownloader(json) { url ->
+                if (url.startsWith("https://api.")) meta.toByteArray() else sb
+            }.download("9")
+        assertEquals(ProjectFormat.SB1, project.format)
+        assertContentEquals(sb, project.data)
     }
 
     @Test
     fun archivedScratch3ProjectsPassThrough() {
-        val sb3 = ScratchDownloader.zip(projectJson.toByteArray(), mapOf("aaaa.svg" to "<svg/>".toByteArray()))
+        val sb3 = Archives.writeProject(projectJson.toByteArray(), mapOf("aaaa.svg" to "<svg/>".toByteArray()))
         val project =
             ScratchDownloader(json) { url ->
                 if (url.startsWith("https://api.")) meta.toByteArray() else sb3
             }.download("9")
-        assertContentEquals(sb3, project.sb3)
+        assertEquals(ProjectFormat.SB3, project.format)
+        assertContentEquals(sb3, project.data)
     }
 
     @Test

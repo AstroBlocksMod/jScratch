@@ -10,6 +10,7 @@
   const result = document.getElementById("result");
   const summary = document.getElementById("summary");
   const download = document.getElementById("download");
+  const downloadSb3 = document.getElementById("download-sb3");
   const warningsOut = document.getElementById("warnings");
   const warningCount = document.getElementById("warning-count");
   const listingOut = document.getElementById("listing-out");
@@ -19,6 +20,8 @@
   let runtimeJar = null;
   let selected = null;
   let lastUrl = null;
+  let lastSb3Url = null;
+  let converter = null;
 
   function setStatus(text, isError) {
     status.textContent = text;
@@ -53,8 +56,43 @@
 
   function choose(file) {
     selected = file;
-    dropText.textContent = file ? file.name + " (" + Math.round(file.size / 1024) + " KiB)" : "Drop an .sb3 file here or click to choose one";
+    dropText.textContent = file ? file.name + " (" + Math.round(file.size / 1024) + " KiB)" : "Drop a project file here or click to choose one";
     updateButton();
+  }
+
+  // The converter for Scratch 1.4 and 2 projects is large, so it loads with the first old project.
+  function loadConverter() {
+    if (!converter) {
+      converter = new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "jscratch-convert.js";
+        script.onload = () => resolve(window.jscratchConvert);
+        script.onerror = () => {
+          converter = null;
+          reject(new Error("could not load jscratch-convert.js"));
+        };
+        document.head.appendChild(script);
+      });
+    }
+    return converter;
+  }
+
+  const uint8 = (a) => new Uint8Array(a.buffer, a.byteOffset, a.byteLength);
+  const int8 = (a) => new Int8Array(a.buffer, a.byteOffset, a.byteLength);
+
+  // Converts a Scratch 1.4 or 2 project to an .sb3, or returns null for anything else.
+  async function convertOld(data) {
+    const old = window.jscratch.readOld(data);
+    if (!old) return null;
+    setStatus("Converting the " + old.label + " project to Scratch 3…");
+    const convert = await loadConverter();
+    const started = performance.now();
+    const converted =
+      old.format === "sb1"
+        ? await convert.convertSb1(uint8(old.datas[0]))
+        : await convert.convertSb2(old.projectJson, old.names, old.datas.map(uint8));
+    const sb3 = window.jscratch.writeSb3(converted.projectJson, converted.names, converted.datas.map(int8));
+    return { label: old.label, sb3, warnings: converted.warnings, ms: Math.round(performance.now() - started) };
   }
 
   fileInput.addEventListener("change", () => choose(fileInput.files[0] || null));
@@ -79,10 +117,18 @@
   compileButton.addEventListener("click", async () => {
     if (!selected) return;
     compileButton.disabled = true;
-    setStatus("Compiling " + selected.name + "…");
     result.classList.add("hidden");
     try {
-      const sb3 = new Int8Array(await selected.arrayBuffer());
+      const data = new Int8Array(await selected.arrayBuffer());
+      let converted;
+      try {
+        converted = await convertOld(data);
+      } catch (e) {
+        setStatus("Conversion failed: " + (e && e.message ? e.message : e), true);
+        return;
+      }
+      const sb3 = converted ? converted.sb3 : data;
+      setStatus("Compiling " + selected.name + "…");
       const started = performance.now();
       const out = window.jscratch.compile(sb3, runtimeJar, listingCheckbox.checked);
       const ms = Math.round(performance.now() - started);
@@ -93,11 +139,22 @@
       const jarBytes = new Uint8Array(out.jar.buffer, out.jar.byteOffset, out.jar.byteLength);
       if (lastUrl) URL.revokeObjectURL(lastUrl);
       lastUrl = URL.createObjectURL(new Blob([jarBytes], { type: "application/java-archive" }));
+      const baseName = selected.name.replace(/\.sb[23]?$/i, "");
       download.href = lastUrl;
-      download.download = selected.name.replace(/\.sb3$/i, "") + ".jar";
+      download.download = baseName + ".jar";
+
+      if (lastSb3Url) URL.revokeObjectURL(lastSb3Url);
+      lastSb3Url = null;
+      downloadSb3.classList.toggle("hidden", !converted);
+      if (converted) {
+        lastSb3Url = URL.createObjectURL(new Blob([uint8(converted.sb3)], { type: "application/x.scratch.sb3" }));
+        downloadSb3.href = lastSb3Url;
+        downloadSb3.download = baseName + ".sb3";
+      }
 
       const classes = out.classes ? out.classes.split("\n").filter(Boolean) : [];
       summary.textContent =
+        (converted ? "Converted from " + converted.label + " in " + converted.ms + " ms. " : "") +
         "Compiled in " + ms + " ms: " + classes.length + " classes, " + Math.round(jarBytes.length / 1024) + " KiB JAR.";
 
       targetsBody.innerHTML = "";
@@ -111,7 +168,7 @@
         targetsBody.appendChild(tr);
       });
 
-      const warnings = out.warnings ? out.warnings.split("\n").filter(Boolean) : [];
+      const warnings = (converted ? converted.warnings : []).concat(out.warnings ? out.warnings.split("\n").filter(Boolean) : []);
       warningCount.textContent = String(warnings.length);
       warningsOut.textContent = warnings.join("\n");
 

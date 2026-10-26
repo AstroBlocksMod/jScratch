@@ -16,6 +16,9 @@ dr-mp3 = "mp3-0.7.3"
 dr-mp3-sha256 = "d80e6800ddde29d50988ce894affe601858802d1bb8f047f98b84b33ae66c11a"
 dr-wav = "wav-0.14.5"
 dr-wav-sha256 = "c69816d0e0ac6cab3df8bf2f42df451d4531c2bfa34f7d7a69e959e6ed399038"
+# The scratch-sb1-converter commit whose test fixtures give the samples a Scratch 1.4 project.
+# A commit, unlike a tag, cannot move, so the file needs no hash.
+sb1-fixtures = "aef33ea15493c2f46b94556be35b966d307abf14"
 
 [libraries]
 asm = { module = "org.ow2.asm:asm", version.ref = "asm" }
@@ -28,6 +31,7 @@ chicory-runtime = { module = "com.dylibso.chicory:runtime", version.ref = "chico
 chicory-compiler-cli = { module = "com.dylibso.chicory:build-time-compiler-cli-experimental", version.ref = "chicory" }
 dr-mp3 = { module = "io.github.mackron:dr_mp3", version.ref = "dr-mp3" }
 dr-wav = { module = "io.github.mackron:dr_wav", version.ref = "dr-wav" }
+sb1-default-project = { module = "io.github.scratchfoundation:default", version.ref = "sb1-fixtures" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 

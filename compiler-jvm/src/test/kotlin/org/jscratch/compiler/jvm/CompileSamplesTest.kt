@@ -5,13 +5,11 @@ import org.jscratch.compiler.sb3.Sb3Parser
 import java.awt.image.BufferedImage
 import java.io.File
 import java.nio.file.Files
-import java.util.concurrent.TimeUnit
 import javax.imageio.ImageIO
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-import kotlin.test.fail
 
 /**
  * End-to-end: compile the sample projects with the real runtime, run the JAR
@@ -20,7 +18,6 @@ import kotlin.test.fail
 class CompileSamplesTest {
     private val runtimeJar = File(System.getProperty("jscratch.test.runtimeJar"))
     private val samplesDir = File(System.getProperty("jscratch.test.samplesDir"))
-    private val java = File(System.getProperty("jscratch.test.javaHome"), "bin/java")
     private val json = RhinoProjectJson()
 
     @Test
@@ -309,30 +306,5 @@ class CompileSamplesTest {
             }
         }
         return false
-    }
-
-    private fun runHeadless(jar: ByteArray, frames: Int, vararg properties: String): String {
-        val tmp = Files.createTempFile("jscratch-test", ".jar").toFile()
-        try {
-            tmp.writeBytes(jar)
-            val command =
-                listOf(java.path, "-Djscratch.headless=$frames", "-Djava.awt.headless=true") + properties +
-                    listOf("-jar", tmp.path)
-            val process =
-                ProcessBuilder(command)
-                    .redirectErrorStream(false)
-                    .start()
-            val stdout = process.inputStream.bufferedReader().readText()
-            val stderr = process.errorStream.bufferedReader().readText()
-            if (!process.waitFor(60, TimeUnit.SECONDS)) {
-                process.destroyForcibly()
-                fail("compiled project did not finish within 60 s. stderr:\n$stderr")
-            }
-            if (process.exitValue() != 0) fail("compiled project exited with ${process.exitValue()}. stderr:\n$stderr")
-            if (stderr.isNotBlank()) println("child stderr:\n$stderr")
-            return stdout
-        } finally {
-            tmp.delete()
-        }
     }
 }

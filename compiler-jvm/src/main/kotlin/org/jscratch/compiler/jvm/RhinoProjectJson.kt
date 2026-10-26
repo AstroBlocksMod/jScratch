@@ -23,27 +23,12 @@ import org.mozilla.javascript.ScriptableObject
  * is native Java and kotlinx parses the result.
  */
 class RhinoProjectJson : ProjectJson {
-    private val scope: ScriptableObject
-
-    init {
-        val source =
-            RhinoProjectJson::class.java.getResourceAsStream(BUNDLE)?.use { it.readBytes().toString(Charsets.UTF_8) }
-                ?: throw IllegalStateException("scratch-parser bundle $BUNDLE is missing from the class path")
-        val cx = enter()
-        try {
-            scope = cx.initSafeStandardObjects()
-            // ajv expects a console; Rhino's standard objects have none.
-            cx.evaluateString(scope, PRELUDE, "prelude.js", 1, null)
-            cx.evaluateString(scope, source, "jscratch-sb3.js", 1, null)
-        } finally {
-            Context.exit()
-        }
-    }
+    private val scope: ScriptableObject = Rhino.load(BUNDLE)
 
     override fun parse(text: String): JsonValue = Json.parseToJsonElement(text).toTree()
 
     override fun parseProject(text: String): JsonValue {
-        val cx = enter()
+        val cx = Rhino.enterContext()
         try {
             val module = ScriptableObject.getProperty(scope, "jscratchSb3") as Scriptable
             val fn = ScriptableObject.getProperty(module, "parseProjectToJson") as Function
@@ -58,17 +43,7 @@ class RhinoProjectJson : ProjectJson {
         }
     }
 
-    private fun enter(): Context {
-        val cx = Context.enter()
-        cx.languageVersion = Context.VERSION_ES6
-        // The bundle is far bigger than one JVM method may be; the interpreter handles it without limits.
-        cx.isInterpretedMode = true
-        return cx
-    }
-
     companion object {
         private const val BUNDLE = "/org/jscratch/compiler/jvm/jscratch-sb3.js"
-        private const val PRELUDE =
-            "var console = { log: function () {}, info: function () {}, warn: function () {}, error: function () {} };"
     }
 }
