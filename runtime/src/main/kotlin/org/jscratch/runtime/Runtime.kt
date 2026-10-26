@@ -30,7 +30,7 @@ class Runtime {
 
     val headlessFrames: Int = Integer.getInteger("jscratch.headless", -1)
     val headless: Boolean get() = headlessFrames >= 0
-    val sounds = Sounds(enabled = !headless)
+    val sounds = Sounds(this)
 
     @Volatile var mouseX: Double = 0.0
 
@@ -42,6 +42,9 @@ class Runtime {
 
     @Volatile var redrawRequested: Boolean = false
     private var frameIndex: Long = 0
+
+    /** How many frames have run. */
+    val frameCount: Long get() = frameIndex
     private var timerStartMs: Double = 0.0
 
     @Volatile var answer: String = ""
@@ -253,6 +256,14 @@ class Runtime {
         ScriptThread.current()?.yieldNow(true)
     }
 
+    /**
+     * Called from inside a script: waits for the next frame even in "run without screen refresh",
+     * like a block in scratch-vm that returns a promise.
+     */
+    fun yieldFrame() {
+        ScriptThread.current()?.yieldFrame()
+    }
+
     fun wait(seconds: Double) {
         val durationMs = Math.max(0.0, seconds * 1000.0)
         val end = nowMillis() + durationMs
@@ -282,19 +293,23 @@ class Runtime {
 
     private fun stopAllInternal() {
         for (t in threads) t.killed = true
+        sounds.stopAll()
         for (t in allTargets()) {
             t.clearSay()
-            // scratch-vm clears graphic effects on stop, and so on every green flag.
+            // scratch-vm clears graphic and sound effects on stop, and so on every green flag. The
+            // sounds are stopped already, so there is nothing to apply the cleared effects to.
             t.clearEffects()
+            t.pitch = 0.0
+            t.pan = 0.0
         }
         sprites.removeAll { it.isClone }
-        sounds.stopAll()
         pendingQuestion = null
         answered = true
         window?.cancelAsk()
     }
 
     fun stopOtherScripts(target: Target) {
+        sounds.stopWaiting(target)
         val me = ScriptThread.current()
         for (t in threads) {
             if (t.target === target && t !== me) t.killed = true
@@ -319,6 +334,7 @@ class Runtime {
 
     fun removeClone(clone: Target) {
         sprites.remove(clone)
+        sounds.remove(clone)
         val me = ScriptThread.current()
         for (t in threads) {
             if (t.target === clone && t !== me) t.killed = true

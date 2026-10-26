@@ -46,6 +46,12 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
 
     @JvmField var volume: Double = 100.0
 
+    /** The pitch sound effect, -360 to 360. */
+    @JvmField var pitch: Double = 0.0
+
+    /** The pan sound effect, -100 (left) to 100 (right). */
+    @JvmField var pan: Double = 0.0
+
     @JvmField var ghost: Double = 0.0
 
     /** Every graphic effect besides [ghost]. */
@@ -127,6 +133,8 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         rotationStyle = src.rotationStyle
         currentCostume = src.currentCostume
         volume = src.volume
+        pitch = src.pitch
+        pan = src.pan
         ghost = src.ghost
         effects = src.effects
         effected = src.effected
@@ -885,40 +893,101 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
 
     // ---- sound ----------------------------------------------------------------------------------
 
-    private fun soundFor(option: Any?): SoundAsset? {
-        if (sounds.isEmpty()) return null
+    /** The index of the sound a menu value or expression picks, or -1 for none. */
+    private fun soundIndex(option: Any?): Int {
+        if (sounds.isEmpty()) return -1
         if (option is Double) {
             val n = sounds.size
-            return sounds[(((Math.round(option - 1) % n) + n) % n).toInt()]
+            return (((Math.round(option - 1) % n) + n) % n).toInt()
         }
 
         val s = Cast.toString(option)
-        sounds.firstOrNull { it.name == s }?.let { return it }
+        val named = sounds.indexOfFirst { it.name == s }
+        if (named >= 0) return named
         val n = Cast.toNumberOrNaN(s)
-        if (!n.isNaN() && !Cast.isWhiteSpace(s)) return soundFor(n)
-        return null
+        if (!n.isNaN() && !Cast.isWhiteSpace(s)) return soundIndex(n)
+        return -1
     }
 
     fun playSound(option: Any?) {
-        val s = soundFor(option) ?: return
-        rt.sounds.play(s, volume)
+        val i = soundIndex(option)
+        if (i >= 0) rt.sounds.play(this, i, false)
     }
 
+    /**
+     * Waits until the sound has played to its end, which the pitch effect makes sooner or later,
+     * or until it stops or starts over: stop all sounds, or this sprite or a clone of it playing
+     * the same sound again, ends the wait, as it does in Scratch. It waits a whole frame at a time
+     * even without screen refresh, because scratch-vm's block returns a promise.
+     */
     fun playSoundUntilDone(option: Any?) {
-        val s = soundFor(option) ?: return
-        val secs = rt.sounds.play(s, volume)
-        if (secs > 0) rt.wait(secs)
+        val i = soundIndex(option)
+        if (i < 0) return
+        val player = rt.sounds.play(this, i, true) ?: return
+        val stops = player.stops
+        if (player.isFinished(stops, rt.nowMillis())) return
+        rt.requestRedraw()
+        do {
+            rt.yieldFrame()
+        } while (!player.isFinished(stops, rt.nowMillis()))
     }
 
     fun stopAllSounds() = rt.sounds.stopAll()
 
+    /**
+     * Volume and sound effect blocks wait for the next frame, even without screen refresh, as in
+     * scratch-vm. NaN counts as 0, like Scratch's `Cast.toNumber`.
+     */
     fun setVolume(v: Double) {
-        volume = v.coerceIn(0.0, 100.0)
+        volume = (if (v.isNaN()) 0.0 else v).coerceIn(0.0, 100.0)
+        rt.sounds.update(this)
+        rt.yieldFrame()
     }
 
-    fun changeVolume(d: Double) = setVolume(volume + d)
+    fun changeVolume(d: Double) = setVolume(volume + (if (d.isNaN()) 0.0 else d))
 
     fun getVolume(): Double = volume
+
+    fun setSoundEffect(effect: String, value: Double) {
+        val name = effect.lowercase()
+        if (soundEffect(name) != null) {
+            setSoundEffectNamed(name, if (value.isNaN()) 0.0 else value)
+        } else {
+            unknownSoundEffect(effect)
+        }
+    }
+
+    fun changeSoundEffect(effect: String, delta: Double) {
+        val name = effect.lowercase()
+        val current = soundEffect(name)
+        if (current != null) {
+            setSoundEffectNamed(name, current + (if (delta.isNaN()) 0.0 else delta))
+        } else {
+            unknownSoundEffect(effect)
+        }
+    }
+
+    /** The value of the sound effect [name], which is already lower case, or null for an unknown effect. */
+    private fun soundEffect(name: String): Double? = when (name) {
+        "pitch" -> pitch
+        "pan" -> pan
+        else -> null
+    }
+
+    /** Sets the known sound effect [name], which is already lower case. */
+    private fun setSoundEffectNamed(name: String, value: Double) {
+        if (name == "pitch") pitch = value.coerceIn(-360.0, 360.0) else pan = value.coerceIn(-100.0, 100.0)
+        rt.sounds.update(this)
+        rt.yieldFrame()
+    }
+
+    private fun unknownSoundEffect(effect: String) = Log.warn("Unknown sound effect '$effect'; it does nothing.")
+
+    fun clearSoundEffects() {
+        pitch = 0.0
+        pan = 0.0
+        rt.sounds.update(this)
+    }
 
     // ---- pen ------------------------------------------------------------------------------------
 

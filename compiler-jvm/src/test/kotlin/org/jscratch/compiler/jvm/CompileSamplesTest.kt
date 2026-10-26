@@ -69,15 +69,34 @@ class CompileSamplesTest {
     /**
      * An MP3 and an IMA ADPCM WAV. Headless runs decode sounds without playing them, so "play
      * sound until done" waits for the decoded length on the virtual clock: 0.5 s for the MP3,
-     * then 0.37 s for the WAV (whole ADPCM blocks).
+     * then 0.37 s for the WAV (whole ADPCM blocks). The pitch effect changes how long the MP3
+     * plays, in whole frames of 1/30 s.
      */
     @Test
     fun compilesAndRunsSoundsProject() {
         val result = JScratch.compile(File(samplesDir, "sounds.sb3").readBytes(), runtimeJar.readBytes(), json)
         assertEquals(emptyList(), result.warnings, "unexpected warnings")
 
-        val out = runHeadless(result.jar, frames = 60)
-        assertEquals(listOf("Speaker says: 5", "Speaker says: 9"), out.lines().filter { it.startsWith("Speaker ") })
+        val out = runHeadless(result.jar, frames = 200)
+        val expected =
+            listOf(
+                // the MP3 and the WAV, in tenths of a second
+                "5",
+                "9",
+                // an octave up takes 8 frames, in hundredths, then an octave down and cleared, in tenths
+                "27",
+                "10",
+                "5",
+                // set volume and set pan inside "run without screen refresh" wait a frame each
+                "2",
+                // up half an octave after 9 frames: 200 ms of sound left take 141 ms, so 5 more frames, in hundredths
+                "47",
+                // after 5 frames, noticed in the next one: stop all sounds, the same sound played again, and a clone playing it
+                "20",
+                "20",
+                "20",
+            ).map { "Speaker says: $it" }
+        assertEquals(expected, out.lines().filter { it.startsWith("Speaker ") })
     }
 
     /**

@@ -13,7 +13,7 @@ import kotlin.test.assertTrue
 
 class SoundDecodersTest {
     private fun bytes(name: String): ByteArray =
-        assertNotNull(javaClass.getResourceAsStream("/sounds/$name"), "missing test sound $name").use { it.readBytes() }
+        assertNotNull(javaClass.getResourceAsStream("/assets/$name"), "missing test sound $name").use { it.readBytes() }
 
     /** Largest absolute sample value, so a decoder that returns silence fails. */
     private fun peak(pcm: Pcm): Int {

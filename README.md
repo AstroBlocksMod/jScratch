@@ -21,7 +21,7 @@ java -jar cli/build/libs/cli-0.1.0-SNAPSHOT-all.jar https://scratch.mit.edu/proj
 
 ## Status
 
-This is an MVP. Typical projects from the Scratch website compile and run, with gaps listed in [docs/blocks.md](docs/blocks.md): no sound effects, no extensions besides pen.
+This is an MVP. Typical projects from the Scratch website compile and run, with gaps listed in [docs/blocks.md](docs/blocks.md), such as no extensions besides pen.
 
 ## Repository
 
