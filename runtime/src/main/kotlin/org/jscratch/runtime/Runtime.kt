@@ -1,5 +1,6 @@
 package org.jscratch.runtime
 
+import java.net.NetworkInterface
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 
@@ -64,6 +65,10 @@ class Runtime {
 
     /** What `username` reports. Projects run outside the Scratch website, so nobody is signed in unless this is set. */
     val username: String = System.getProperty("jscratch.username", "")
+
+    private var online: Boolean = true
+    private var onlineCheckedNanos: Long = 0
+    private var onlineChecked: Boolean = false
 
     private val keysDown: MutableSet<String> = ConcurrentHashMap.newKeySet()
     private val events = ConcurrentLinkedQueue<Event>()
@@ -495,6 +500,31 @@ class Runtime {
 
     fun resetTimer() {
         timerStartMs = nowMillis()
+    }
+
+    /**
+     * `online?`: whether the computer has a network connection, like a browser's `navigator.onLine`,
+     * which the Scratch block reports. That means some network interface other than loopback is up
+     * with an address that is not link-local, since macOS keeps link-local ones like AirDrop's up even
+     * offline. Listing the interfaces takes a moment, so the answer is kept for a second.
+     */
+    fun online(): Boolean {
+        val now = System.nanoTime()
+        if (!onlineChecked || now - onlineCheckedNanos >= 1_000_000_000L) {
+            onlineChecked = true
+            onlineCheckedNanos = now
+            online =
+                try {
+                    NetworkInterface.networkInterfaces().anyMatch { nif ->
+                        nif.isUp && !nif.isLoopback &&
+                            nif.inetAddresses().anyMatch { !it.isLoopbackAddress && !it.isLinkLocalAddress }
+                    }
+                } catch (_: Exception) {
+                    // Like TurboWarp outside a browser: when there is no way to tell, assume a connection.
+                    true
+                }
+        }
+        return online
     }
 
     /** Microphone loudness from 0 to 100, measured once a frame like scratch-vm does, or -1 without a microphone. */

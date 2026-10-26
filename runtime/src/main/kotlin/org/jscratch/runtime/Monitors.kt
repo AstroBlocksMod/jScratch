@@ -62,6 +62,7 @@ class Monitor(
             "sensing_current" -> t.current(param)
             "sensing_loudness" -> rt.loudness()
             "sensing_username" -> rt.username
+            "sensing_online" -> rt.online()
             else -> ""
         }
     }

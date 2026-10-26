@@ -924,6 +924,8 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
 
     fun username(): String = rt.username
 
+    fun online(): Boolean = rt.online()
+
     /** `loud?` from Scratch 2 projects. */
     fun loud(): Boolean = rt.loudness() > 10.0
 

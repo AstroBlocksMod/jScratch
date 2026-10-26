@@ -113,7 +113,7 @@
         },
         "s3": {
           "opcode": "sensing_setdragmode",
-          "next": null,
+          "next": "s4",
           "parent": "s2",
           "inputs": {},
           "fields": {
@@ -122,6 +122,95 @@
               null
             ]
           },
+          "shadow": false,
+          "topLevel": false
+        },
+        "s4": {
+          "opcode": "looks_say",
+          "next": null,
+          "parent": "s3",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "o1",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "o1": {
+          "opcode": "operator_join",
+          "next": null,
+          "parent": "s4",
+          "inputs": {
+            "STRING1": [
+              1,
+              [
+                10,
+                "online "
+              ]
+            ],
+            "STRING2": [
+              2,
+              "o2"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "o2": {
+          "opcode": "operator_or",
+          "next": null,
+          "parent": "o1",
+          "inputs": {
+            "OPERAND1": [
+              2,
+              "o3"
+            ],
+            "OPERAND2": [
+              2,
+              "o4"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "o3": {
+          "opcode": "sensing_online",
+          "next": null,
+          "parent": "o2",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "o4": {
+          "opcode": "operator_not",
+          "next": null,
+          "parent": "o2",
+          "inputs": {
+            "OPERAND": [
+              2,
+              "o5"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "o5": {
+          "opcode": "sensing_online",
+          "next": null,
+          "parent": "o4",
+          "inputs": {},
+          "fields": {},
           "shadow": false,
           "topLevel": false
         }

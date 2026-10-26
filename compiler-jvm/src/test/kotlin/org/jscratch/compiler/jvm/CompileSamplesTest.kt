@@ -216,16 +216,25 @@ class CompileSamplesTest {
         assertEquals(expected, out.lines().filter { it.startsWith("Ball ") })
     }
 
-    /** `username` reports the `jscratch.username` property, and nothing without it. */
+    /**
+     * `username` reports the `jscratch.username` property, and nothing without it. Whether the machine is
+     * online varies, so the project only says whether `online?` is a boolean.
+     */
     @Test
     fun compilesAndRunsSensingProject() {
         val result = JScratch.compile(File(samplesDir, "sensing.sb3").readBytes(), runtimeJar.readBytes(), json)
         assertEquals(emptyList(), result.warnings, "unexpected warnings")
 
         val named = runHeadless(result.jar, frames = 10, "-Djscratch.username=ada")
-        assertEquals(listOf("Cat says: user: ada"), named.lines().filter { it.startsWith("Cat ") })
+        assertEquals(
+            listOf("Cat says: user: ada", "Cat says: online true"),
+            named.lines().filter { it.startsWith("Cat ") },
+        )
         val anonymous = runHeadless(result.jar, frames = 10)
-        assertEquals(listOf("Cat says: user: "), anonymous.lines().filter { it.startsWith("Cat ") })
+        assertEquals(
+            listOf("Cat says: user: ", "Cat says: online true"),
+            anonymous.lines().filter { it.startsWith("Cat ") },
+        )
     }
 
     /**

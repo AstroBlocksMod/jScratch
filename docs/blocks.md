@@ -44,7 +44,7 @@ wait, repeat, forever, if, if else, wait until, repeat until, while, stop (all, 
 
 ## Sensing
 
-touching (mouse, edge, sprite), touching color, color is touching color, distance to, ask and wait with answer, key pressed, mouse down, mouse x and y, loudness, timer, reset timer, "of" (sprite and stage properties and variables), current date and time, days since 2000, and loud? from Scratch 2 projects (loudness above 10).
+touching (mouse, edge, sprite), touching color, color is touching color, distance to, ask and wait with answer, key pressed, mouse down, mouse x and y, loudness, timer, reset timer, "of" (sprite and stage properties and variables), current date and time, days since 2000, set drag mode, username, online?, and loud? from Scratch 2 projects (loudness above 10).
 
 Loudness listens to the default microphone through `javax.sound.sampled`, which opens the first time a project asks for the loudness, as in Scratch. It is measured the way scratch-audio does it, once a frame: the RMS of the last 2048 samples, falling no faster than 40% a frame, mapped to 0 through 100. It is -1 until the microphone is open, for good when there is none, and always in headless mode. On macOS the app that starts Java (the terminal or editor, for example) needs microphone access, which is under Privacy & Security in System Settings. Without it macOS hands out only silence, so the loudness also stays at -1 until the microphone hears something, and after two seconds of silence the runtime prints a note about the permission.
 
@@ -55,6 +55,8 @@ Touching color looks at what the stage shows under every opaque pixel of the spr
 Set drag mode works like dragging in the Scratch player. Pressing on a draggable sprite picks it up once the mouse moves more than 3 pixels of the window or stays down for 400 ms. Set drag mode on the stage does nothing, as in Scratch. The sprite jumps to the front and follows the mouse, keeping the spot where it was grabbed under the pointer, and stays inside the stage like any sprite. While it is being dragged, scripts cannot move it, the pen does not draw, and other sprites do not touch it, though it can still touch them. Sprites saved as draggable in the project start that way, and clones copy the setting.
 
 Username reports the value of the `jscratch.username` system property (`java -Djscratch.username=ada -jar game.jar`), and an empty string without it, like a Scratch project run by someone who is not signed in.
+
+Online? is true when the computer has a network connection, the way a browser's `navigator.onLine` sees it: some network interface other than loopback is up with an address that is not link-local. It is checked at most once a second.
 
 Not supported: video sensing.
 
@@ -72,7 +74,7 @@ Monitors are drawn the way the Scratch player draws them, with scratch-gui's siz
 
 - **Variables** show as a normal readout, a large readout or a slider, whichever the project saved. Dragging a slider's bar sets the variable, snapping to whole numbers or to hundredths like in Scratch.
 - **Lists** show their items with index numbers and the length, at the size saved in the project. The mouse wheel scrolls a long list.
-- **Built-in reporters** with a checkbox in the editor can be monitored too: x position, y position, direction, costume and backdrop number or name, size, volume, answer, timer, current date and time, username and loudness.
+- **Built-in reporters** with a checkbox in the editor can be monitored too: x position, y position, direction, costume and backdrop number or name, size, volume, answer, timer, current date and time, username, online and loudness.
 - Numbers are rounded to six decimal places for display, as in Scratch.
 - show and hide variable and show and hide list work on every variable and list, including ones that never had a monitor and ones a block uses without declaring them. A monitor shown for the first time is placed where scratch-gui would place it, in the first free spot from the top left.
 - Clicks on a monitor do not reach the project, so they do not trigger `when stage clicked` or `mouse down?`.

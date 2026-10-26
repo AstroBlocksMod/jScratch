@@ -1390,6 +1390,9 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
             "sensing_loud" -> {
                 call("loud", "()Z", VType.BOOL) {}
             }
+            "sensing_online" -> {
+                call("online", "()Z", VType.BOOL) {}
+            }
             else -> {
                 ctx.warn("Unsupported reporter '${b.opcode}' in '${target.name}' reports an empty value")
                 mv.visitVarInsn(ALOAD, 0)
