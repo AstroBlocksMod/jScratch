@@ -42,6 +42,8 @@ broadcast, broadcast and wait. Broadcasts restart scripts that are already runni
 
 wait, repeat, forever, if, if else, wait until, repeat until, while, stop (all, this script, other scripts in sprite), create clone of, delete this clone. Clones are capped at 300.
 
+The editor hides a few control blocks that still load from Scratch 2 projects, and they work too. For each sets its variable to 1, 2, 3 and so on while it is below the value, which is read again before every round, and waits for the next frame after each round like repeat. The counter blocks (counter, increment counter, clear counter) share one counter between all sprites, which only starts over when the project starts, as in Scratch. All at once runs the blocks inside it, as in Scratch 3.
+
 ## Sensing
 
 touching (mouse, edge, sprite), touching color, color is touching color, distance to, ask and wait with answer, key pressed, mouse down, mouse x and y, loudness, timer, reset timer, "of" (sprite and stage properties and variables), current date and time, days since 2000, set drag mode, username, online?, and loud? from Scratch 2 projects (loudness above 10).

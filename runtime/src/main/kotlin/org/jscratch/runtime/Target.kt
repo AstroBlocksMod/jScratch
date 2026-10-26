@@ -503,6 +503,18 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         throw StopScript()
     }
 
+    // The counter blocks hidden in Scratch 3 for Scratch 2 projects. Every target shares the one counter.
+
+    fun counter(): Double = rt.counter
+
+    fun incrCounter() {
+        rt.counter++
+    }
+
+    fun clearCounter() {
+        rt.counter = 0.0
+    }
+
     fun broadcast(name: Any?) {
         rt.broadcast(Cast.toString(name))
     }

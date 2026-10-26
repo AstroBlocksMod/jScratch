@@ -23,7 +23,9 @@ import org.objectweb.asm.Opcodes.DCMPL
 import org.objectweb.asm.Opcodes.DCONST_0
 import org.objectweb.asm.Opcodes.DCONST_1
 import org.objectweb.asm.Opcodes.DDIV
+import org.objectweb.asm.Opcodes.DLOAD
 import org.objectweb.asm.Opcodes.DMUL
+import org.objectweb.asm.Opcodes.DSTORE
 import org.objectweb.asm.Opcodes.DSUB
 import org.objectweb.asm.Opcodes.DUP
 import org.objectweb.asm.Opcodes.DUP_X1
@@ -35,6 +37,7 @@ import org.objectweb.asm.Opcodes.IAND
 import org.objectweb.asm.Opcodes.ICONST_0
 import org.objectweb.asm.Opcodes.ICONST_1
 import org.objectweb.asm.Opcodes.IFEQ
+import org.objectweb.asm.Opcodes.IFGE
 import org.objectweb.asm.Opcodes.IFGT
 import org.objectweb.asm.Opcodes.IFLE
 import org.objectweb.asm.Opcodes.IFLT
@@ -772,6 +775,11 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
                 thisCall(st, "wait", "(D)V") { emitExpr(st, b.inputs["DURATION"], VType.NUM) }
             }
             "control_repeat" -> emitRepeat(st, b)
+            "control_for_each" -> emitForEach(st, b)
+            // Hidden blocks from Scratch 2 projects. "all at once" just runs its blocks, as in Scratch 3.
+            "control_all_at_once" -> emitSubstack(st, b, "SUBSTACK")
+            "control_incr_counter" -> thisCall(st, "incrCounter", "()V") {}
+            "control_clear_counter" -> thisCall(st, "clearCounter", "()V") {}
             "control_forever" -> {
                 val loop = Label()
                 mv.visitLabel(loop)
@@ -961,6 +969,38 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
         mv.visitJumpInsn(IFLE, end)
         emitSubstack(st, b, "SUBSTACK")
         mv.visitIincInsn(counter, -1)
+        thisCall(st, "yieldLoop", "()V") {}
+        mv.visitJumpInsn(GOTO, loop)
+        mv.visitLabel(end)
+    }
+
+    /**
+     * `for each` from Scratch 2 projects: sets the variable to 1, 2, 3 and so on while it is below the
+     * value, which is read again before every round, and yields after each round like `repeat`.
+     */
+    private fun emitForEach(st: MethodState, b: Block) {
+        val mv = st.mv
+        val slot = variableSlot(b, false) ?: return
+        val index = st.allocLocal(2)
+        mv.visitInsn(DCONST_0)
+        mv.visitVarInsn(DSTORE, index)
+        val loop = Label()
+        val end = Label()
+        mv.visitLabel(loop)
+        mv.visitVarInsn(DLOAD, index)
+        emitExpr(st, b.inputs["VALUE"], VType.NUM)
+        // dcmpg yields 1 for NaN, which ends the loop like a failed `<` would.
+        mv.visitInsn(DCMPG)
+        mv.visitJumpInsn(IFGE, end)
+        mv.visitVarInsn(DLOAD, index)
+        mv.visitInsn(DCONST_1)
+        mv.visitInsn(DADD)
+        mv.visitVarInsn(DSTORE, index)
+        emitSetSlot(st, slot) {
+            mv.visitVarInsn(DLOAD, index)
+            coerce(mv, VType.NUM, VType.ANY)
+        }
+        emitSubstack(st, b, "SUBSTACK")
         thisCall(st, "yieldLoop", "()V") {}
         mv.visitJumpInsn(GOTO, loop)
         mv.visitLabel(end)
@@ -1393,6 +1433,9 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
             "sensing_online" -> {
                 call("online", "()Z", VType.BOOL) {}
             }
+            "control_get_counter" -> {
+                call("counter", "()D", VType.NUM) {}
+            }
             else -> {
                 ctx.warn("Unsupported reporter '${b.opcode}' in '${target.name}' reports an empty value")
                 mv.visitVarInsn(ALOAD, 0)
@@ -1470,6 +1513,7 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
                 "motion_xposition", "motion_yposition", "motion_direction", "looks_size", "sound_volume",
                 "sensing_mousex", "sensing_mousey", "sensing_timer", "sensing_dayssince2000", "sensing_current",
                 "sensing_distanceto", "sensing_loudness", "data_lengthoflist", "data_itemnumoflist",
+                "control_get_counter",
                 -> VType.NUM
                 "operator_join", "operator_letter_of", "sensing_answer", "sensing_username", "data_listcontents",
                 -> VType.STR

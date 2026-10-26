@@ -216,6 +216,27 @@ class CompileSamplesTest {
         assertEquals(expected, out.lines().filter { it.startsWith("Ball ") })
     }
 
+    /** Blocks hidden in Scratch 3 that still load from Scratch 2 projects. */
+    @Test
+    fun compilesAndRunsScratch2Project() {
+        val result = JScratch.compile(File(samplesDir, "scratch2.sb3").readBytes(), runtimeJar.readBytes(), json)
+        assertEquals(emptyList(), result.warnings, "unexpected warnings")
+
+        val out = runHeadless(result.jar, frames = 30)
+        val expected =
+            listOf(
+                // for each counts from 1 and leaves the variable at the last value
+                "each 1",
+                "each 2",
+                "each 3",
+                "after 3",
+                "counter 2",
+                "all at once",
+                "done",
+            ).map { "Cat says: $it" }
+        assertEquals(expected, out.lines().filter { it.startsWith("Cat ") })
+    }
+
     /**
      * `username` reports the `jscratch.username` property, and nothing without it. Whether the machine is
      * online varies, so the project only says whether `online?` is a boolean.

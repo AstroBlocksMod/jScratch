@@ -66,6 +66,9 @@ class Runtime {
     /** What `username` reports. Projects run outside the Scratch website, so nobody is signed in unless this is set. */
     val username: String = System.getProperty("jscratch.username", "")
 
+    /** The counter of the Scratch 2 counter blocks. Like scratch-vm's, only loading the project resets it. */
+    var counter: Double = 0.0
+
     private var online: Boolean = true
     private var onlineCheckedNanos: Long = 0
     private var onlineChecked: Boolean = false
