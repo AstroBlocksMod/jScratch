@@ -28,7 +28,7 @@ Graphic effects: set effect to, change effect by and clear graphic effects, for 
 
 ## Sound
 
-play sound, play sound until done, stop all sounds, set and change volume, volume. MP3 and WAV sounds play, including the ADPCM WAV files common in projects that started in Scratch 2. Sounds up to 10 seconds long are decoded when the project starts, and longer ones while they play. The timer restarts with every green flag, as in Scratch.
+play sound, play sound until done, stop all sounds, set and change volume, volume. WAV and MP3 sounds play, including the ADPCM WAV files common in library sounds and in projects that started in Scratch 2. Sounds up to 10 seconds long are decoded when the project starts, and longer ones while they play. The timer restarts with every green flag, as in Scratch.
 
 As in Scratch 3, a sound never plays twice at once within a sprite: playing a sound that is still playing starts it over, also when a clone of the sprite plays it, and "play sound until done" waiting on it stops waiting. Playing a sound again in the same frame from the same sprite or clone leaves it playing and only ends those waits. Stopped and restarted sounds fade out over 25 ms. Stop other scripts in sprite and deleting a clone stop the sounds that sprite or clone started with "play sound until done" and that no other clone has started since, the way scratch-vm does.
 

@@ -90,7 +90,7 @@ Input events from Swing are queued and applied at the start of the next frame on
 
 ## Sound
 
-The JDK's `javax.sound` plays PCM WAV only, while projects saved by the Scratch editor mostly hold MP3, and older ones ADPCM WAV. The runtime decodes both with dr_mp3 and dr_wav, two C libraries that are compiled to JVM bytecode at build time:
+WAV is Scratch's default sound format. The editor saves every sound it records or edits as WAV, so an uploaded MP3 stays MP3 only until it is edited, and many library sounds and projects that started in Scratch 2 hold ADPCM WAV. The JDK's `javax.sound` plays PCM WAV only, so the runtime decodes every sound itself with dr_mp3 and dr_wav, two C libraries that are compiled to JVM bytecode at build time:
 
 ```mermaid
 flowchart LR
