@@ -41,6 +41,9 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
 
     @JvmField var draggable: Boolean = false
 
+    /** Whether the mouse is dragging this sprite right now. */
+    @JvmField var dragging: Boolean = false
+
     @JvmField var rotationStyle: RotationStyle = RotationStyle.ALL_AROUND
 
     @JvmField var layerOrder: Int = 0
@@ -404,7 +407,8 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         var bottom = Double.POSITIVE_INFINITY
         var top = Double.NEGATIVE_INFINITY
         for (other in rt.sprites) {
-            if (other === this || other.name != spriteName || !other.visible) continue
+            // A sprite being dragged can touch others, but nothing touches it, as in Scratch 2 and 3.
+            if (other === this || other.name != spriteName || !other.visible || other.dragging) continue
             val ob = other.touchingBounds() ?: continue
             if (!ob.intersects(mine)) continue
             probes.add(other.probe() ?: continue)
@@ -509,7 +513,15 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
 
     // ---- motion ---------------------------------------------------------------------------------
 
+    /** Moves the sprite. As in Scratch, scripts cannot move a sprite while the mouse drags it. */
     fun setXY(nx: Double, ny: Double) {
+        if (!dragging) moveTo(nx, ny, true)
+    }
+
+    /** Moves the sprite where the mouse drags it. Like in Scratch, that never draws with the pen. */
+    internal fun dragTo(nx: Double, ny: Double) = moveTo(nx, ny, false)
+
+    private fun moveTo(nx: Double, ny: Double, drawPen: Boolean) {
         if (isStage) return
         var tx = if (nx.isNaN()) 0.0 else nx
         var ty = if (ny.isNaN()) 0.0 else ny
@@ -520,7 +532,7 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         val oy = y
         x = tx
         y = ty
-        if (pen.down) rt.pen.line(ox, oy, tx, ty, pen)
+        if (drawPen && pen.down) rt.pen.line(ox, oy, tx, ty, pen)
         if (visible) rt.requestRedraw()
     }
 
@@ -903,6 +915,13 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
     fun resetTimer() = rt.resetTimer()
 
     fun loudness(): Double = rt.loudness()
+
+    /** `set drag mode`: the mouse can drag a draggable sprite around the stage. */
+    fun setDragMode(mode: String) {
+        draggable = mode == "draggable"
+    }
+
+    fun username(): String = rt.username
 
     /** `loud?` from Scratch 2 projects. */
     fun loud(): Boolean = rt.loudness() > 10.0

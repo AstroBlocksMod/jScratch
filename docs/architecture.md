@@ -86,7 +86,7 @@ Collision follows scratch-render. Each costume image gets a `Silhouette`, built 
 
 Color sensing follows scratch-render's CPU path and never reads the window. It walks the whole stage pixels inside the sprite's bounds and, at each pixel where the sprite is opaque (or has the mask color for `color is touching color`), samples every other layer by nearest neighbor through the same inverse transforms and graphic effects: the visible sprites whose bounds overlap, front to back, then the pen layer, then the backdrop. The premultiplied colors are blended the way `gl.blendFunc(ONE, ONE_MINUS_SRC_ALPHA)` would, over white, rounding each channel after every step as scratch-render's byte arrays do, and the first pixel whose blend matches ends the search. The silhouette only copies a costume's colors out of its image the first time a color block needs them, and a premultiplied copy the first time a graphic effect other than ghost draws it. Costumes that use neither keep just the bit mask.
 
-Input events from Swing are queued and applied at the start of the next frame on the scheduler thread, which is where hats are started.
+Input events from Swing are queued and applied at the start of the next frame on the scheduler thread, which is where hats are started. Dragging happens there too, as scratch-gui does it in the Scratch player: the runtime remembers where the mouse went down, picks up a draggable sprite once the mouse moved far enough or was held long enough, and moves it with the mouse once a frame, past the check that keeps scripts from moving a sprite that is being dragged.
 
 ## Sound
 

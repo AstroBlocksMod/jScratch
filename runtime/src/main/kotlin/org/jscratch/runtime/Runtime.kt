@@ -41,6 +41,23 @@ class Runtime {
     @Volatile var mouseY: Double = 0.0
 
     @Volatile var mouseDown: Boolean = false
+
+    /** Where the mouse went down, while the button is held over the stage. NaN when it is up. */
+    private var pressX: Double = Double.NaN
+    private var pressY: Double = Double.NaN
+    private var pressNanos: Long = 0
+
+    /** Whether the press has been held long enough to try to start a drag without moving. */
+    private var pressTimedOut: Boolean = false
+
+    /** The sprite the mouse is dragging, and the sprite's position relative to the mouse. */
+    private var dragged: Sprite? = null
+    private var dragOffsetX: Double = 0.0
+    private var dragOffsetY: Double = 0.0
+
+    /** What `username` reports. Projects run outside the Scratch website, so nobody is signed in unless this is set. */
+    val username: String = System.getProperty("jscratch.username", "")
+
     private val keysDown: MutableSet<String> = ConcurrentHashMap.newKeySet()
     private val events = ConcurrentLinkedQueue<Event>()
 
@@ -71,7 +88,9 @@ class Runtime {
     sealed class Event {
         class KeyDown(val key: String) : Event()
 
-        class Click(val x: Double, val y: Double) : Event()
+        class MouseDown(val x: Double, val y: Double) : Event()
+
+        class MouseUp(val x: Double, val y: Double) : Event()
 
         object GreenFlag : Event()
 
@@ -198,12 +217,19 @@ class Runtime {
                 is Event.MonitorScroll -> monitors.getOrNull(e.index)?.let {
                     it.scroll = Math.max(0.0, it.scroll + e.delta)
                 }
-                is Event.Click -> {
-                    val hit = sprites.asReversed().firstOrNull { it.ghost < 100.0 && it.touchingPoint(e.x, e.y) }
-                    if (hit != null) startHats(HAT_CLICKED, "", hit) else startHats(HAT_CLICKED, "", stage)
+                is Event.MouseDown -> {
+                    pressX = e.x
+                    pressY = e.y
+                    pressNanos = System.nanoTime()
+                    pressTimedOut = false
+                    // A draggable target starts its click hats when the mouse goes up instead, if it was not dragged.
+                    val hit = pick(e.x, e.y)
+                    if (!hit.draggable) startHats(HAT_CLICKED, "", hit)
                 }
+                is Event.MouseUp -> mouseUp(e.x, e.y)
             }
         }
+        updateDrag()
 
         val q = pendingQuestion
         if (q != null && !answered && window != null && !window!!.isAsking) {
@@ -213,6 +239,61 @@ class Runtime {
                 pendingQuestion = null
             }
         }
+    }
+
+    // ---- dragging -------------------------------------------------------------------------------
+    //
+    // In Scratch, scratch-gui drags sprites: a press on a draggable sprite becomes a drag once the mouse
+    // moves more than 3 pixels or stays down for 400 ms. The sprite jumps to the front and follows the
+    // mouse, and a press that became a drag is not a click.
+
+    /** The topmost sprite with an opaque pixel under the stage point, or the stage. Fully ghosted sprites are skipped. */
+    private fun pick(x: Double, y: Double): Target =
+        sprites.asReversed().firstOrNull { it.ghost < 100.0 && it.touchingPoint(x, y) } ?: stage
+
+    /** Starts or continues a drag, once a frame while the mouse is held. */
+    private fun updateDrag() {
+        if (pressX.isNaN()) return
+        if (dragged == null) {
+            if (movedFromPress(mouseX, mouseY)) {
+                startDrag()
+            } else if (!pressTimedOut && System.nanoTime() - pressNanos >= DRAG_DELAY_NANOS) {
+                // scratch-gui tries this once, so a sprite passing under a mouse held still is not picked up.
+                pressTimedOut = true
+                startDrag()
+            }
+        }
+        dragged?.dragTo(mouseX + dragOffsetX, mouseY + dragOffsetY)
+    }
+
+    private fun movedFromPress(x: Double, y: Double): Boolean = Math.hypot(x - pressX, y - pressY) > DRAG_THRESHOLD
+
+    /** Picks up the sprite where the mouse went down, if it is draggable. */
+    private fun startDrag() {
+        val hit = pick(pressX, pressY) as? Sprite ?: return
+        if (!hit.draggable) return
+        moveToLayer(hit, true)
+        hit.dragging = true
+        dragged = hit
+        dragOffsetX = hit.x - pressX
+        dragOffsetY = hit.y - pressY
+    }
+
+    private fun mouseUp(x: Double, y: Double) {
+        if (pressX.isNaN()) return
+        // A press released this far away became a drag on the way, even if no frame saw the mouse move.
+        if (dragged == null && movedFromPress(x, y)) startDrag()
+        pressX = Double.NaN
+        pressY = Double.NaN
+        val drag = dragged
+        if (drag != null) {
+            drag.dragTo(x + dragOffsetX, y + dragOffsetY)
+            drag.dragging = false
+            dragged = null
+            return
+        }
+        val hit = pick(x, y)
+        if (hit.draggable) startHats(HAT_CLICKED, "", hit)
     }
 
     /** `show variable`, `hide variable`, `show list` and `hide list`. */
@@ -456,7 +537,7 @@ class Runtime {
         mouseY = y.coerceIn(-STAGE_HEIGHT / 2.0, STAGE_HEIGHT / 2.0)
         if (down != null) {
             mouseDown = down
-            if (down) events.add(Event.Click(mouseX, mouseY))
+            events.add(if (down) Event.MouseDown(mouseX, mouseY) else Event.MouseUp(mouseX, mouseY))
         }
     }
 
@@ -484,6 +565,12 @@ class Runtime {
         const val FPS = 30
         const val MAX_CLONES = 300
         private const val WORK_TIME_NANOS = 750L * 1_000_000L / FPS
+
+        /** How far the mouse moves, in stage units, before a press on a draggable sprite becomes a drag. */
+        private const val DRAG_THRESHOLD = 3.0
+
+        /** How long a press stays still before it becomes a drag anyway. */
+        private const val DRAG_DELAY_NANOS = 400_000_000L
 
         const val HAT_FLAG = 0
         const val HAT_KEY = 1

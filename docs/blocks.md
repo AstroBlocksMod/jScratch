@@ -8,7 +8,7 @@ The compiler handles the blocks below. Anything else compiles to a no-op with a 
 | --- | --- |
 | when green flag clicked | Also runs on launch. |
 | when key pressed | Fires on key down, repeats with the OS key repeat. "any" works. |
-| when this sprite clicked, when stage clicked | A click hits the topmost sprite with an opaque pixel under the mouse. Sprites with a ghost effect of 100 do not catch clicks. |
+| when this sprite clicked, when stage clicked | A click hits the topmost sprite with an opaque pixel under the mouse. Sprites with a ghost effect of 100 do not catch clicks. A draggable sprite is clicked when the mouse goes up instead of down, and not at all when the press dragged it, as in Scratch. |
 | when I receive | Case-insensitive match like Scratch. |
 | when backdrop switches to | Fires on every switch, even to the same backdrop. |
 | when I start as a clone | |
@@ -52,7 +52,11 @@ Touching a sprite or the mouse is pixel-accurate: it compares the opaque pixels 
 
 Touching color looks at what the stage shows under every opaque pixel of the sprite: the other sprites in front to back order (with all their effects), the pen layer, the backdrop (with the stage's effects) and the white stage behind it. Color is touching color only looks under the sprite's pixels that have the first color after its own color and brightness effects, ignoring its ghost effect. Colors match loosely, like in Scratch: the top 5 bits of red and green and the top 4 bits of blue have to agree, and the first color of color is touching color needs the top 6 bits of each channel. Both blocks work while the sprite is hidden, as in Scratch 3.
 
-Not supported: username (reports an empty string), video sensing, drag mode (ignored).
+Set drag mode works like dragging in the Scratch player. Pressing on a draggable sprite picks it up once the mouse moves more than 3 pixels or stays down for 400 ms. The sprite jumps to the front and follows the mouse, keeping the spot where it was grabbed under the pointer, and stays inside the stage like any sprite. While it is being dragged, scripts cannot move it, the pen does not draw, and other sprites do not touch it, though it can still touch them. Sprites saved as draggable in the project start that way, and clones copy the setting.
+
+Username reports the value of the `jscratch.username` system property (`java -Djscratch.username=ada -jar game.jar`), and an empty string without it, like a Scratch project run by someone who is not signed in.
+
+Not supported: video sensing.
 
 ## Operators
 

@@ -61,6 +61,7 @@ class Monitor(
             "sensing_timer" -> rt.timer()
             "sensing_current" -> t.current(param)
             "sensing_loudness" -> rt.loudness()
+            "sensing_username" -> rt.username
             else -> ""
         }
     }

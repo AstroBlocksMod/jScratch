@@ -216,6 +216,18 @@ class CompileSamplesTest {
         assertEquals(expected, out.lines().filter { it.startsWith("Ball ") })
     }
 
+    /** `username` reports the `jscratch.username` property, and nothing without it. */
+    @Test
+    fun compilesAndRunsSensingProject() {
+        val result = JScratch.compile(File(samplesDir, "sensing.sb3").readBytes(), runtimeJar.readBytes(), json)
+        assertEquals(emptyList(), result.warnings, "unexpected warnings")
+
+        val named = runHeadless(result.jar, frames = 10, "-Djscratch.username=ada")
+        assertEquals(listOf("Cat says: user: ada"), named.lines().filter { it.startsWith("Cat ") })
+        val anonymous = runHeadless(result.jar, frames = 10)
+        assertEquals(listOf("Cat says: user: "), anonymous.lines().filter { it.startsWith("Cat ") })
+    }
+
     /**
      * Monitors from the project file, `show` and `hide` blocks, and a monitor placed automatically. The
      * screenshot is checked at spots whose layout does not depend on the font: the colored fill of each

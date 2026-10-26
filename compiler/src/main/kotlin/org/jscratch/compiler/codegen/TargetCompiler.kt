@@ -883,7 +883,9 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
             "sensing_resettimer" -> {
                 thisCall(st, "resetTimer", "()V") {}
             }
-            "sensing_setdragmode" -> {}
+            "sensing_setdragmode" -> {
+                thisCall(st, "setDragMode", "(${RT.D_STRING})V") { mv.visitLdcInsn(field(b, "DRAG_MODE")) }
+            }
 
             // pen
             "pen_clear" -> {
@@ -1380,8 +1382,7 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
                 call("daysSince2000", "()D", VType.NUM) {}
             }
             "sensing_username" -> {
-                mv.visitLdcInsn("")
-                VType.STR
+                call("username", "()${RT.D_STRING}", VType.STR) {}
             }
             "sensing_loudness" -> {
                 call("loudness", "()D", VType.NUM) {}
