@@ -94,6 +94,38 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
     /** Sets a variable from a slider monitor. */
     open fun setMonitorSlot(slot: Int, value: Any?) {}
 
+    /** The current condition of the edge-activated hat of script [id]. */
+    open fun hatPredicate(id: Int): Boolean = false
+
+    // ---- edge-activated hats --------------------------------------------------------------------
+
+    /** The condition of each edge-activated hat when it was last checked, by script, as scratch-vm keeps them. */
+    private var edgeValues = HashMap<Int, Boolean>()
+
+    /**
+     * Checks the condition of the edge-activated hat of script [id] and remembers it. True when the
+     * script should start: the condition is true and was false before, or was never checked.
+     */
+    internal fun edgeActivated(id: Int): Boolean {
+        val value =
+            try {
+                hatPredicate(id)
+            } catch (e: RuntimeException) {
+                Log.warn("The hat of script $id in '$name' failed: $e")
+                false
+            }
+        val old = edgeValues.put(id, value)
+        return value && old != true
+    }
+
+    /** Whether an edge-activated hat of this target was false when last checked, or never checked yet. */
+    internal fun edgeHatWaiting(): Boolean = hats.any { it.kind == Runtime.HAT_EDGE && edgeValues[it.scriptId] != true }
+
+    /** Forgets every hat condition, which the green flag does, so hats that are already true fire again. */
+    fun clearEdgeValues() {
+        edgeValues.clear()
+    }
+
     // ---- setup called from generated constructors -----------------------------------------------
 
     fun addCostume(
@@ -139,6 +171,8 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         effects = src.effects
         effected = src.effected
         pen.copyFrom(src.pen)
+        // A clone starts with its parent's hat conditions, so a hat that is true for both does not fire again.
+        edgeValues = HashMap(src.edgeValues)
         copyLocalsFrom(src)
     }
 
@@ -855,6 +889,11 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
     fun timer(): Double = rt.timer()
 
     fun resetTimer() = rt.resetTimer()
+
+    fun loudness(): Double = rt.loudness()
+
+    /** `loud?` from Scratch 2 projects. */
+    fun loud(): Boolean = rt.loudness() > 10.0
 
     fun askAndWait(question: Any?) = rt.ask(this, Cast.toString(question))
 

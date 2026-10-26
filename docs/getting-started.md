@@ -61,7 +61,7 @@ Compiled JARs understand a few system properties that are handy for tests and au
 
 | Property | Effect |
 | --- | --- |
-| `-Djscratch.headless=<frames>` | Run up to that many frames with a virtual 30 fps clock and no window, stopping early once no script is left running. Every `say` and `think` is printed to stdout as `<sprite> says: <text>`. |
+| `-Djscratch.headless=<frames>` | Run up to that many frames with a virtual 30 fps clock and no window, stopping early once no script is left running and every `when timer greater than` or `when touching` hat is already true. Every `say` and `think` is printed to stdout as `<sprite> says: <text>`. |
 | `-Djscratch.screenshot=<file.png>` | In headless mode, save the final frame as a PNG at twice the stage resolution. |
 | `-Djscratch.timing=true` | In headless mode, print the number of frames and the wall time from the green flag to the end of the run to stderr, as `jscratch: <frames> frames in <ms> ms`. The [benchmarks](benchmarks.md) use it. |
 

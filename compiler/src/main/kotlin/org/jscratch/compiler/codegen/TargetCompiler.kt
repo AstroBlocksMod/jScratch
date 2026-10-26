@@ -45,6 +45,7 @@ import org.objectweb.asm.Opcodes.INVOKESPECIAL
 import org.objectweb.asm.Opcodes.INVOKESTATIC
 import org.objectweb.asm.Opcodes.INVOKEVIRTUAL
 import org.objectweb.asm.Opcodes.IOR
+import org.objectweb.asm.Opcodes.IRETURN
 import org.objectweb.asm.Opcodes.ISTORE
 import org.objectweb.asm.Opcodes.IXOR
 import org.objectweb.asm.Opcodes.NEW
@@ -120,6 +121,7 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
         if (target.isStage) emitStaticInit()
         emitConstructor()
         emitRunScript()
+        emitHatPredicate()
         for (s in scripts) emitScript(s)
         for (p in procs.values) emitProcedure(p)
         if (!target.isStage) {
@@ -191,10 +193,7 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
         "event_whenbroadcastreceived" -> RT.HAT_BROADCAST to (b.fields["BROADCAST_OPTION"]?.value ?: "")
         "event_whenbackdropswitchesto" -> RT.HAT_BACKDROP to (b.fields["BACKDROP"]?.value ?: "")
         "control_start_as_clone" -> RT.HAT_CLONE_START to ""
-        "event_whengreaterthan", "event_whentouchingobject" -> {
-            ctx.warn("Hat block '${b.opcode}' is not supported yet; its script never runs")
-            null
-        }
+        "event_whengreaterthan", "event_whentouchingobject" -> RT.HAT_EDGE to ""
         else -> {
             null
         }
@@ -348,6 +347,64 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
         mv.visitInsn(RETURN)
         mv.visitMaxs(0, 0)
         mv.visitEnd()
+    }
+
+    /**
+     * The condition of every edge-activated hat, by script number. The runtime calls it on the scheduler
+     * thread once a frame and starts the script when the condition turns true.
+     */
+    private fun emitHatPredicate() {
+        val edges = scripts.filter { it.hatKind == RT.HAT_EDGE }
+        if (edges.isEmpty()) return
+        val mv = cw.visitMethod(ACC_PUBLIC, "hatPredicate", "(I)Z", null, null)
+        mv.visitCode()
+        val st = MethodState(mv, null, 2)
+        val dflt = Label()
+        val labels = Array(edges.size) { Label() }
+        mv.visitVarInsn(ILOAD, 1)
+        mv.visitLookupSwitchInsn(dflt, edges.map { it.id }.toIntArray(), labels)
+        for ((i, s) in edges.withIndex()) {
+            mv.visitLabel(labels[i])
+            emitHatCondition(st, s.hat)
+            mv.visitInsn(IRETURN)
+        }
+        mv.visitLabel(dflt)
+        mv.visitInsn(ICONST_0)
+        mv.visitInsn(IRETURN)
+        mv.visitMaxs(0, 0)
+        mv.visitEnd()
+    }
+
+    /** Leaves the condition of an edge-activated [hat] on the stack as a boolean. */
+    private fun emitHatCondition(st: MethodState, hat: Block) {
+        val mv = st.mv
+        if (hat.opcode == "event_whentouchingobject") {
+            mv.visitVarInsn(ALOAD, 0)
+            emitExpr(st, hat.inputs["TOUCHINGOBJECTMENU"], VType.ANY)
+            mv.visitMethodInsn(INVOKEVIRTUAL, RT.TARGET, "touching", "(${RT.D_OBJECT})Z", false)
+            return
+        }
+        val measure =
+            when (field(hat, "WHENGREATERTHANMENU").lowercase()) {
+                "timer" -> "timer"
+                "loudness" -> "loudness"
+                else -> {
+                    mv.visitInsn(ICONST_0)
+                    return
+                }
+            }
+        mv.visitVarInsn(ALOAD, 0)
+        mv.visitMethodInsn(INVOKEVIRTUAL, RT.TARGET, measure, "()D", false)
+        emitExpr(st, hat.inputs["VALUE"], VType.NUM)
+        val yes = Label()
+        val end = Label()
+        mv.visitInsn(DCMPL)
+        mv.visitJumpInsn(IFGT, yes)
+        mv.visitInsn(ICONST_0)
+        mv.visitJumpInsn(GOTO, end)
+        mv.visitLabel(yes)
+        mv.visitInsn(ICONST_1)
+        mv.visitLabel(end)
     }
 
     private fun emitNewInstance() {
@@ -1325,8 +1382,10 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
                 VType.STR
             }
             "sensing_loudness" -> {
-                pushDouble(mv, -1.0)
-                VType.NUM
+                call("loudness", "()D", VType.NUM) {}
+            }
+            "sensing_loud" -> {
+                call("loud", "()Z", VType.BOOL) {}
             }
             else -> {
                 ctx.warn("Unsupported reporter '${b.opcode}' in '${target.name}' reports an empty value")

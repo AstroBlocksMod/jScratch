@@ -10,7 +10,8 @@ import java.util.concurrent.ConcurrentLinkedQueue
  *
  * Headless mode (`-Djscratch.headless=<frames>`) runs up to the given number of
  * frames with a virtual clock and no window, printing every `say` to stdout. It
- * stops early when no script is left running. With `-Djscratch.screenshot=<file.png>`
+ * stops early when no script is left running and no edge-activated hat is waiting
+ * for its condition to turn true. With `-Djscratch.screenshot=<file.png>`
  * it also saves the final frame, and `-Djscratch.timing=true` prints the frame
  * count and wall time to stderr. The tests and the benchmarks rely on these.
  */
@@ -31,6 +32,9 @@ class Runtime {
     val headlessFrames: Int = Integer.getInteger("jscratch.headless", -1)
     val headless: Boolean get() = headlessFrames >= 0
     val sounds = Sounds(this)
+    private val microphone = Microphone()
+    private var loudness: Double = -1.0
+    private var loudnessFrame: Long = -1
 
     @Volatile var mouseX: Double = 0.0
 
@@ -39,6 +43,9 @@ class Runtime {
     @Volatile var mouseDown: Boolean = false
     private val keysDown: MutableSet<String> = ConcurrentHashMap.newKeySet()
     private val events = ConcurrentLinkedQueue<Event>()
+
+    /** Whether any target has an edge-activated hat. Clones have the hats of their sprite, so this never changes. */
+    private var hasEdgeHats = false
 
     @Volatile var redrawRequested: Boolean = false
     private var frameIndex: Long = 0
@@ -78,6 +85,7 @@ class Runtime {
     // ---- setup ----------------------------------------------------------------------------------
 
     fun addTarget(t: Target) {
+        if (t.hats.any { it.kind == HAT_EDGE }) hasEdgeHats = true
         if (t is Stage) {
             stage = t
         } else if (t is Sprite) {
@@ -98,8 +106,9 @@ class Runtime {
             val start = System.nanoTime()
             resetTimer()
             startHats(HAT_FLAG, "", null)
-            // Stop early once every script has finished: nothing can start a new one without input.
-            while (frameIndex < headlessFrames && threads.isNotEmpty()) {
+            // Stop early once every script has finished: nothing but an edge-activated hat can start a new one
+            // without input.
+            while (frameIndex < headlessFrames && (threads.isNotEmpty() || edgeHatWaiting())) {
                 frame()
                 frameIndex++
             }
@@ -151,6 +160,7 @@ class Runtime {
     /** Runs one frame: processes input events, then steps every script until it yields. */
     fun frame() {
         processEvents()
+        startEdgeHats()
         redrawRequested = false
         val start = System.nanoTime()
         for (t in threads) t.tickYield = false
@@ -178,6 +188,7 @@ class Runtime {
                     stopAllInternal()
                     // The green flag restarts the timer, as in scratch-vm, so loading time never counts.
                     resetTimer()
+                    for (t in allTargets()) t.clearEdgeValues()
                     startHats(HAT_FLAG, "", null)
                 }
                 is Event.StopAll -> stopAllInternal()
@@ -235,6 +246,25 @@ class Runtime {
         }
         return started
     }
+
+    /**
+     * Queues a thread for every edge-activated hat whose script is not running, as scratch-vm does at the
+     * start of every frame. Each thread checks its hat's condition when it first steps and only runs the
+     * script when the condition has just turned true.
+     */
+    private fun startEdgeHats() {
+        if (!hasEdgeHats) return
+        for (t in allTargets()) {
+            for (h in t.hats) {
+                if (h.kind != HAT_EDGE) continue
+                if (threads.any { it.target === t && it.scriptId == h.scriptId && !it.done && !it.killed }) continue
+                threads.add(ScriptThread(this, t, h.scriptId, edgeHat = true))
+            }
+        }
+    }
+
+    /** Whether some edge-activated hat could still fire: its condition was false last time, or never checked. */
+    private fun edgeHatWaiting(): Boolean = hasEdgeHats && allTargets().any { it.edgeHatWaiting() }
 
     private fun startScript(target: Target, scriptId: Int): ScriptThread {
         for (t in threads) {
@@ -365,6 +395,16 @@ class Runtime {
         timerStartMs = nowMillis()
     }
 
+    /** Microphone loudness from 0 to 100, measured once a frame like scratch-vm does, or -1 without a microphone. */
+    fun loudness(): Double {
+        if (headless) return -1.0
+        if (loudnessFrame != frameIndex) {
+            loudnessFrame = frameIndex
+            loudness = microphone.loudness()
+        }
+        return loudness
+    }
+
     fun keyPressed(key: Any?): Boolean {
         val k = Keys.normalize(key)
         if (k == "any") return keysDown.isNotEmpty()
@@ -444,5 +484,6 @@ class Runtime {
         const val HAT_BROADCAST = 3
         const val HAT_BACKDROP = 4
         const val HAT_CLONE_START = 5
+        const val HAT_EDGE = 6
     }
 }

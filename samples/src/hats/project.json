@@ -1,0 +1,691 @@
+{
+  "targets": [
+    {
+      "isStage": true,
+      "name": "Stage",
+      "variables": {
+        "var_limit": [
+          "limit",
+          0.5
+        ],
+        "var_count": [
+          "count",
+          0
+        ],
+        "var_hits": [
+          "hits",
+          0
+        ]
+      },
+      "lists": {},
+      "broadcasts": {},
+      "blocks": {},
+      "comments": {},
+      "currentCostume": 0,
+      "costumes": [
+        {
+          "name": "Blue Sky",
+          "bitmapResolution": 1,
+          "dataFormat": "svg",
+          "assetId": "e7c147730f19d284bcd7b3f00af19bb6",
+          "md5ext": "e7c147730f19d284bcd7b3f00af19bb6.svg",
+          "rotationCenterX": 240,
+          "rotationCenterY": 180
+        }
+      ],
+      "sounds": [],
+      "volume": 100,
+      "layerOrder": 0,
+      "tempo": 60,
+      "videoTransparency": 50,
+      "videoState": "on",
+      "textToSpeechLanguage": null
+    },
+    {
+      "isStage": false,
+      "name": "Wall",
+      "variables": {},
+      "lists": {},
+      "broadcasts": {},
+      "blocks": {},
+      "comments": {},
+      "currentCostume": 0,
+      "costumes": [
+        {
+          "name": "ball",
+          "bitmapResolution": 1,
+          "dataFormat": "svg",
+          "assetId": "9b4d1f54db5cd5a833e83be2f184ff65",
+          "md5ext": "9b4d1f54db5cd5a833e83be2f184ff65.svg",
+          "rotationCenterX": 100,
+          "rotationCenterY": 100
+        }
+      ],
+      "sounds": [],
+      "volume": 100,
+      "layerOrder": 1,
+      "visible": true,
+      "x": 0,
+      "y": 0,
+      "size": 100,
+      "direction": 90,
+      "draggable": false,
+      "rotationStyle": "all around"
+    },
+    {
+      "isStage": false,
+      "name": "Ball",
+      "variables": {},
+      "lists": {},
+      "broadcasts": {},
+      "blocks": {
+        "h1": {
+          "opcode": "event_whenflagclicked",
+          "next": "f1",
+          "parent": null,
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": true,
+          "x": 20,
+          "y": 20
+        },
+        "f1": {
+          "opcode": "motion_gotoxy",
+          "next": "f2",
+          "parent": "h1",
+          "inputs": {
+            "X": [
+              1,
+              [
+                4,
+                "-200"
+              ]
+            ],
+            "Y": [
+              1,
+              [
+                4,
+                "0"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "f2": {
+          "opcode": "control_wait",
+          "next": "f3",
+          "parent": "f1",
+          "inputs": {
+            "DURATION": [
+              1,
+              [
+                5,
+                "0.2"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "f3": {
+          "opcode": "motion_gotoxy",
+          "next": "f4",
+          "parent": "f2",
+          "inputs": {
+            "X": [
+              1,
+              [
+                4,
+                "0"
+              ]
+            ],
+            "Y": [
+              1,
+              [
+                4,
+                "0"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "f4": {
+          "opcode": "control_wait",
+          "next": "f5",
+          "parent": "f3",
+          "inputs": {
+            "DURATION": [
+              1,
+              [
+                5,
+                "0.2"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "f5": {
+          "opcode": "motion_gotoxy",
+          "next": "f6",
+          "parent": "f4",
+          "inputs": {
+            "X": [
+              1,
+              [
+                4,
+                "-200"
+              ]
+            ],
+            "Y": [
+              1,
+              [
+                4,
+                "0"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "f6": {
+          "opcode": "control_wait",
+          "next": "f7",
+          "parent": "f5",
+          "inputs": {
+            "DURATION": [
+              1,
+              [
+                5,
+                "0.2"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "f7": {
+          "opcode": "motion_gotoxy",
+          "next": null,
+          "parent": "f6",
+          "inputs": {
+            "X": [
+              1,
+              [
+                4,
+                "0"
+              ]
+            ],
+            "Y": [
+              1,
+              [
+                4,
+                "0"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "h2": {
+          "opcode": "event_whentouchingobject",
+          "next": "t1",
+          "parent": null,
+          "inputs": {
+            "TOUCHINGOBJECTMENU": [
+              1,
+              "t0"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": true,
+          "x": 20,
+          "y": 220
+        },
+        "t0": {
+          "opcode": "event_touchingobjectmenu",
+          "next": null,
+          "parent": "h2",
+          "inputs": {},
+          "fields": {
+            "TOUCHINGOBJECTMENU": [
+              "Wall",
+              null
+            ]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "t1": {
+          "opcode": "data_changevariableby",
+          "next": "t2",
+          "parent": "h2",
+          "inputs": {
+            "VALUE": [
+              1,
+              [
+                4,
+                "1"
+              ]
+            ]
+          },
+          "fields": {
+            "VARIABLE": [
+              "hits",
+              "var_hits"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "t2": {
+          "opcode": "looks_say",
+          "next": null,
+          "parent": "t1",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "t3",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "t3": {
+          "opcode": "operator_join",
+          "next": null,
+          "parent": "t2",
+          "inputs": {
+            "STRING1": [
+              1,
+              [
+                10,
+                "touch "
+              ]
+            ],
+            "STRING2": [
+              3,
+              [
+                12,
+                "hits",
+                "var_hits"
+              ],
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "h3": {
+          "opcode": "event_whengreaterthan",
+          "next": "g1",
+          "parent": null,
+          "inputs": {
+            "VALUE": [
+              3,
+              [
+                12,
+                "limit",
+                "var_limit"
+              ],
+              [
+                4,
+                "10"
+              ]
+            ]
+          },
+          "fields": {
+            "WHENGREATERTHANMENU": [
+              "TIMER",
+              null
+            ]
+          },
+          "shadow": false,
+          "topLevel": true,
+          "x": 20,
+          "y": 420
+        },
+        "g1": {
+          "opcode": "looks_say",
+          "next": "g4",
+          "parent": "h3",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "g2",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "g2": {
+          "opcode": "operator_join",
+          "next": null,
+          "parent": "g1",
+          "inputs": {
+            "STRING1": [
+              1,
+              [
+                10,
+                "timer "
+              ]
+            ],
+            "STRING2": [
+              3,
+              "g3",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "g3": {
+          "opcode": "operator_round",
+          "next": null,
+          "parent": "g2",
+          "inputs": {
+            "NUM": [
+              3,
+              "g5",
+              [
+                4,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "g5": {
+          "opcode": "operator_multiply",
+          "next": null,
+          "parent": "g3",
+          "inputs": {
+            "NUM1": [
+              3,
+              "g6",
+              [
+                4,
+                ""
+              ]
+            ],
+            "NUM2": [
+              1,
+              [
+                4,
+                "30"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "g6": {
+          "opcode": "sensing_timer",
+          "next": null,
+          "parent": "g5",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "g4": {
+          "opcode": "data_changevariableby",
+          "next": "g7",
+          "parent": "h3",
+          "inputs": {
+            "VALUE": [
+              1,
+              [
+                4,
+                "1"
+              ]
+            ]
+          },
+          "fields": {
+            "VARIABLE": [
+              "count",
+              "var_count"
+            ]
+          },
+          "shadow": false,
+          "topLevel": false
+        },
+        "g7": {
+          "opcode": "control_if",
+          "next": null,
+          "parent": "g4",
+          "inputs": {
+            "CONDITION": [
+              2,
+              "g8"
+            ],
+            "SUBSTACK": [
+              2,
+              "g9"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "g8": {
+          "opcode": "operator_lt",
+          "next": null,
+          "parent": "g7",
+          "inputs": {
+            "OPERAND1": [
+              3,
+              [
+                12,
+                "count",
+                "var_count"
+              ],
+              [
+                10,
+                ""
+              ]
+            ],
+            "OPERAND2": [
+              1,
+              [
+                10,
+                "2"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "g9": {
+          "opcode": "sensing_resettimer",
+          "next": null,
+          "parent": "g7",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "h4": {
+          "opcode": "event_whengreaterthan",
+          "next": "a1",
+          "parent": null,
+          "inputs": {
+            "VALUE": [
+              1,
+              [
+                4,
+                "-1"
+              ]
+            ]
+          },
+          "fields": {
+            "WHENGREATERTHANMENU": [
+              "TIMER",
+              null
+            ]
+          },
+          "shadow": false,
+          "topLevel": true,
+          "x": 20,
+          "y": 620
+        },
+        "a1": {
+          "opcode": "looks_say",
+          "next": null,
+          "parent": "h4",
+          "inputs": {
+            "MESSAGE": [
+              1,
+              [
+                10,
+                "timer was already greater"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "h5": {
+          "opcode": "event_whengreaterthan",
+          "next": "l1",
+          "parent": null,
+          "inputs": {
+            "VALUE": [
+              1,
+              [
+                4,
+                "-2"
+              ]
+            ]
+          },
+          "fields": {
+            "WHENGREATERTHANMENU": [
+              "LOUDNESS",
+              null
+            ]
+          },
+          "shadow": false,
+          "topLevel": true,
+          "x": 20,
+          "y": 820
+        },
+        "l1": {
+          "opcode": "looks_say",
+          "next": null,
+          "parent": "h5",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "l2",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "l2": {
+          "opcode": "operator_join",
+          "next": null,
+          "parent": "l1",
+          "inputs": {
+            "STRING1": [
+              1,
+              [
+                10,
+                "loudness "
+              ]
+            ],
+            "STRING2": [
+              3,
+              "l3",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "l3": {
+          "opcode": "sensing_loudness",
+          "next": null,
+          "parent": "l2",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        }
+      },
+      "comments": {},
+      "currentCostume": 0,
+      "costumes": [
+        {
+          "name": "ball",
+          "bitmapResolution": 1,
+          "dataFormat": "svg",
+          "assetId": "9b4d1f54db5cd5a833e83be2f184ff65",
+          "md5ext": "9b4d1f54db5cd5a833e83be2f184ff65.svg",
+          "rotationCenterX": 100,
+          "rotationCenterY": 100
+        }
+      ],
+      "sounds": [],
+      "volume": 100,
+      "layerOrder": 2,
+      "visible": true,
+      "x": -200,
+      "y": 0,
+      "size": 100,
+      "direction": 90,
+      "draggable": false,
+      "rotationStyle": "all around"
+    }
+  ],
+  "monitors": [],
+  "extensions": [],
+  "meta": {
+    "semver": "3.0.0",
+    "vm": "0.2.0",
+    "agent": "jScratch sample"
+  }
+}

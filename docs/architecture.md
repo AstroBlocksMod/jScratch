@@ -33,6 +33,7 @@ flowchart LR
 | Sprite variable | `public Object` field on the sprite class (clones copy it) |
 | List | `ScratchList` field; large initial contents live in `data/*.txt` resources |
 | Hat script | `private void script_N()` registered through `registerHat(kind, arg, N)` |
+| Condition of `when timer greater than`, `when loudness greater than` and `when touching` | `hatPredicate(int)` override, a `lookupswitch` over the numbers of those scripts |
 | Custom block | `private void proc_N(Object... args)`, wrapped in `enterWarp` and `exitWarp` when "run without screen refresh" is on |
 | Clone support | `newInstance()` and `copyLocalsFrom(Target)` overrides |
 | `sensing_of` variables | `lookupVariable(String)` override, a chain of string comparisons |
@@ -70,6 +71,8 @@ sequenceDiagram
 Within one frame the scheduler keeps re-stepping loop-yielded scripts until 75 percent of the frame time is used or a visible change requested a redraw, which is the same rule scratch-vm applies. Scripts that waited for time (`wait`, `glide`, `say for secs`) are not re-stepped until the next frame.
 
 Stopping a script sets a `killed` flag; the next time the script resumes it throws `StopScript`, which unwinds the virtual thread. "Run without screen refresh" increments a warp counter on the current script so yields return immediately, with the same 500 ms safety valve as Scratch.
+
+Edge-activated hats (`when timer greater than`, `when loudness greater than` and `when touching`) work like they do in scratch-vm. At the start of every frame the scheduler queues a `ScriptThread` for each of these hats whose script is not already running. When the thread first steps, it calls the hat's `hatPredicate` and compares the result with the value the target kept from the last check, and only a change from false to true (or a first check that is true) runs the script. The check happens on the scheduler thread, and a `ScriptThread` only starts its virtual thread once the script really runs, so a hat that does not fire costs one method call per frame. Clones start with their parent's hat values, and the green flag forgets them all, so a condition that is already true fires again.
 
 ## Rendering and input
 

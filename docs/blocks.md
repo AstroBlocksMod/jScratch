@@ -13,7 +13,8 @@ The compiler handles the blocks below. Anything else compiles to a no-op with a 
 | when backdrop switches to | Fires on every switch, even to the same backdrop. |
 | when I start as a clone | |
 | define (custom blocks) | Arguments, defaults and "run without screen refresh" are honored. |
-| when loudness or timer greater than | Not supported. The script never runs. |
+| when timer greater than, when loudness greater than | Checked at the start of every frame, and the script runs when the condition turns true, as in Scratch. The value can be any reporter. A script that is still running is not started again, and its condition is not checked until it ends. A condition that is true from the start fires once, and again after every green flag. |
+| when touching | The same edge rule, with the same sprite, mouse pointer and edge choices as the touching block. It is hidden in the Scratch 3 editor but loads from projects that use it. |
 
 ## Motion
 
@@ -43,13 +44,15 @@ wait, repeat, forever, if, if else, wait until, repeat until, while, stop (all, 
 
 ## Sensing
 
-touching (mouse, edge, sprite), touching color, color is touching color, distance to, ask and wait with answer, key pressed, mouse down, mouse x and y, timer, reset timer, "of" (sprite and stage properties and variables), current date and time, days since 2000.
+touching (mouse, edge, sprite), touching color, color is touching color, distance to, ask and wait with answer, key pressed, mouse down, mouse x and y, loudness, timer, reset timer, "of" (sprite and stage properties and variables), current date and time, days since 2000, and loud? from Scratch 2 projects (loudness above 10).
+
+Loudness listens to the default microphone through `javax.sound.sampled`, which opens the first time a project asks for the loudness, as in Scratch. It is measured the way scratch-audio does it, once a frame: the RMS of the last 2048 samples, falling no faster than 40% a frame, mapped to 0 through 100. It is -1 until the microphone is open, for good when there is none, and always in headless mode. On macOS the app that starts Java (the terminal, for example) needs microphone access in the privacy settings; without it, the microphone hears only silence and the loudness stays at 0.
 
 Touching a sprite or the mouse is pixel-accurate: it compares the opaque pixels of the costumes as they are drawn, with rotation, size and the effects that move pixels (fisheye, whirl, pixelate, mosaic) applied, the way scratch-render does. The mouse counts as the whole stage pixel under it. Ghost and the other color effects do not change what a sprite touches. Touching the edge, if on edge bounce and fencing use tight bounds, the box around the costume's opaque pixels as the effects draw them, so transparent padding in a costume does not count. A costume with no opaque pixels at all touches nothing, not even the edge, and is not fenced.
 
 Touching color looks at what the stage shows under every opaque pixel of the sprite: the other sprites in front to back order (with all their effects), the pen layer, the backdrop (with the stage's effects) and the white stage behind it. Color is touching color only looks under the sprite's pixels that have the first color after its own color and brightness effects, ignoring its ghost effect. Colors match loosely, like in Scratch: the top 5 bits of red and green and the top 4 bits of blue have to agree, and the first color of color is touching color needs the top 6 bits of each channel. Both blocks work while the sprite is hidden, as in Scratch 3.
 
-Not supported: loudness (reports -1), username (reports an empty string), video sensing, drag mode (ignored).
+Not supported: username (reports an empty string), video sensing, drag mode (ignored).
 
 ## Operators
 
