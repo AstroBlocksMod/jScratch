@@ -893,50 +893,42 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
 
     // ---- sound ----------------------------------------------------------------------------------
 
-    private fun soundFor(option: Any?): SoundAsset? {
-        if (sounds.isEmpty()) return null
+    /** The index of the sound a menu value or expression picks, or -1 for none. */
+    private fun soundIndex(option: Any?): Int {
+        if (sounds.isEmpty()) return -1
         if (option is Double) {
             val n = sounds.size
-            return sounds[(((Math.round(option - 1) % n) + n) % n).toInt()]
+            return (((Math.round(option - 1) % n) + n) % n).toInt()
         }
 
         val s = Cast.toString(option)
-        sounds.firstOrNull { it.name == s }?.let { return it }
+        val named = sounds.indexOfFirst { it.name == s }
+        if (named >= 0) return named
         val n = Cast.toNumberOrNaN(s)
-        if (!n.isNaN() && !Cast.isWhiteSpace(s)) return soundFor(n)
-        return null
+        if (!n.isNaN() && !Cast.isWhiteSpace(s)) return soundIndex(n)
+        return -1
     }
 
     fun playSound(option: Any?) {
-        val s = soundFor(option) ?: return
-        rt.sounds.play(s, this)
+        val i = soundIndex(option)
+        if (i >= 0) rt.sounds.play(this, i)
     }
 
     /**
-     * Waits until the sound has played to its end on the runtime clock, at the rate the pitch
-     * effect sets in each frame, so changing the pitch while it plays changes the wait too. Stop
-     * all sounds ends the wait, as it does in Scratch.
+     * Waits until the sound has played to its end, which the pitch effect makes sooner or later,
+     * or until it stops or starts over: stop all sounds, or this sprite or a clone of it playing
+     * the same sound again, ends the wait, as it does in Scratch.
      */
     fun playSoundUntilDone(option: Any?) {
-        val s = soundFor(option) ?: return
-        val stops = rt.sounds.stops
-        val length = rt.sounds.play(s, this) * 1000.0
-        if (length <= 0) return
-        // Played milliseconds are counted from the last pitch change, so a steady pitch adds no rounding.
-        var played = 0.0
-        var since = rt.nowMillis()
-        var rate = SoundMix.rate(pitch)
+        val i = soundIndex(option)
+        if (i < 0) return
+        val player = rt.sounds.play(this, i) ?: return
+        val stops = player.stops
+        if (player.isFinished(stops, rt.nowMillis())) return
         rt.requestRedraw()
-        while (played + (rt.nowMillis() - since) * rate < length && rt.sounds.stops == stops) {
+        do {
             rt.yieldTick()
-            val now = SoundMix.rate(pitch)
-            if (now != rate) {
-                val t = rt.nowMillis()
-                played += (t - since) * rate
-                since = t
-                rate = now
-            }
-        }
+        } while (!player.isFinished(stops, rt.nowMillis()))
     }
 
     fun stopAllSounds() = rt.sounds.stopAll()

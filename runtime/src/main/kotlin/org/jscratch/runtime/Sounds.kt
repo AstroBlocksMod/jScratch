@@ -55,25 +55,22 @@ class SoundMix(volume: Double, pitch: Double, pan: Double) {
  * sound feeds its own stereo [SourceDataLine] from a daemon thread, which resamples it for the
  * pitch effect and applies volume and pan in software, so changes reach sounds already playing.
  *
- * Headless runs only read the lengths and play nothing, so "play sound until done" still
- * waits as long as the sound lasts.
+ * Like scratch-audio's sound bank, there is one [SoundPlayer] for each sound of a sprite, shared
+ * with its clones, so playing a sound that is still playing starts it over. Whether a sound is
+ * still playing is counted on the runtime clock, so headless runs, which play nothing, behave the
+ * same.
  */
-class Sounds(private val enabled: Boolean) {
+class Sounds(private val rt: Runtime) {
     /** A sound that could be opened: its length, and its samples when it is short. */
     private class Loaded(val resource: String, val mp3: Boolean, val seconds: Double, val pcm: Pcm?)
 
-    private class Playback(val target: Target, val line: SourceDataLine, val voice: Voice) {
-        @Volatile var stopped = false
-    }
+    private val enabled = !rt.headless
 
-    private val playing = ArrayList<Playback>()
+    /** Players by the target's generated class, which its clones share, and the sound's index. */
+    private val players = HashMap<Pair<Class<*>, Int>, SoundPlayer>()
 
     /** Loaded sounds by resource name, null for those that could not be opened. */
     private val loaded = HashMap<String, Loaded?>()
-
-    /** How many times [stopAll] ran, so "play sound until done" can tell that its sound was stopped. */
-    @Volatile var stops: Int = 0
-        private set
 
     /** Opens every sound in parallel. Decoding is CPU work, so virtual threads spread it over the cores. */
     fun loadAll(sounds: Collection<SoundAsset>) {
@@ -125,79 +122,113 @@ class Sounds(private val enabled: Boolean) {
     }
 
     /**
-     * Starts the sound with [target]'s volume and effects and returns its length in seconds at
-     * normal pitch (0 when it could not be decoded).
+     * Plays sound number [index] of [target] with its volume and effects, and returns its player,
+     * or null when the sound could not be decoded.
+     *
+     * A sound that is still playing starts over, which ends the waits for it, the way
+     * scratch-audio's `SoundBank.playSound` does. The exception is a sound the same target started
+     * in this same frame: scratch-audio leaves a sound alone in its first 25 ms, and the audio
+     * clock never moves while scratch-vm runs a frame's scripts, so it only ends the waits.
      */
-    fun play(sound: SoundAsset, target: Target): Double {
-        val sound = load(sound) ?: return 0.0
-        if (enabled) {
-            val mix = SoundMix.of(target)
+    fun play(target: Target, index: Int): SoundPlayer? {
+        val sound = load(target.sounds[index]) ?: return null
+        val player = players.getOrPut(Pair(target.javaClass, index)) { SoundPlayer() }
+        val now = rt.nowMillis()
+        if (player.isPlaying(now)) {
+            if (player.target === target && player.startFrame == rt.frame) {
+                player.stops++
+                return player
+            }
+            player.stop()
+        }
+        val mix = SoundMix.of(target)
+        val audio = if (enabled) Audio(mix) else null
+        player.start(target, sound.seconds * 1000.0, now, rt.frame, mix.rate, audio)
+        if (audio != null) {
             Thread
                 .ofPlatform()
                 .daemon()
                 .name("jscratch-sound")
-                .start { feed(sound, target, mix) }
+                .start { feed(sound, audio) }
         }
-        return sound.seconds
+        return player
     }
 
     /** Applies [target]'s current volume and effects to the sounds it is playing. */
     fun update(target: Target) {
-        if (!enabled) return
         val mix = SoundMix.of(target)
-        synchronized(playing) {
-            playing.forEach { if (it.target === target) it.voice.mix = mix }
+        val now = rt.nowMillis()
+        for (player in players.values) {
+            if (player.target === target) player.remix(mix, now)
         }
     }
 
-    private fun feed(sound: Loaded, target: Target, mix: SoundMix) {
-        var playback: Playback? = null
+    /** Stops every playing sound. */
+    fun stopAll() {
+        for (player in players.values) player.stop()
+    }
+
+    private fun feed(sound: Loaded, audio: Audio) {
         var stream: SoundStream? = null
+        var line: SourceDataLine? = null
         try {
             val pcm = sound.pcm
             if (pcm == null) {
                 val bytes = Assets.readResource("assets/" + sound.resource) ?: return
                 stream = (if (sound.mp3) SoundStream.openMp3(bytes) else SoundStream.openWav(bytes)) ?: return
             }
-            val voice = Voice(pcm, stream, mix)
+            val voice = Voice(pcm, stream, audio.mix)
+            if (!audio.attach(voice)) return
             val format = audioFormat(voice.sampleRate, 2)
-            val line = AudioSystem.getSourceDataLine(format)
+            line = AudioSystem.getSourceDataLine(format)
             line.open(format, voice.sampleRate / LINE_BUFFERS_PER_SECOND * 4)
-            playback = Playback(target, line, voice)
-            synchronized(playing) { playing.add(playback) }
             line.start()
 
             // Short chunks, so a new mix is heard within a chunk and the line's buffer.
             val out = ByteArray(CHUNK_FRAMES * 4)
-            while (!playback.stopped) {
+            while (true) {
                 val n = voice.read(out)
                 if (n > 0) line.write(out, 0, n * 4)
                 if (n < CHUNK_FRAMES) break
             }
-            if (!playback.stopped) line.drain()
+            line.drain()
         } catch (e: Exception) {
             Log.warn("Could not play sound ${sound.resource}: $e")
         } finally {
             stream?.close()
-            if (playback != null) {
-                synchronized(playing) { playing.remove(playback) }
-                playback.line.close()
-            }
+            line?.close()
         }
     }
 
-    /** Stops every playing sound. Stopping and flushing a line makes a blocked write return. */
-    fun stopAll() {
-        stops++
-        synchronized(playing) {
-            playing.forEach {
-                it.stopped = true
-                try {
-                    it.line.stop()
-                    it.line.flush()
-                } catch (_: Exception) {
-                }
-            }
+    /**
+     * The audio of one play of a sound, shared between the player and the thread that feeds it.
+     * The thread attaches its [Voice] once the sound is open, and a mix or stop that came before
+     * then still reaches it.
+     */
+    internal class Audio(mix: SoundMix) {
+        @Volatile var mix: SoundMix = mix
+            private set
+
+        @Volatile private var voice: Voice? = null
+
+        @Volatile private var stopped = false
+
+        /** Returns false when the sound was stopped before it could start. */
+        fun attach(v: Voice): Boolean {
+            voice = v
+            v.mix = mix
+            return !stopped
+        }
+
+        fun remix(m: SoundMix) {
+            mix = m
+            voice?.mix = m
+        }
+
+        /** Fades the sound out over 25 ms after what the line already holds, like scratch-audio's stop. */
+        fun stop() {
+            stopped = true
+            voice?.fadeOut()
         }
     }
 
@@ -208,6 +239,68 @@ class Sounds(private val enabled: Boolean) {
         /** The lines buffer a tenth of a second, so changes to the mix are heard soon. */
         private const val LINE_BUFFERS_PER_SECOND = 10
         private const val CHUNK_FRAMES = 1024
+    }
+}
+
+/**
+ * One sound of a sprite and its clones, like a `SoundPlayer` in scratch-audio: at most one play
+ * of it at a time. Script threads use it one at a time, so it needs no locking.
+ *
+ * Its play position is counted on the runtime clock in milliseconds of the sound at normal pitch:
+ * [played] up to [since], then [rate] times the time after that. A new mix starts a new stretch,
+ * so the pitch the sound had at every moment counts.
+ */
+class SoundPlayer internal constructor() {
+    /** The target that played the sound last, whose volume and effects it has. */
+    internal var target: Target? = null
+        private set
+
+    /** The frame the sound last started in. */
+    internal var startFrame = -1L
+        private set
+
+    /** Bumped every time the sound stops or starts over, which ends "play sound until done". */
+    var stops = 0
+        internal set
+
+    private var length = 0.0
+    private var played = 0.0
+    private var since = 0.0
+    private var rate = 1.0
+    private var stopped = true
+    private var audio: Sounds.Audio? = null
+
+    fun isPlaying(now: Double): Boolean = !stopped && played + (now - since) * rate < length
+
+    /** Whether a wait that began when [stops] had this value is over at [now]. */
+    fun isFinished(stops: Int, now: Double): Boolean = this.stops != stops || !isPlaying(now)
+
+    internal fun start(target: Target, length: Double, now: Double, frame: Long, rate: Double, audio: Sounds.Audio?) {
+        this.target = target
+        this.length = length
+        played = 0.0
+        since = now
+        this.rate = rate
+        startFrame = frame
+        stopped = false
+        this.audio = audio
+    }
+
+    internal fun remix(mix: SoundMix, now: Double) {
+        audio?.remix(mix)
+        if (mix.rate != rate) {
+            played += (now - since) * rate
+            since = now
+            rate = mix.rate
+        }
+    }
+
+    internal fun stop() {
+        if (stopped) return
+        stopped = true
+        stops++
+        audio?.stop()
+        audio = null
     }
 }
 
@@ -237,12 +330,25 @@ internal class Voice(pcm: Pcm?, private val stream: SoundStream?, @Volatile var 
     private var rl = mix.rightFromLeft
     private var rr = mix.rightFromRight
 
+    @Volatile private var fadeRequested = false
+    private val fadeFrames = Math.max(1, (sampleRate * FADE_SECONDS).toInt())
+
+    /** Frames left in the fade out, or -1 before it starts. */
+    private var fadeLeft = -1
+
+    /** Fades the sound out linearly over 25 ms, after which [read] reports its end. */
+    fun fadeOut() {
+        fadeRequested = true
+    }
+
     /** Fills [out] with up to a quarter of its size in stereo frames. Fewer means the sound ended. */
     fun read(out: ByteArray): Int {
         val mix = mix
         val max = out.size / 4
         var n = 0
         while (n < max) {
+            if (fadeLeft < 0 && fadeRequested) fadeLeft = fadeFrames
+            if (fadeLeft == 0) break
             val frame = position.toLong()
             if (!has(frame)) break
             var l = sample(frame, 0).toDouble()
@@ -256,6 +362,12 @@ internal class Voice(pcm: Pcm?, private val stream: SoundStream?, @Volatile var 
             lr += (mix.leftFromRight - lr) * glide
             rl += (mix.rightFromLeft - rl) * glide
             rr += (mix.rightFromRight - rr) * glide
+            if (fadeLeft > 0) {
+                val fade = fadeLeft.toDouble() / fadeFrames
+                l *= fade
+                r *= fade
+                fadeLeft--
+            }
             write(out, n * 4, l * ll + r * lr)
             write(out, n * 4 + 2, l * rl + r * rr)
             position += mix.rate
@@ -296,5 +408,6 @@ internal class Voice(pcm: Pcm?, private val stream: SoundStream?, @Volatile var 
     private companion object {
         const val STREAM_FRAMES = 4096
         const val GLIDE_SECONDS = 0.025
+        const val FADE_SECONDS = 0.025
     }
 }

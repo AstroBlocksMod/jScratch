@@ -89,9 +89,11 @@ class CompileSamplesTest {
                 "5",
                 // set volume and set pan inside "run without screen refresh" wait a frame each
                 "2",
-                // up an octave after 10 frames, so 3 more, in hundredths
-                "43",
-                // stop all sounds after 5 frames, noticed in the next one
+                // up half an octave after 9 frames: 200 ms of sound left take 141 ms, so 5 more frames, in hundredths
+                "47",
+                // after 5 frames, noticed in the next one: stop all sounds, the same sound played again, and a clone playing it
+                "20",
+                "20",
                 "20",
             ).map { "Speaker says: $it" }
         assertEquals(expected, out.lines().filter { it.startsWith("Speaker ") })

@@ -7,7 +7,8 @@
       "lists": {},
       "broadcasts": {
         "bc_bend": "bend",
-        "bc_hush": "hush"
+        "bc_hush": "hush",
+        "bc_again": "again"
       },
       "blocks": {},
       "comments": {},
@@ -1000,7 +1001,7 @@
         },
         "e48": {
           "opcode": "looks_say",
-          "next": null,
+          "next": "e103",
           "parent": "e44",
           "inputs": {
             "MESSAGE": [
@@ -1115,7 +1116,7 @@
               1,
               [
                 4,
-                "120"
+                "60"
               ]
             ]
           },
@@ -1185,6 +1186,383 @@
           "topLevel": true,
           "x": 420,
           "y": 420
+        },
+        "q101": {
+          "opcode": "control_create_clone_of_menu",
+          "next": null,
+          "parent": "e102",
+          "inputs": {},
+          "fields": {
+            "CLONE_OPTION": [
+              "_myself_",
+              null
+            ]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "e102": {
+          "opcode": "control_create_clone_of",
+          "next": "e113",
+          "parent": "e111",
+          "inputs": {
+            "CLONE_OPTION": [
+              1,
+              "q101"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "e103": {
+          "opcode": "sensing_resettimer",
+          "next": "e104",
+          "parent": "e48",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "e104": {
+          "opcode": "event_broadcast",
+          "next": "e106",
+          "parent": "e103",
+          "inputs": {
+            "BROADCAST_INPUT": [
+              1,
+              [
+                11,
+                "again",
+                "bc_again"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q105": {
+          "opcode": "sound_sounds_menu",
+          "next": null,
+          "parent": "e106",
+          "inputs": {},
+          "fields": {
+            "SOUND_MENU": [
+              "beep",
+              null
+            ]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "e106": {
+          "opcode": "sound_playuntildone",
+          "next": "e110",
+          "parent": "e104",
+          "inputs": {
+            "SOUND_MENU": [
+              1,
+              "q105"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q107": {
+          "opcode": "sensing_timer",
+          "next": null,
+          "parent": "q108",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q108": {
+          "opcode": "operator_multiply",
+          "next": null,
+          "parent": "q109",
+          "inputs": {
+            "NUM1": [
+              3,
+              "q107",
+              [
+                4,
+                ""
+              ]
+            ],
+            "NUM2": [
+              1,
+              [
+                4,
+                "100"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q109": {
+          "opcode": "operator_round",
+          "next": null,
+          "parent": "e110",
+          "inputs": {
+            "NUM": [
+              3,
+              "q108",
+              [
+                4,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "e110": {
+          "opcode": "looks_say",
+          "next": "e111",
+          "parent": "e106",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "q109",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "e111": {
+          "opcode": "sensing_resettimer",
+          "next": "e102",
+          "parent": "e110",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q112": {
+          "opcode": "sound_sounds_menu",
+          "next": null,
+          "parent": "e113",
+          "inputs": {},
+          "fields": {
+            "SOUND_MENU": [
+              "beep",
+              null
+            ]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "e113": {
+          "opcode": "sound_playuntildone",
+          "next": "e117",
+          "parent": "e102",
+          "inputs": {
+            "SOUND_MENU": [
+              1,
+              "q112"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q114": {
+          "opcode": "sensing_timer",
+          "next": null,
+          "parent": "q115",
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q115": {
+          "opcode": "operator_multiply",
+          "next": null,
+          "parent": "q116",
+          "inputs": {
+            "NUM1": [
+              3,
+              "q114",
+              [
+                4,
+                ""
+              ]
+            ],
+            "NUM2": [
+              1,
+              [
+                4,
+                "100"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q116": {
+          "opcode": "operator_round",
+          "next": null,
+          "parent": "e117",
+          "inputs": {
+            "NUM": [
+              3,
+              "q115",
+              [
+                4,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "e117": {
+          "opcode": "looks_say",
+          "next": null,
+          "parent": "e113",
+          "inputs": {
+            "MESSAGE": [
+              3,
+              "q116",
+              [
+                10,
+                ""
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "e118": {
+          "opcode": "control_wait",
+          "next": "e120",
+          "parent": "h121",
+          "inputs": {
+            "DURATION": [
+              1,
+              [
+                5,
+                "0.15"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q119": {
+          "opcode": "sound_sounds_menu",
+          "next": null,
+          "parent": "e120",
+          "inputs": {},
+          "fields": {
+            "SOUND_MENU": [
+              "beep",
+              null
+            ]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "e120": {
+          "opcode": "sound_play",
+          "next": null,
+          "parent": "e118",
+          "inputs": {
+            "SOUND_MENU": [
+              1,
+              "q119"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "h121": {
+          "opcode": "event_whenbroadcastreceived",
+          "next": "e118",
+          "parent": null,
+          "inputs": {},
+          "fields": {
+            "BROADCAST_OPTION": [
+              "again",
+              "bc_again"
+            ]
+          },
+          "shadow": false,
+          "topLevel": true,
+          "x": 420,
+          "y": 620
+        },
+        "e122": {
+          "opcode": "control_wait",
+          "next": "e124",
+          "parent": "h125",
+          "inputs": {
+            "DURATION": [
+              1,
+              [
+                5,
+                "0.15"
+              ]
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "q123": {
+          "opcode": "sound_sounds_menu",
+          "next": null,
+          "parent": "e124",
+          "inputs": {},
+          "fields": {
+            "SOUND_MENU": [
+              "beep",
+              null
+            ]
+          },
+          "shadow": true,
+          "topLevel": false
+        },
+        "e124": {
+          "opcode": "sound_play",
+          "next": null,
+          "parent": "e122",
+          "inputs": {
+            "SOUND_MENU": [
+              1,
+              "q123"
+            ]
+          },
+          "fields": {},
+          "shadow": false,
+          "topLevel": false
+        },
+        "h125": {
+          "opcode": "control_start_as_clone",
+          "next": "e122",
+          "parent": null,
+          "inputs": {},
+          "fields": {},
+          "shadow": false,
+          "topLevel": true,
+          "x": 420,
+          "y": 820
         }
       },
       "comments": {},

@@ -30,7 +30,7 @@ class Runtime {
 
     val headlessFrames: Int = Integer.getInteger("jscratch.headless", -1)
     val headless: Boolean get() = headlessFrames >= 0
-    val sounds = Sounds(enabled = !headless)
+    val sounds = Sounds(this)
 
     @Volatile var mouseX: Double = 0.0
 
@@ -42,6 +42,9 @@ class Runtime {
 
     @Volatile var redrawRequested: Boolean = false
     private var frameIndex: Long = 0
+
+    /** How many frames have run. */
+    val frame: Long get() = frameIndex
     private var timerStartMs: Double = 0.0
 
     @Volatile var answer: String = ""

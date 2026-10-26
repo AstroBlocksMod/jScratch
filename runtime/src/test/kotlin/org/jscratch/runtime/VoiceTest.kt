@@ -82,6 +82,19 @@ class VoiceTest {
         assertEquals(0, after[11025], "still audible 250 ms after the change")
     }
 
+    @Test
+    fun fadesOutWhenStopped() {
+        val voice = Voice(pcm(1, *IntArray(44100) { 10000 }), null, normal)
+        voice.read(ByteArray(4))
+        voice.fadeOut()
+        val after = render(voice).filterIndexed { i, _ -> i % 2 == 0 }
+        // 25 ms at 44.1 kHz, falling in a straight line from where the sound was.
+        assertEquals(1102, after.size)
+        assertEquals(10000, after[0])
+        assertEquals(5000, after[551])
+        assertTrue(after.last() < 10)
+    }
+
     /** A streamed sound has to come out exactly like the cached one, across the decoder's chunks too. */
     @Test
     fun streamsLikeCachedSamples() {
