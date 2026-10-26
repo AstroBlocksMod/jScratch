@@ -307,6 +307,7 @@ class Runtime {
     }
 
     fun stopOtherScripts(target: Target) {
+        sounds.stopWaiting(target)
         val me = ScriptThread.current()
         for (t in threads) {
             if (t.target === target && t !== me) t.killed = true
@@ -331,6 +332,7 @@ class Runtime {
 
     fun removeClone(clone: Target) {
         sprites.remove(clone)
+        sounds.stopWaiting(clone)
         val me = ScriptThread.current()
         for (t in threads) {
             if (t.target === clone && t !== me) t.killed = true

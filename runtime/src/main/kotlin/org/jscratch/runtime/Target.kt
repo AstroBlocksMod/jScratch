@@ -911,7 +911,7 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
 
     fun playSound(option: Any?) {
         val i = soundIndex(option)
-        if (i >= 0) rt.sounds.play(this, i)
+        if (i >= 0) rt.sounds.play(this, i, false)
     }
 
     /**
@@ -922,7 +922,7 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
     fun playSoundUntilDone(option: Any?) {
         val i = soundIndex(option)
         if (i < 0) return
-        val player = rt.sounds.play(this, i) ?: return
+        val player = rt.sounds.play(this, i, true) ?: return
         val stops = player.stops
         if (player.isFinished(stops, rt.nowMillis())) return
         rt.requestRedraw()

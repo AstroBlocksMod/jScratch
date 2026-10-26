@@ -98,7 +98,7 @@ class VoiceTest {
     /** A streamed sound has to come out exactly like the cached one, across the decoder's chunks too. */
     @Test
     fun streamsLikeCachedSamples() {
-        val bytes = assertNotNull(javaClass.getResourceAsStream("/sounds/beep.mp3")).use { it.readBytes() }
+        val bytes = assertNotNull(javaClass.getResourceAsStream("/assets/beep.mp3")).use { it.readBytes() }
         val cached = assertNotNull(SoundDecoders.decodeMp3(bytes))
         for (mix in listOf(normal, SoundMix(70.0, 130.0, -30.0), SoundMix(100.0, -75.0, 0.0))) {
             val stream = assertNotNull(SoundStream.openMp3(bytes))

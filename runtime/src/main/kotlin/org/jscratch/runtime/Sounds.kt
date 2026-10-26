@@ -123,20 +123,21 @@ class Sounds(private val rt: Runtime) {
 
     /**
      * Plays sound number [index] of [target] with its volume and effects, and returns its player,
-     * or null when the sound could not be decoded.
+     * or null when the sound could not be decoded. [untilDone] is set for "play sound until done".
      *
      * A sound that is still playing starts over, which ends the waits for it, the way
      * scratch-audio's `SoundBank.playSound` does. The exception is a sound the same target started
      * in this same frame: scratch-audio leaves a sound alone in its first 25 ms, and the audio
      * clock never moves while scratch-vm runs a frame's scripts, so it only ends the waits.
      */
-    fun play(target: Target, index: Int): SoundPlayer? {
+    fun play(target: Target, index: Int, untilDone: Boolean): SoundPlayer? {
         val sound = load(target.sounds[index]) ?: return null
         val player = players.getOrPut(Pair(target.javaClass, index)) { SoundPlayer() }
         val now = rt.nowMillis()
         if (player.isPlaying(now)) {
             if (player.target === target && player.startFrame == rt.frame) {
                 player.stops++
+                player.waited = untilDone
                 return player
             }
             player.stop()
@@ -144,6 +145,7 @@ class Sounds(private val rt: Runtime) {
         val mix = SoundMix.of(target)
         val audio = if (enabled) Audio(mix) else null
         player.start(target, sound.seconds * 1000.0, now, rt.frame, mix.rate, audio)
+        player.waited = untilDone
         if (audio != null) {
             Thread
                 .ofPlatform()
@@ -166,6 +168,18 @@ class Sounds(private val rt: Runtime) {
     /** Stops every playing sound. */
     fun stopAll() {
         for (player in players.values) player.stop()
+    }
+
+    /**
+     * Stops the sounds [target] started with "play sound until done" and still plays, for stop
+     * other scripts and deleting a clone. scratch-vm does the same on its `STOP_FOR_TARGET` event,
+     * in `_stopWaitingSoundsForTarget`.
+     */
+    fun stopWaiting(target: Target) {
+        val now = rt.nowMillis()
+        for (player in players.values) {
+            if (player.target === target && player.waited && player.isPlaying(now)) player.stop()
+        }
     }
 
     private fun feed(sound: Loaded, audio: Audio) {
@@ -259,6 +273,9 @@ class SoundPlayer internal constructor() {
     internal var startFrame = -1L
         private set
 
+    /** Whether [target] played the sound last with "play sound until done", which [Sounds.stopWaiting] stops. */
+    internal var waited = false
+
     /** Bumped every time the sound stops or starts over, which ends "play sound until done". */
     var stops = 0
         internal set
@@ -298,6 +315,7 @@ class SoundPlayer internal constructor() {
     internal fun stop() {
         if (stopped) return
         stopped = true
+        waited = false
         stops++
         audio?.stop()
         audio = null
