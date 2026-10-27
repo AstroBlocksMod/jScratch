@@ -1,5 +1,6 @@
 package org.jscratch.compiler.codegen
 
+import org.jscratch.compiler.CompileOptions
 import org.jscratch.compiler.sb3.Project
 import org.jscratch.compiler.sb3.Target
 import org.objectweb.asm.ClassWriter
@@ -28,8 +29,8 @@ class VarSlot(
     var monitor: Int = -1
 }
 
-/** Everything target compilers share: class names and the global variable table. */
-class ProjectContext(val project: Project) {
+/** Everything target compilers share: the options, class names and the global variable table. */
+class ProjectContext(val project: Project, val options: CompileOptions) {
     val warnings = ArrayList<String>()
     val classNames = HashMap<Target, String>()
     private val stageVars = HashMap<String, VarSlot>()
@@ -99,8 +100,8 @@ class SafeClassWriter : ClassWriter(COMPUTE_FRAMES or COMPUTE_MAXS) {
 }
 
 object ProjectCompiler {
-    fun compile(project: Project): GeneratedProject {
-        val ctx = ProjectContext(project)
+    fun compile(project: Project, options: CompileOptions): GeneratedProject {
+        val ctx = ProjectContext(project, options)
         val classes = LinkedHashMap<String, ByteArray>()
         for (t in project.targets) {
             val name = ctx.classNames.getValue(t)

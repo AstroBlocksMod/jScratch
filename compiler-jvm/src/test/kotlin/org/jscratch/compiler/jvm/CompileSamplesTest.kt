@@ -1,5 +1,6 @@
 package org.jscratch.compiler.jvm
 
+import org.jscratch.compiler.CompileOptions
 import org.jscratch.compiler.JScratch
 import org.jscratch.compiler.sb3.Sb3Parser
 import java.awt.image.BufferedImage
@@ -255,6 +256,26 @@ class CompileSamplesTest {
             listOf("Cat says: user: ", "Cat says: online true"),
             anonymous.lines().filter { it.startsWith("Cat ") },
         )
+    }
+
+    /**
+     * The hacked `is turbowarp?` and `is compiled?` blocks report true only with the TurboWarp option, in any
+     * case. A string reporter of the same name and a real argument of that name are left alone, as in TurboWarp.
+     */
+    @Test
+    fun compilesAndRunsTurboWarpProject() {
+        val sb3 = File(samplesDir, "turbowarp.sb3").readBytes()
+        for (turboWarp in listOf(false, true)) {
+            val result = JScratch.compile(sb3, runtimeJar.readBytes(), json, CompileOptions(turboWarp = turboWarp))
+            assertEquals(emptyList(), result.warnings, "unexpected warnings")
+            val out = runHeadless(result.jar, frames = 10)
+            assertEquals(
+                listOf("turbowarp $turboWarp", "compiled $turboWarp", "string 0", "argument false")
+                    .map { "Cat says: $it" },
+                out.lines().filter { it.startsWith("Cat ") },
+                "turboWarp = $turboWarp",
+            )
+        }
     }
 
     /**

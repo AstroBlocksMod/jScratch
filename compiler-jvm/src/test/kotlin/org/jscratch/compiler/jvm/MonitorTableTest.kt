@@ -1,5 +1,6 @@
 package org.jscratch.compiler.jvm
 
+import org.jscratch.compiler.CompileOptions
 import org.jscratch.compiler.codegen.Monitors
 import org.jscratch.compiler.codegen.ProjectCompiler
 import org.jscratch.compiler.sb3.Sb3Parser
@@ -43,7 +44,10 @@ class MonitorTableTest {
 
     @Test
     fun warnsWithTheReasonAMonitorIsDropped() {
-        val generated = ProjectCompiler.compile(Sb3Parser(json).parseProject(json.parseProject(project)))
+        val generated = ProjectCompiler.compile(
+            Sb3Parser(json).parseProject(json.parseProject(project)),
+            CompileOptions(),
+        )
         val monitorWarnings = generated.warnings.filter { it.startsWith("Monitor") }
         assertEquals(
             listOf(
@@ -58,7 +62,10 @@ class MonitorTableTest {
 
     @Test
     fun showingAVariableCreatedOnTheFlyHasAMonitor() {
-        val generated = ProjectCompiler.compile(Sb3Parser(json).parseProject(json.parseProject(project)))
+        val generated = ProjectCompiler.compile(
+            Sb3Parser(json).parseProject(json.parseProject(project)),
+            CompileOptions(),
+        )
         val table = generated.resources.getValue(Monitors.RESOURCE).toString(Charsets.UTF_8).lines()
         // The stage variable's dropped record leaves it the default hidden monitor; the Cat's undeclared
         // variable gets one at the end of the table, as its first slot.

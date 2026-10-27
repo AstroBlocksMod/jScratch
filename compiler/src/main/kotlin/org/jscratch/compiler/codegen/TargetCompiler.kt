@@ -67,6 +67,9 @@ enum class VType(val desc: String) {
     ANY(RT.D_OBJECT),
 }
 
+/** Boolean argument names, in lowercase, that report true outside their custom block with the TurboWarp option. */
+private val TURBOWARP_ARGUMENTS = setOf("is turbowarp?", "is compiled?")
+
 /** A custom block (procedure) of the target. */
 class ProcInfo(
     val proccode: String,
@@ -1335,12 +1338,25 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
             "argument_reporter_string_number", "argument_reporter_boolean" -> {
                 val name = field(b, "VALUE")
                 val slot = st.argSlots[name]
-                if (slot != null) {
-                    mv.visitVarInsn(ALOAD, slot)
-                    VType.ANY
-                } else {
-                    if (b.opcode == "argument_reporter_boolean") mv.visitInsn(ICONST_0) else pushDouble(mv, 0.0)
-                    if (b.opcode == "argument_reporter_boolean") VType.BOOL else VType.NUM
+                val isBool = b.opcode == "argument_reporter_boolean"
+                when {
+                    slot != null -> {
+                        mv.visitVarInsn(ALOAD, slot)
+                        VType.ANY
+                    }
+                    // Like TurboWarp, which reports true for these outside a custom block that defines them.
+                    isBool && ctx.options.turboWarp && name.lowercase() in TURBOWARP_ARGUMENTS -> {
+                        mv.visitInsn(ICONST_1)
+                        VType.BOOL
+                    }
+                    isBool -> {
+                        mv.visitInsn(ICONST_0)
+                        VType.BOOL
+                    }
+                    else -> {
+                        pushDouble(mv, 0.0)
+                        VType.NUM
+                    }
                 }
             }
 
