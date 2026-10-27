@@ -76,6 +76,8 @@ Every operator block: arithmetic, pick random, comparisons, and, or, not, join, 
 
 set, change, show and hide variable, all list blocks: add, delete, delete all, insert, replace, item, item number, length, contains, show and hide list, and the list reporter. Cloud variables behave as ordinary variables.
 
+Lists have no length limit. The Scratch editor stops `add` and `insert` at 200,000 items, but TurboWarp's compiler does not, and projects written for a compiler rely on that: one that stores a large world with one list item per entry would otherwise lose every write above the limit and can end up looping forever on bookkeeping that never converges. jScratch follows TurboWarp here.
+
 ## Monitors
 
 Monitors are drawn the way the Scratch player draws them, with scratch-gui's sizes, colors and labels, on top of the sprites and say bubbles.

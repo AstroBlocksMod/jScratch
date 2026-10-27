@@ -1,11 +1,18 @@
 package org.jscratch.runtime
 
-/** A Scratch list. Indices in the public API are Scratch values (1-based, or "last", "random", "all"). */
+/**
+ * A Scratch list. Indices in the public API are Scratch values (1-based, or "last", "random", "all").
+ *
+ * There is no length limit. The Scratch editor stops `add` and `insert` at 200,000 items, but
+ * TurboWarp's compiler does not, and projects built for a compiler rely on that: a voxel world that
+ * stores one list item per block overflows the editor's limit at default settings, and every write
+ * above it would be dropped, which turns bookkeeping like a lighting flood fill into an infinite
+ * loop. jScratch compiles projects the way TurboWarp does, so its lists follow TurboWarp.
+ */
 class ScratchList {
     val items: ArrayList<Any> = ArrayList()
 
     fun add(item: Any?) {
-        if (items.size >= MAX_ITEMS) return
         items.add(item ?: "")
     }
 
@@ -22,7 +29,7 @@ class ScratchList {
 
     fun insert(index: Any?, item: Any?) {
         val i = Cast.toListIndex(index, items.size + 1, false)
-        if (i == Cast.LIST_INVALID || items.size >= MAX_ITEMS) return
+        if (i == Cast.LIST_INVALID) return
         items.add(i - 1, item ?: "")
     }
 
@@ -68,9 +75,5 @@ class ScratchList {
         items.clear()
         items.addAll(ListData.decode(text))
         return this
-    }
-
-    companion object {
-        const val MAX_ITEMS = 200_000
     }
 }
