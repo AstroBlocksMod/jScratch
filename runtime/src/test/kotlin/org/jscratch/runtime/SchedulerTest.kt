@@ -185,6 +185,46 @@ class SchedulerTest {
     }
 
     @Test
+    fun aSlowWarpLoopGivesUpTheFrameSoonAfter500Ms() {
+        var rounds = 0
+        bot.onFlag {
+            bot.enterWarp()
+            while (log.isEmpty()) {
+                Thread.sleep(10)
+                rounds++
+                rt.yieldLoop()
+            }
+            bot.exitWarp()
+        }
+        bot.onFlag { log.add("b") }
+        flag()
+        runUntilDone()
+        // 500 ms of 10 ms rounds is 50 at most. Looking at the clock only every 256 rounds would take 2.5 s.
+        assertTrue(rounds <= 60, "the warp loop ran $rounds rounds before letting the other script run")
+    }
+
+    @Test
+    fun aWarpLoopThatRestartsItsOwnScriptStopsAtTheNextYield() {
+        var runs = 0
+        var lastRound = -1
+        bot.onFlag { rt.broadcast("go") }
+        bot.onBroadcast("go") {
+            if (runs++ > 0) return@onBroadcast
+            bot.enterWarp()
+            for (i in 0 until 1000) {
+                lastRound = i
+                if (i == 500) rt.broadcast("go")
+                rt.yieldLoop()
+            }
+            bot.exitWarp()
+        }
+        flag()
+        runUntilDone()
+        assertEquals(2, runs)
+        assertEquals(500, lastRound)
+    }
+
+    @Test
     fun aBroadcastStartsScriptsInTheSamePass() {
         bot.onFlag {
             log.add("flag")
