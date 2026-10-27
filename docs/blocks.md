@@ -16,6 +16,12 @@ The compiler handles the blocks below. Anything else compiles to a no-op with a 
 | when timer greater than, when loudness greater than | Checked at the start of every frame, and the script runs when the condition turns true, as in Scratch. The value can be any reporter. A script that is still running is not started again, and its condition is not checked until it ends. A condition that is true from the start fires once, and again after every green flag. |
 | when touching | The same edge rule, with the same sprite, mouse pointer and edge choices as the touching block. It is hidden in the Scratch 3 editor but loads from projects that use it. |
 
+## Custom blocks
+
+Argument reporters report the value passed to the custom block they belong to. Dragged out of their custom block, they report 0 for a text or number argument and false for a boolean one.
+
+TurboWarp makes two boolean arguments special: `is turbowarp?` and `is compiled?`, in any mix of upper and lower case, report true outside a custom block that defines them. Projects make these "hacked" blocks by renaming a boolean argument and dragging it out, then use them to tell whether they run in TurboWarp. Some show a message and stop when they do not. They report false by default, as in Scratch. Compile with `--turbowarp`, or tick "Tell the project it runs in TurboWarp" in the [playground](web-playground.md), and both report true. Text and number arguments with those names, and real arguments of a custom block that happen to have them, are not affected, also as in TurboWarp.
+
 ## Motion
 
 All motion blocks: move, turn, go to (xy, random, mouse, sprite), glide (both forms), point in direction, point towards, change and set x and y, if on edge bounce, set rotation style, and the x position, y position and direction reporters. Sprites are fenced to the stage as in Scratch.

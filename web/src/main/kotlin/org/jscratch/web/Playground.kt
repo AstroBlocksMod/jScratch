@@ -1,6 +1,7 @@
 package org.jscratch.web
 
 import org.jscratch.compiler.Archives
+import org.jscratch.compiler.CompileOptions
 import org.jscratch.compiler.JScratch
 import org.jscratch.compiler.convert.OldProject
 import org.jscratch.compiler.convert.OldProjects
@@ -12,7 +13,8 @@ import org.teavm.jso.JSObject
  * Browser entry point. TeaVM compiles the compiler module to JavaScript and this
  * file exposes it as `window.jscratch`:
  *
- * - `compile(sb3, runtimeJar, listing)` compiles an .sb3.
+ * - `compile(sb3, runtimeJar, listing, turboWarp)` compiles an .sb3. `turboWarp` is
+ *   [CompileOptions.turboWarp].
  * - `readOld(data)` reads a Scratch 1.4 or 2 project for the converter bundle
  *   (`jscratch-convert.js`), or returns null for anything else.
  * - `writeSb3(projectJson, names, datas)` packs the converter's result into an .sb3.
@@ -25,7 +27,7 @@ import org.teavm.jso.JSObject
  */
 @JSFunctor
 fun interface CompileFunction : JSObject {
-    fun compile(sb3: ByteArray, runtimeJar: ByteArray?, listing: Boolean): JSObject
+    fun compile(sb3: ByteArray, runtimeJar: ByteArray?, listing: Boolean, turboWarp: Boolean): JSObject
 }
 
 @JSFunctor
@@ -80,8 +82,18 @@ external fun failure(message: String): JSObject
 fun main() {
     install(
         object : CompileFunction {
-            override fun compile(sb3: ByteArray, runtimeJar: ByteArray?, listing: Boolean): JSObject = try {
-                val result = JScratch.compile(sb3, runtimeJar, BrowserProjectJson)
+            override fun compile(
+                sb3: ByteArray,
+                runtimeJar: ByteArray?,
+                listing: Boolean,
+                turboWarp: Boolean,
+            ): JSObject = try {
+                val result = JScratch.compile(
+                    sb3,
+                    runtimeJar,
+                    BrowserProjectJson,
+                    CompileOptions(turboWarp = turboWarp),
+                )
                 val text =
                     if (listing) {
                         result.classes.entries.joinToString("\n") { (name, bytes) ->

@@ -6,6 +6,7 @@
   const dropText = document.getElementById("drop-text");
   const compileButton = document.getElementById("compile");
   const listingCheckbox = document.getElementById("listing");
+  const turboWarpCheckbox = document.getElementById("turbowarp");
   const status = document.getElementById("status");
   const result = document.getElementById("result");
   const summary = document.getElementById("summary");
@@ -130,7 +131,7 @@
       const sb3 = converted ? converted.sb3 : data;
       setStatus("Compiling " + selected.name + "…");
       const started = performance.now();
-      const out = window.jscratch.compile(sb3, runtimeJar, listingCheckbox.checked);
+      const out = window.jscratch.compile(sb3, runtimeJar, listingCheckbox.checked, turboWarpCheckbox.checked);
       const ms = Math.round(performance.now() - started);
       if (!out.ok) {
         setStatus("Compilation failed: " + out.error, true);

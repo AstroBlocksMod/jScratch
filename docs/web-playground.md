@@ -25,12 +25,12 @@ Then open `http://localhost:8000/`. The site is static: `index.html`, `playgroun
 `web/src/main/kotlin/org/jscratch/web/Playground.kt` installs three functions:
 
 ```js
-window.jscratch.compile(sb3Int8Array, runtimeJarInt8Array, includeListing)
+window.jscratch.compile(sb3Int8Array, runtimeJarInt8Array, includeListing, turboWarp)
 window.jscratch.readOld(projectInt8Array)
 window.jscratch.writeSb3(projectJson, names, datas)
 ```
 
-`compile` returns `{ ok: true, jar, listing, warnings, classes, targets }` or `{ ok: false, error }`. Primitive arrays cross the TeaVM boundary as typed arrays, which is why the page passes `Int8Array`s.
+`turboWarp` comes from the "Tell the project it runs in TurboWarp" checkbox and does what the CLI's `--turbowarp` option does: the hacked [TurboWarp blocks](blocks.md#custom-blocks) report true. `compile` returns `{ ok: true, jar, listing, warnings, classes, targets }` or `{ ok: false, error }`. Primitive arrays cross the TeaVM boundary as typed arrays, which is why the page passes `Int8Array`s.
 
 The other two exist because the converter returns a promise, which TeaVM code cannot wait for. `readOld` returns null for anything that is not a Scratch 1.4 or 2 project. Otherwise it returns `{ format, label, projectJson, names, datas }`: for Scratch 2 the `project.json` text and the other files of the archive, for Scratch 1.4 the whole file as the only entry of `datas`. The page then loads `jscratch-convert.js`, which it only does when the first old project comes in, and awaits `jscratchConvert.convertSb1` or `convertSb2`. `writeSb3` zips the result into the `.sb3` that goes to `compile`.
 

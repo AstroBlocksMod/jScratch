@@ -18,6 +18,16 @@ class CompileResult(
     val warnings: List<String>,
 )
 
+/** Settings that change what a project sees about the player it runs in. */
+class CompileOptions(
+    /**
+     * Whether the hacked `is turbowarp?` and `is compiled?` blocks report true. They are boolean argument
+     * reporters dragged out of a custom block, which report false in Scratch but true in TurboWarp, so
+     * projects use them to tell which player they run in. Some refuse to run without TurboWarp.
+     */
+    val turboWarp: Boolean = false,
+)
+
 /** Entry point shared by the CLI, the tests and the browser playground. */
 object JScratch {
     /**
@@ -25,9 +35,14 @@ object JScratch {
      * are merged into the output; pass null for a classes-only JAR. [json] supplies
      * the platform's JSON parsing and the scratch-parser bridge.
      */
-    fun compile(sb3: ByteArray, runtimeJar: ByteArray?, json: ProjectJson): CompileResult {
+    fun compile(
+        sb3: ByteArray,
+        runtimeJar: ByteArray?,
+        json: ProjectJson,
+        options: CompileOptions = CompileOptions(),
+    ): CompileResult {
         val file = Sb3Parser(json).readSb3(sb3)
-        val generated = ProjectCompiler.compile(file.project)
+        val generated = ProjectCompiler.compile(file.project, options)
         val warnings = ArrayList(generated.warnings)
         val usedAssets = LinkedHashMap<String, ByteArray>()
         for (t in file.project.targets) {
