@@ -16,6 +16,8 @@ import java.awt.event.MouseWheelEvent
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 import java.awt.geom.Path2D
+import java.awt.image.BufferedImage
+import java.util.concurrent.CompletableFuture
 import javax.swing.Icon
 import javax.swing.JButton
 import javax.swing.JFrame
@@ -29,7 +31,7 @@ class StageWindow(private val rt: Runtime) {
     private val frame = JFrame("jScratch")
     private val panel = StagePanel()
 
-    @Volatile private var snapshot: FrameSnapshot? = null
+    private val frames = PresentedFrames(rt.pen)
 
     @Volatile var isAsking: Boolean = false
         private set
@@ -80,8 +82,33 @@ class StageWindow(private val rt: Runtime) {
 
     /** Called by the scheduler after each frame: snapshots the scene and asks Swing to repaint. */
     fun present() {
-        snapshot = StageRenderer.snapshot(rt)
+        frames.present(StageRenderer.snapshot(rt))
         panel.repaint()
+    }
+
+    /**
+     * Paints the stage panel into an image at twice its size, once Swing gets to it. Like a repaint, this
+     * happens on the event thread while the scheduler may already be running the next frame.
+     */
+    fun capture(): CompletableFuture<BufferedImage> {
+        val result = CompletableFuture<BufferedImage>()
+        SwingUtilities.invokeLater {
+            try {
+                val img = BufferedImage(panel.width * 2, panel.height * 2, BufferedImage.TYPE_INT_ARGB)
+                val g = img.createGraphics()
+                g.scale(2.0, 2.0)
+                panel.paint(g)
+                g.dispose()
+                result.complete(img)
+            } catch (e: Exception) {
+                result.completeExceptionally(e)
+            }
+        }
+        return result
+    }
+
+    fun close() {
+        SwingUtilities.invokeLater { frame.dispose() }
     }
 
     fun ask(target: Target?, question: String, onAnswer: (String) -> Unit) {
@@ -157,7 +184,7 @@ class StageWindow(private val rt: Runtime) {
                     }
 
                     private fun monitorAt(e: MouseEvent): MonitorItem? =
-                        snapshot?.monitors?.lastOrNull { it.contains(stageX(e), stageY(e)) }
+                        frames.snapshot?.monitors?.lastOrNull { it.contains(stageX(e), stageY(e)) }
 
                     /** The mouse position in stage pixels from the top left, the monitors' coordinates. */
                     private fun stageX(e: MouseEvent): Double = (e.x - offsetX) / scale
@@ -184,7 +211,7 @@ class StageWindow(private val rt: Runtime) {
             offsetY = (height - Runtime.STAGE_HEIGHT * scale) / 2
             g.translate(offsetX, offsetY)
             g.scale(scale, scale)
-            StageRenderer.render(g, snapshot, rt.pen)
+            frames.paint { snapshot, pen -> StageRenderer.render(g, snapshot, pen) }
             g.dispose()
         }
     }
