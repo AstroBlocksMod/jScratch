@@ -12,10 +12,10 @@ class StopScript : RuntimeException(null, null, false, false)
  * a yield point (end of a loop iteration, a wait, a glide), then the next script
  * runs. jScratch maps each script onto a JVM virtual thread. Exactly one script
  * runs at any time, and the scheduler decides the order: a yielding script asks
- * [Runtime.nextToRun] which script comes next, hands control straight to it and
- * parks until it is resumed. When the yielding script is the only one left to
- * step in the frame, it gets itself back and no thread switch happens at all.
- * The scheduler thread only takes part at frame boundaries. This keeps generated
+ * [Runtime.dispatch] to hand control to whichever script comes next and parks
+ * until it is resumed. When the yielding script is the only one left to step in
+ * the frame, it gets itself back and no thread switch happens at all. The
+ * scheduler thread only takes part at frame boundaries. This keeps generated
  * bytecode simple: a `forever` loop really is a loop with a call to
  * `yieldLoop()` at the end.
  */
@@ -26,15 +26,22 @@ class ScriptThread(
     /** Whether the script starts with an edge-activated hat, whose condition decides whether it runs at all. */
     private val edgeHat: Boolean = false,
 ) {
-    // Made in [start], so a hat that does not fire allocates nothing but this object.
-    private lateinit var thread: Thread
-    private lateinit var permit: Semaphore
-    private var launched = false
+    /**
+     * What the script's virtual thread parks on between steps. Null until the thread is launched, which
+     * is how [resume] tells a first step from a later one. Made then, so a hat that does not fire
+     * allocates nothing but this object.
+     */
+    private var permit: Semaphore? = null
 
     @Volatile var done: Boolean = false
         private set
 
+    /** Set to stop the script, which unwinds the next time it resumes. Tells the scheduler, which may have skipped it. */
     @Volatile var killed: Boolean = false
+        set(value) {
+            if (value && !field) runtime.threadsChanged()
+            field = value
+        }
 
     /** Set when the script yielded until the next frame (`wait`, `glide`) instead of a loop yield. */
     var tickYield: Boolean = false
@@ -47,20 +54,45 @@ class ScriptThread(
         private set
 
     /**
-     * Prepares the virtual thread the first time the scheduler picks the script, and tells whether the
-     * script runs at all. An edge-activated hat checks its condition here, at the point in the frame
-     * where scratch-vm checks it, so a hat that does not fire, which is most of them in most frames,
-     * never needs a thread.
+     * Decides, the first time the scheduler picks the script, whether it runs at all. An edge-activated
+     * hat checks its condition here, at the point in the frame where scratch-vm checks it, so a hat that
+     * does not fire, which is most of them in most frames, never needs a thread. A condition that throws
+     * counts as false, whatever it throws, since it runs on whichever thread is choosing the next script.
      */
     internal fun start(): Boolean {
         started = true
-        if (killed || (edgeHat && !target.edgeActivated(scriptId))) {
-            done = true
-            return false
+        val runs =
+            try {
+                !killed && (!edgeHat || target.edgeActivated(scriptId))
+            } catch (t: Throwable) {
+                Log.warn("The condition of script $scriptId in '${target.name}' failed with $t and counts as false")
+                false
+            }
+        if (!runs) done = true
+        return runs
+    }
+
+    /**
+     * Gives control to this script. [Runtime.dispatch] calls it, on the scheduler thread for the first
+     * script of a frame and on the yielding script's thread for every other one. The first time it
+     * launches the virtual thread, which is a handoff by itself; after that the thread is parked in
+     * [handOff] and gets its permit. Throws only when the virtual thread cannot be launched, and then
+     * the dispatcher gives up on the script with [abandon].
+     */
+    internal fun resume() {
+        val p = permit
+        if (p != null) {
+            p.release()
+            return
         }
+        // Set before the launch, which makes it visible to the new thread.
         permit = Semaphore(0)
-        thread = Thread.ofVirtual().name("script-${target.name}-$scriptId").unstarted(::run)
-        return true
+        Thread.ofVirtual().name("script-${target.name}-$scriptId").start(::run)
+    }
+
+    /** Marks a script that could not be launched as finished, so the scheduler stops picking it. */
+    internal fun abandon() {
+        done = true
     }
 
     private fun run() {
@@ -73,41 +105,18 @@ class ScriptThread(
             t.printStackTrace()
         } finally {
             done = true
-            try {
-                handOff()
-            } catch (t: Throwable) {
-                // The frame must end even if choosing the next script failed, or the scheduler waits forever.
-                Log.warn("Scheduling after script $scriptId in '${target.name}' failed: $t")
-                t.printStackTrace()
-                runtime.endFrame()
-            }
+            handOff()
         }
     }
 
     /**
-     * Gives control to this script. The scheduler calls it for the first script of a frame, and the
-     * yielding script for every other one. The first time it starts the virtual thread, which is a
-     * handoff by itself; after that the thread is parked in [handOff] and gets its permit.
-     */
-    internal fun resume() {
-        if (launched) {
-            permit.release()
-        } else {
-            launched = true
-            thread.start()
-        }
-    }
-
-    /**
-     * Hands control to whatever the scheduler picks next, or back to the scheduler when the frame is
-     * over, and parks until this script is resumed. Returns at once when the scheduler picks this
+     * Hands control to whatever the scheduler picks next, or back to the scheduler thread when the frame
+     * is over, and parks until this script is resumed. Returns at once when the scheduler picks this
      * script again, which is what happens when no other script is left to step in the frame.
      */
     private fun handOff() {
-        val next = runtime.nextToRun()
-        if (next === this) return
-        if (next == null) runtime.endFrame() else next.resume()
-        if (!done) permit.acquireUninterruptibly()
+        if (runtime.dispatch(this)) return
+        if (!done) permit!!.acquireUninterruptibly()
     }
 
     /** Called from inside the script: lets the other scripts run. */
@@ -137,11 +146,13 @@ class ScriptThread(
         if (killed) throw StopScript()
     }
 
+    /** Enters "run without screen refresh", where loop yields return at once for up to 500 ms. */
     fun enterWarp() {
         if (warpDepth == 0) warpStartNanos = System.nanoTime()
         warpDepth++
     }
 
+    /** Leaves one level of "run without screen refresh". */
     fun exitWarp() {
         if (warpDepth > 0) warpDepth--
     }

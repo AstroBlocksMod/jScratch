@@ -1,18 +1,26 @@
 package org.jscratch.runtime
 
+import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** How scripts take turns within a frame and across frames, and how they stop. */
+/**
+ * How scripts take turns within a frame and across frames, and how they stop.
+ *
+ * A frame also ends once 75 percent of its time is used, which a slow machine can reach at any pass. Passes
+ * are never cut short, though, so the tests check the order things happen in across frames, not what fits
+ * into one frame, unless a redraw or a wait decides where the frame ends.
+ */
 class SchedulerTest {
     private class Backdrop(rt: Runtime) : Stage(rt, "Stage") {
         override fun runScript(id: Int) {}
     }
 
-    /** A sprite whose scripts are Kotlin lambdas, started by the green flag or by a broadcast. */
-    private class Bot(rt: Runtime) : Sprite(rt, "Bot") {
+    /** A sprite whose scripts are Kotlin lambdas, started by the green flag, a broadcast or a condition. */
+    private class Bot(rt: Runtime, name: String = "Bot") : Sprite(rt, name) {
         private val scripts = ArrayList<() -> Unit>()
+        private val conditions = HashMap<Int, () -> Boolean>()
 
         fun onFlag(body: () -> Unit) {
             registerHat(Runtime.HAT_FLAG, "", scripts.size)
@@ -24,9 +32,18 @@ class SchedulerTest {
             scripts.add(body)
         }
 
+        /** An edge-activated hat. Register it before the sprite is added, which is when the runtime looks for them. */
+        fun onCondition(condition: () -> Boolean, body: () -> Unit) {
+            registerHat(Runtime.HAT_EDGE, "touching", scripts.size)
+            conditions[scripts.size] = condition
+            scripts.add(body)
+        }
+
+        override fun hatPredicate(id: Int): Boolean = conditions.getValue(id)()
+
         override fun runScript(id: Int) = scripts[id]()
 
-        override fun newInstance(): Target = Bot(rt)
+        override fun newInstance(): Target = Bot(rt, name)
     }
 
     private val rt: Runtime
@@ -46,12 +63,29 @@ class SchedulerTest {
         rt.addTarget(bot)
     }
 
+    /** Unwinds the scripts a test left parked, so their virtual threads end with the test. */
+    @AfterTest
+    fun stopEverything() {
+        rt.stopAll()
+        var frames = 0
+        while (rt.threads.isNotEmpty() && frames++ < 10) rt.frame()
+    }
+
     private fun flag() {
         rt.startHats(Runtime.HAT_FLAG, "", null)
     }
 
+    /** Runs frames until no script is left. */
+    private fun runUntilDone() {
+        var frames = 0
+        while (rt.threads.isNotEmpty()) {
+            check(frames++ < 1000) { "the scripts never finished" }
+            rt.frame()
+        }
+    }
+
     @Test
-    fun loopScriptsTakeTurnsWithinAFrame() {
+    fun loopScriptsTakeTurns() {
         bot.onFlag {
             repeat(3) {
                 log.add("a")
@@ -65,9 +99,8 @@ class SchedulerTest {
             }
         }
         flag()
-        rt.frame()
+        runUntilDone()
         assertEquals(listOf("a", "b", "a", "b", "a", "b"), log)
-        assertTrue(rt.threads.isEmpty())
     }
 
     @Test
@@ -79,24 +112,28 @@ class SchedulerTest {
             }
         }
         bot.onFlag {
-            repeat(2) {
+            repeat(5) {
                 log.add("l")
                 rt.yieldLoop()
             }
         }
         flag()
-        rt.frame()
-        assertEquals(listOf("w", "l", "l"), log, "the loop gets the rest of the frame")
-        rt.frame()
-        assertEquals(listOf("w", "l", "l", "w"), log)
-        rt.frame()
-        rt.frame()
-        assertEquals(listOf("w", "l", "l", "w", "w"), log)
-        assertTrue(rt.threads.isEmpty())
+        for (frame in 1..3) {
+            rt.frame()
+            assertEquals(frame, log.count { it == "w" })
+        }
+        runUntilDone()
+        assertEquals(3, log.count { it == "w" })
+        assertEquals(5, log.count { it == "l" })
     }
 
     @Test
-    fun aLoneLoopRunsOnWithoutSwitchingThreads() {
+    fun aBusyLoopYieldsWithoutThreadSwitchesWhileOthersWait() {
+        repeat(5) {
+            bot.onFlag {
+                while (true) rt.yieldTick()
+            }
+        }
         var iterations = 0
         bot.onFlag {
             repeat(10000) {
@@ -105,9 +142,14 @@ class SchedulerTest {
             }
         }
         flag()
-        rt.frame()
-        assertEquals(10000, iterations, "finishes within the first frame")
-        assertTrue(rt.threads.isEmpty())
+        var frames = 0
+        while (iterations < 10000) {
+            check(frames++ < 1000) { "the loop never finished" }
+            val before = rt.handoffs
+            rt.frame()
+            // Each script gets control once, in the first pass, and the loop keeps it after that.
+            assertEquals(6, rt.handoffs - before, "handoffs in frame $frames")
+        }
     }
 
     @Test
@@ -143,7 +185,7 @@ class SchedulerTest {
     }
 
     @Test
-    fun aBroadcastStartsScriptsInTheSameFrame() {
+    fun aBroadcastStartsScriptsInTheSamePass() {
         bot.onFlag {
             log.add("flag")
             rt.broadcast("go")
@@ -153,7 +195,54 @@ class SchedulerTest {
         bot.onBroadcast("go") { log.add("go") }
         flag()
         rt.frame()
+        assertEquals(listOf("flag", "go"), log.take(2))
+        runUntilDone()
         assertEquals(listOf("flag", "go", "flag again"), log)
+    }
+
+    @Test
+    fun aLoneLoopThatBroadcastsLetsTheNewScriptRunNext() {
+        bot.onFlag {
+            log.add("w")
+            while (true) rt.yieldTick()
+        }
+        bot.onFlag {
+            for (i in 0 until 6) {
+                if (i == 3) rt.broadcast("go")
+                log.add("$i")
+                rt.yieldLoop()
+            }
+        }
+        bot.onBroadcast("go") { log.add("go") }
+        flag()
+        var frames = 0
+        while (log.lastOrNull() != "5") {
+            check(frames++ < 1000) { "the loop never finished" }
+            rt.frame()
+        }
+        assertEquals(listOf("w", "0", "1", "2", "3", "go", "4", "5"), log)
+    }
+
+    @Test
+    fun aLoneLoopThatStopsAWaitingScriptUnwindsItAtOnce() {
+        bot.onFlag {
+            log.add("w")
+            try {
+                while (true) rt.yieldTick()
+            } finally {
+                log.add("w stopped")
+            }
+        }
+        bot.onFlag {
+            for (i in 0 until 6) {
+                if (i == 3) rt.stopOtherScripts(bot)
+                log.add("$i")
+                rt.yieldLoop()
+            }
+        }
+        flag()
+        runUntilDone()
+        assertEquals(listOf("w", "0", "1", "2", "3", "w stopped", "4", "5"), log)
     }
 
     @Test
@@ -194,5 +283,21 @@ class SchedulerTest {
         rt.frame()
         assertEquals(listOf("start", "start", "end"), log)
         assertTrue(rt.threads.isEmpty())
+    }
+
+    @Test
+    fun aHatConditionThatThrowsAnErrorDoesNotStopTheYieldingScript() {
+        val broken = Bot(rt, "Broken")
+        broken.onCondition({ throw StackOverflowError() }) { log.add("never") }
+        rt.addTarget(broken)
+        bot.onFlag {
+            repeat(3) {
+                log.add("a")
+                rt.yieldLoop()
+            }
+        }
+        flag()
+        repeat(5) { rt.frame() }
+        assertEquals(listOf("a", "a", "a"), log)
     }
 }

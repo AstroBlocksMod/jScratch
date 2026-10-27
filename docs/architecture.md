@@ -80,9 +80,11 @@ Comparisons use `Cast.compare`, which mirrors scratch-vm: numeric when both side
 
 Scratch scripts are cooperative green threads: a script runs until it reaches a yield point (the end of a loop iteration, a `wait`, a `glide`), then the next script runs, and the stage is redrawn once per frame.
 
-jScratch keeps that model with JVM virtual threads. Each running script is a `ScriptThread` that owns a virtual thread, and exactly one script runs at any time, so generated code can be ordinary straight-line bytecode: a `forever` loop is a real loop that calls `yieldLoop()` at the end of each iteration. The scheduler decides the order, but it is not a thread that steps the scripts one by one. When a script yields, it asks the scheduler (`Runtime.nextToRun()`) which script comes next, resumes that script's thread directly and parks its own until it is resumed. When the frame is over, the yielding script wakes the scheduler thread instead, which renders the frame and starts the next one at 30 fps. The scheduler thread is a virtual thread too, so every switch is a virtual thread switch, which costs well under a microsecond, and no platform thread has to be woken.
+jScratch keeps that model with JVM virtual threads. Each running script is a `ScriptThread` that owns a virtual thread, and exactly one script runs at any time, so generated code can be ordinary straight-line bytecode: a `forever` loop is a real loop that calls `yieldLoop()` at the end of each iteration. The scheduler decides the order, but it is not a thread that steps the scripts one by one. When a script yields, it calls `Runtime.dispatch()`, which picks the script that comes next and resumes its thread directly, and then the yielding script parks its own thread until it is resumed. When the frame is over, the yielding script wakes the scheduler thread instead, which renders the frame and starts the next one at 30 fps. The scheduler thread is a virtual thread too, so a frame boundary is a virtual thread switch like the ones between scripts. Such a switch costs well under a microsecond. The JDK still runs virtual threads on a pool of carrier threads, though, so resuming another script can wake an idle carrier.
 
-The common case is cheaper still. A frame mostly has one script that is active, looping without waiting, while every other script waits for the next frame. The scheduler then picks the yielding script again, and the yield returns at once without any thread switch: it costs a few field reads and one clock read, so a loop that yields on every iteration runs almost as fast as one that does not.
+The common case avoids switches altogether. A frame mostly has one script that is active, looping without waiting, while every other script waits for the next frame. Once a pass ends with a single active script and no script was started or stopped during it, the scheduler knows the next passes would step that script alone. It stops scanning the list of scripts and hands each yield straight back to the same script, so the yield returns at once: it costs a few field reads and one clock read however many scripts are waiting, and a loop that yields on every iteration runs almost as fast as one that does not. Starting or stopping any script ends this, and the scheduler goes on with an ordinary pass from that point, so the order is the same as if it had scanned all along.
+
+`dispatch()` never throws. A hat condition that fails counts as false, and a script whose thread cannot be launched is dropped, so neither can crash the script that happened to be yielding or leave the scheduler waiting for a frame that never ends.
 
 ```mermaid
 sequenceDiagram
@@ -92,7 +94,7 @@ sequenceDiagram
     S->>A: resume() to start the frame
     A->>B: yieldLoop() hands over to B
     B->>A: wait() yields until next frame and hands back to A
-    A->>A: yieldLoop() returns at once, no other script is active
+    A->>A: yieldLoop() returns at once, no other script is left to step
     A->>S: frame time used up, wake the scheduler
     S->>S: render frame
 ```
