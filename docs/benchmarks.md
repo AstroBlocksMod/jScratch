@@ -41,7 +41,7 @@ All but `loops` do their work inside a custom block that runs without screen ref
 
 ## Latest results
 
-Measured on October 26, 2026 on a Mac with an Apple M4 and 16 GB of memory, with the change that made yields between frames cheap. jScratch ran on JDK 25.0.4, TurboWarp (`TurboWarp/scratch-vm` at `371839d`) and scratch-vm (`@scratch/scratch-vm` 15.3.0) on Node.js 26.12.0. Median of 3 runs, in milliseconds.
+Measured on October 26, 2026 on a Mac with an Apple M4 and 16 GB of memory, at commit `4c76d56`. jScratch ran on JDK 25.0.4, TurboWarp (`TurboWarp/scratch-vm` at `371839d`) and scratch-vm (`@scratch/scratch-vm` 15.3.0) on Node.js 26.12.0. Median of 3 runs, in milliseconds.
 
 | Project | jScratch | TurboWarp | scratch-vm | jScratch vs TurboWarp | jScratch vs scratch-vm |
 | --- | ---: | ---: | ---: | --- | --- |
