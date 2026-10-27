@@ -41,23 +41,23 @@ All but `loops` do their work inside a custom block that runs without screen ref
 
 ## Latest results
 
-Measured on October 27, 2026 on a Mac with an Apple M4 and 16 GB of memory, at commit `4961d39`. jScratch ran on JDK 25.0.4, TurboWarp (`TurboWarp/scratch-vm` at `371839d`) and scratch-vm (`@scratch/scratch-vm` 15.3.0) on Node.js 26.12.0. Median of 5 runs, in milliseconds.
+Measured on October 27, 2026 on a Mac with an Apple M4 and 16 GB of memory, at commit `053ebba`. jScratch ran on JDK 25.0.4, TurboWarp (`TurboWarp/scratch-vm` at `371839d`) and scratch-vm (`@scratch/scratch-vm` 15.3.0) on Node.js 26.12.0. Median of 5 runs, in milliseconds.
 
 | Project | jScratch | TurboWarp | scratch-vm | jScratch vs TurboWarp | jScratch vs scratch-vm |
 | --- | ---: | ---: | ---: | --- | --- |
-| fib | 54.9 | 20.8 | 3122.3 | 2.6x slower | 56.9x faster |
-| loops | 19.6 | 23.7 | 81.8 | 1.2x faster | 4.2x faster |
-| motion | 160.1 | 166.4 | 2633.1 | 1.0x faster | 16.4x faster |
-| primes | 674.2 | 82.9 | 17998.3 | 8.1x slower | 26.7x faster |
-| sieve | 185.1 | 51.7 | 7868.2 | 3.6x slower | 42.5x faster |
-| sort | 124.5 | 29.7 | 9836.5 | 4.2x slower | 79.0x faster |
-| strings | 234.0 | 85.9 | 4262.9 | 2.7x slower | 18.2x faster |
+| fib | 51.2 | 27.6 | 2917.3 | 1.9x slower | 57.0x faster |
+| loops | 16.6 | 31.7 | 74.9 | 1.9x faster | 4.5x faster |
+| motion | 140.1 | 157.1 | 2335.9 | 1.1x faster | 16.7x faster |
+| primes | 643.9 | 80.0 | 18793.8 | 8.1x slower | 29.2x faster |
+| sieve | 173.4 | 55.2 | 8118.3 | 3.1x slower | 46.8x faster |
+| sort | 114.8 | 32.4 | 10265.0 | 3.5x slower | 89.4x faster |
+| strings | 245.7 | 84.9 | 4384.8 | 2.9x slower | 17.8x faster |
 
-Every engine gave the expected result on every project. The numbers move with the machine, so compare engines within one run, not across machines. They also move between runs on one machine: this run was about 5% slower than one earlier the same day on all three engines, and an earlier run of 3 had TurboWarp at 335.3 ms on `motion`, more than twice its usual time, so a single run can mislead.
+Every engine gave the expected result on every project. The numbers move with the machine, so compare engines within one run, not across machines. They also move between runs on one machine: a run an hour earlier had TurboWarp at 20.8 ms on `fib` and 23.7 ms on `loops`, and one on October 26 had it at 335.3 ms on `motion`, more than twice its usual time, so a single run can mislead.
 
-Until this run, every loop iteration inside "run without screen refresh" read the clock and the script's volatile stop flag to enforce the 500 ms limit. Now only every 256th iteration does. Timed on jScratch alone the same day, before and after the change, `sort` went from 286.8 ms to 115.6 ms, `sieve` from 392.8 ms to 174.5 ms, `primes` from 1049.4 ms to 638.5 ms, `motion` from 249.3 ms to 142.6 ms and `strings` from 288.6 ms to 210.9 ms. Skipping the check entirely measured within noise of checking every 256th iteration, so the limit stays.
+Until October 27, every loop iteration inside "run without screen refresh" read the clock and the script's volatile stop flag to enforce the 500 ms limit. Now a run of iterations shares one look, growing to 256 while the looks stay under a millisecond apart, so a loop with a slow body still looks every time. Timed on jScratch alone the same day, before and after the change, `sort` went from 286.8 ms to 115.6 ms, `sieve` from 392.8 ms to 174.5 ms, `primes` from 1049.4 ms to 638.5 ms, `motion` from 249.3 ms to 142.6 ms and `strings` from 288.6 ms to 210.9 ms. Skipping the check entirely measured within noise of that, so the limit stays.
 
-Three days before that, before yields became cheap, `loops` took 2705.6 ms on the same machine: 119.5 times slower than TurboWarp and 35.6 times slower than scratch-vm. Every yield then switched from the scheduler thread to the script's virtual thread and back through two semaphores, about 5 microseconds. Now a script that yields while no other script is active keeps running without a thread switch, see [Runtime scheduling](architecture.md#runtime-scheduling). `motion` went from 425.6 ms to 262.1 ms in the same change, because a warp loop no longer looks up the running script in a `ThreadLocal` on every iteration.
+On October 23, before yields became cheap, `loops` took 2705.6 ms on the same machine: 119.5 times slower than TurboWarp and 35.6 times slower than scratch-vm. Every yield then switched from the scheduler thread to the script's virtual thread and back through two semaphores, about 5 microseconds. Now a script that yields while no other script is active keeps running without a thread switch, see [Runtime scheduling](architecture.md#runtime-scheduling). `motion` went from 425.6 ms to 262.1 ms in the same change, because a warp loop no longer looks up the running script in a `ThreadLocal` on every iteration.
 
 ## Reading the results
 
