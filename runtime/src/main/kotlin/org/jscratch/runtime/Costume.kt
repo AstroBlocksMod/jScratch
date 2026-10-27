@@ -34,6 +34,7 @@ class Costume(
     var imageResolution: Double = if (bitmapResolution > 0) bitmapResolution else 1.0
         private set
     private var radius: Double = -1.0
+    private var boxRadius: Double = -1.0
 
     /**
      * Sets the loaded pixels and everything derived from them in one step, so the
@@ -46,6 +47,7 @@ class Costume(
         imageRotationCenterY = centerY
         imageResolution = resolution
         radius = -1.0
+        boxRadius = -1.0
     }
 
     /** Takes the pixels of [other], an already loaded costume of the same resource, without copying them. */
@@ -72,10 +74,12 @@ class Costume(
 
     /** Distance in costume units from the rotation center to the farthest corner of the whole image. */
     fun boxRadius(): Double {
+        if (boxRadius >= 0) return boxRadius
         val img = image ?: return 0.0
         val dx = Math.max(imageRotationCenterX, img.width - imageRotationCenterX)
         val dy = Math.max(imageRotationCenterY, img.height - imageRotationCenterY)
-        return Math.hypot(dx, dy) / imageResolution
+        boxRadius = Math.hypot(dx, dy) / imageResolution
+        return boxRadius
     }
 
     val isSvg: Boolean get() = resource.endsWith(".svg", ignoreCase = true)
