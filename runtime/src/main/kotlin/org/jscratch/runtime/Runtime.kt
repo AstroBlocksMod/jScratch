@@ -16,6 +16,8 @@ import java.util.concurrent.Semaphore
  * fire. With `-Djscratch.screenshot=<file.png>`
  * it also saves the final frame, and `-Djscratch.timing=true` prints the frame
  * count and wall time to stderr. The tests and the benchmarks rely on these.
+ * `-Djscratch.input=<file>` feeds scripted input, in a window or headless (see
+ * [InputScript]).
  */
 class Runtime {
     lateinit var stage: Stage
@@ -33,6 +35,9 @@ class Runtime {
 
     val headlessFrames: Int = Integer.getInteger("jscratch.headless", -1)
     val headless: Boolean get() = headlessFrames >= 0
+
+    /** Scripted input from `-Djscratch.input`, run between frames. */
+    var input: InputScript? = InputScript.fromProperty()
     val sounds = Sounds(this)
     private val microphone = Microphone()
     private var loudness: Double = -1.0
@@ -201,9 +206,12 @@ class Runtime {
         val start = System.nanoTime()
         resetTimer()
         startHats(HAT_FLAG, "", null)
-        // Stop early once every script has finished: nothing but an edge-activated hat can start a new one
-        // without input.
-        while (frameIndex < headlessFrames && (threads.isNotEmpty() || edgeHatWaiting())) {
+        // Stop early once every script has finished: nothing but an edge-activated hat or scripted input can
+        // start a new one.
+        while (frameIndex < headlessFrames) {
+            input?.runDue(this)
+            val idle = threads.isEmpty() && events.isEmpty() && !edgeHatWaiting() && input?.pending != true
+            if (!running || idle) break
             frame()
             frameIndex++
         }
@@ -212,7 +220,7 @@ class Runtime {
             System.err.println("jscratch: $frameIndex frames in $ms ms")
         }
         System.getProperty("jscratch.screenshot")?.let { path ->
-            val img = StageRenderer.toImage(StageRenderer.snapshot(this), pen, 2)
+            val img = StageRenderer.toImage(StageRenderer.snapshot(this), pen.image, 2)
             javax.imageio.ImageIO.write(img, "png", java.io.File(path))
         }
         stopAllInternal()
@@ -226,6 +234,8 @@ class Runtime {
         val frameNanos = 1_000_000_000L / FPS
         var next = System.nanoTime()
         while (running) {
+            input?.runDue(this)
+            if (!running) break
             frame()
             frameIndex++
             w.present()

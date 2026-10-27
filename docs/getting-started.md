@@ -83,10 +83,43 @@ Compiled JARs understand a few system properties that are handy for tests and au
 | `-Djscratch.screenshot=<file.png>` | In headless mode, save the final frame as a PNG at twice the stage resolution. |
 | `-Djscratch.timing=true` | In headless mode, print the number of frames and the wall time from the green flag to the end of the run to stderr, as `jscratch: <frames> frames in <ms> ms`. The [benchmarks](benchmarks.md) use it. |
 | `-Djscratch.username=<name>` | What the `username` block reports, in a window or headless. Without it the block reports an empty string, as for a player who is not signed in. |
+| `-Djscratch.input=<file>` | Play the [scripted input](#scripted-input) in that file, in a window or headless. A headless run keeps going until the last line has run, even when no script is running. |
 
 ```sh
 java -Djscratch.headless=90 -Djscratch.screenshot=frame.png -jar my-game.jar
 ```
+
+### Scripted input
+
+Many projects open with menus that wait for a click. A scripted input file clicks through them for you, presses keys and saves screenshots along the way. Each line is a frame number, a command and its arguments, and runs once that many frames have run, so its input reaches the next frame. Blank lines and lines starting with `#` are skipped. Coordinates are stage coordinates, with (0, 0) in the middle and y going up.
+
+| Command | Effect |
+| --- | --- |
+| `move <x> <y>` | Move the mouse there. |
+| `down <x> <y>`, `up <x> <y>` | Press or release the mouse there. |
+| `click <x> <y>` | Press the mouse there and release it two frames later, so scripts that poll `mouse down?` see it too. |
+| `key <name>`, `keyup <name>` | Press and hold a key, or release it. Names are the ones Scratch uses: `space`, `left arrow`, `a`. |
+| `flag`, `stop` | Click the green flag or the stop button. |
+| `screenshot <file.png>` | Save the stage as it is at this point between two frames, at twice its size. |
+| `window <file.png>` | In a window, save what the window paints, at twice its size. Swing paints it when it gets to it, while the next frame runs, as it does on screen. |
+| `pause <ms>` | Wait that long before starting the next frame. |
+| `quit` | End the run, as closing the window does. |
+
+```text
+# Pick English, then keyboard controls, then look at the first level.
+60 click -100 -20
+130 click -95 -10
+300 key w
+320 keyup w
+330 screenshot level.png
+331 quit
+```
+
+```sh
+java -Djscratch.headless=400 -Djscratch.input=menus.txt -jar my-game.jar
+```
+
+A headless screenshot shows the frame the scripts finished, so use `window` in a window to check what a player actually sees.
 
 ## Try the sample
 

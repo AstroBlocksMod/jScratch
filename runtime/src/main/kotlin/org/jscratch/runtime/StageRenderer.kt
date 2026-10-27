@@ -46,8 +46,11 @@ object StageRenderer {
         return FrameSnapshot(backdrop, items, MonitorView.layout(rt))
     }
 
-    /** Renders the stage into [g], whose transform must already map stage pixels (480 x 360) to the device. */
-    fun render(g: Graphics2D, snap: FrameSnapshot?, pen: PenLayer) {
+    /**
+     * Renders the stage into [g], whose transform must already map stage pixels (480 x 360) to the device.
+     * [pen] is the pen layer's image or a copy of it, at any multiple of the stage size.
+     */
+    fun render(g: Graphics2D, snap: FrameSnapshot?, pen: BufferedImage) {
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
         g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
@@ -55,8 +58,8 @@ object StageRenderer {
         g.color = Color.WHITE
         g.fillRect(0, 0, Runtime.STAGE_WIDTH, Runtime.STAGE_HEIGHT)
         snap?.backdrop?.let { g.drawImage(it.image, it.transform, null) }
-        val penScale = 1.0 / pen.scale
-        g.drawImage(pen.image, AffineTransform.getScaleInstance(penScale, penScale), null)
+        val penScale = Runtime.STAGE_WIDTH.toDouble() / pen.width
+        g.drawImage(pen, AffineTransform.getScaleInstance(penScale, penScale), null)
         if (snap == null) return
         for (item in snap.items) {
             if (item.alpha <= 0f) continue
@@ -73,7 +76,7 @@ object StageRenderer {
     }
 
     /** Renders a frame to an image at [scale] times the stage size. */
-    fun toImage(snap: FrameSnapshot?, pen: PenLayer, scale: Int): BufferedImage {
+    fun toImage(snap: FrameSnapshot?, pen: BufferedImage, scale: Int): BufferedImage {
         val img = BufferedImage(Runtime.STAGE_WIDTH * scale, Runtime.STAGE_HEIGHT * scale, BufferedImage.TYPE_INT_ARGB)
         val g = img.createGraphics()
         g.scale(scale.toDouble(), scale.toDouble())

@@ -1,5 +1,6 @@
 package org.jscratch.runtime
 
+import java.awt.AlphaComposite
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
@@ -16,6 +17,9 @@ import java.awt.event.MouseWheelEvent
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 import java.awt.geom.Path2D
+import java.awt.image.BufferedImage
+import java.io.File
+import javax.imageio.ImageIO
 import javax.swing.Icon
 import javax.swing.JButton
 import javax.swing.JFrame
@@ -30,6 +34,15 @@ class StageWindow(private val rt: Runtime) {
     private val panel = StagePanel()
 
     @Volatile private var snapshot: FrameSnapshot? = null
+
+    /**
+     * The pen layer as it was at the end of the last frame. Swing paints whenever it gets to it, by which
+     * time the scripts are drawing the next frame into the live layer, often right after `erase all`. 3D
+     * engines draw their whole scene with the pen, so painting the live layer showed a blank or half drawn
+     * scene. [paintLock] keeps the copy from changing while it is painted.
+     */
+    private val pen = BufferedImage(rt.pen.image.width, rt.pen.image.height, BufferedImage.TYPE_INT_ARGB)
+    private val paintLock = Any()
 
     @Volatile var isAsking: Boolean = false
         private set
@@ -80,8 +93,37 @@ class StageWindow(private val rt: Runtime) {
 
     /** Called by the scheduler after each frame: snapshots the scene and asks Swing to repaint. */
     fun present() {
-        snapshot = StageRenderer.snapshot(rt)
+        val snap = StageRenderer.snapshot(rt)
+        synchronized(paintLock) {
+            if (rt.pen.dirty) {
+                rt.pen.dirty = false
+                val g = pen.createGraphics()
+                g.composite = AlphaComposite.Src
+                g.drawImage(rt.pen.image, 0, 0, null)
+                g.dispose()
+            }
+            snapshot = snap
+        }
         panel.repaint()
+    }
+
+    /**
+     * Saves what the stage panel paints at twice its size, once Swing gets to it. Like a repaint, this
+     * happens on the event thread while the scheduler may already be running the next frame.
+     */
+    fun capture(file: File) {
+        SwingUtilities.invokeLater {
+            val img = BufferedImage(panel.width * 2, panel.height * 2, BufferedImage.TYPE_INT_ARGB)
+            val g = img.createGraphics()
+            g.scale(2.0, 2.0)
+            panel.paint(g)
+            g.dispose()
+            ImageIO.write(img, "png", file)
+        }
+    }
+
+    fun close() {
+        SwingUtilities.invokeLater { frame.dispose() }
     }
 
     fun ask(target: Target?, question: String, onAnswer: (String) -> Unit) {
@@ -184,7 +226,7 @@ class StageWindow(private val rt: Runtime) {
             offsetY = (height - Runtime.STAGE_HEIGHT * scale) / 2
             g.translate(offsetX, offsetY)
             g.scale(scale, scale)
-            StageRenderer.render(g, snapshot, rt.pen)
+            synchronized(paintLock) { StageRenderer.render(g, snapshot, pen) }
             g.dispose()
         }
     }
