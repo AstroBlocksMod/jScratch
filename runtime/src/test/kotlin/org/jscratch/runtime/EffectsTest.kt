@@ -116,4 +116,28 @@ class EffectsTest {
         assertTrue(tiled.opaque(0, 0) && tiled.opaque(2, 0) && tiled.opaque(0, 2) && tiled.opaque(2, 2))
         assertFalse(tiled.opaque(1, 1))
     }
+
+    @Test
+    fun renderShrinksToTheDrawnSize() {
+        val img = BufferedImage(4, 4, BufferedImage.TYPE_INT_ARGB)
+        for (y in 0 until 4) for (x in 0 until 4) img.setRGB(x, y, 0xFFFF0000.toInt())
+        val small = effect("color", 100.0).render(Silhouette(img), 4.0, 4.0, 2, 2)
+        assertEquals(2, small.width)
+        assertEquals(2, small.height)
+        // Solid red everywhere, so the bilinear samples stay pure and every pixel turns cyan.
+        for (y in 0 until 2) for (x in 0 until 2) assertEquals(0xFF01FFFF.toInt(), small.getRGB(x, y))
+    }
+
+    @Test
+    fun renderSplitsLargeImagesAcrossCores() {
+        // 256 x 256 is past the parallel threshold; every pixel must still come out transformed.
+        val img = BufferedImage(256, 256, BufferedImage.TYPE_INT_ARGB)
+        for (y in 0 until 256) for (x in 0 until 256) img.setRGB(x, y, 0xFF000000.toInt())
+        val bright = effect("brightness", 100.0).render(Silhouette(img), 256.0, 256.0)
+        for (y in 0 until 256 step 51) {
+            for (x in 0 until 256 step 51) {
+                assertEquals(0xFFFFFFFF.toInt(), bright.getRGB(x, y))
+            }
+        }
+    }
 }

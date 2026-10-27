@@ -182,32 +182,82 @@ internal data class Effects(
     /**
      * Draws [sil]'s costume image with these effects, as scratch-render's sprite shader does. Moved
      * pixels are sampled bilinearly from the premultiplied costume, clamped at its edges like a WebGL
-     * texture. The result has the costume's size and comes back premultiplied.
+     * texture. The result is [outWidth] by [outHeight] pixels, at most the costume's own size: a
+     * sprite drawn small gets a small image, so the effects only pay for the pixels that end up on
+     * the stage. The work is split across cores for large images, and [transformColor] results are
+     * cached per distinct color, which a drawing with flat areas hits constantly. Comes back
+     * premultiplied.
      */
-    fun render(sil: Silhouette, skinWidth: Double, skinHeight: Double): BufferedImage {
-        val w = sil.width
-        val h = sil.height
+    fun render(
+        sil: Silhouette,
+        skinWidth: Double,
+        skinHeight: Double,
+        outWidth: Int = sil.width,
+        outHeight: Int = sil.height,
+    ): BufferedImage {
         val src = sil.premultiplied
-        val out = IntArray(w * h)
-        val p = DoubleArray(2)
-        for (y in 0 until h) {
-            for (x in 0 until w) {
-                val i = y * w + x
-                val c =
-                    if (changesShape) {
-                        p[0] = (x + 0.5) / w
-                        p[1] = (y + 0.5) / h
-                        transformPoint(p, skinWidth, skinHeight)
-                        sampleLinear(src, w, h, p[0], p[1])
-                    } else {
-                        src[i]
-                    }
-                out[i] = transformColor(c)
+        val out = IntArray(outWidth * outHeight)
+        val cores = java.lang.Runtime.getRuntime().availableProcessors()
+        val chunks = if (outWidth * outHeight >= PARALLEL_PIXELS) Math.min(cores, outHeight) else 1
+        if (chunks <= 1) {
+            renderRows(sil, src, skinWidth, skinHeight, out, outWidth, outHeight, 0, outHeight)
+        } else {
+            val rows = (outHeight + chunks - 1) / chunks
+            java.util.stream.IntStream.range(0, chunks).parallel().forEach { c ->
+                val from = c * rows
+                renderRows(
+                    sil, src, skinWidth, skinHeight, out, outWidth, outHeight, from,
+                    Math.min(
+                        outHeight,
+                        from + rows,
+                    ),
+                )
             }
         }
-        val img = BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB_PRE)
-        img.raster.setDataElements(0, 0, w, h, out)
+        val img = BufferedImage(outWidth, outHeight, BufferedImage.TYPE_INT_ARGB_PRE)
+        img.raster.setDataElements(0, 0, outWidth, outHeight, out)
         return img
+    }
+
+    /** Renders the rows [fromRow] until [toRow] of [out], with its own color cache so chunks never share state. */
+    private fun renderRows(
+        sil: Silhouette,
+        src: IntArray,
+        skinWidth: Double,
+        skinHeight: Double,
+        out: IntArray,
+        outWidth: Int,
+        outHeight: Int,
+        fromRow: Int,
+        toRow: Int,
+    ) {
+        val w = sil.width
+        val h = sil.height
+        val plain = !changesShape && outWidth == w && outHeight == h
+        val cache = if (changesColor) HashMap<Int, Int>() else null
+        val p = DoubleArray(2)
+        for (y in fromRow until toRow) {
+            for (x in 0 until outWidth) {
+                val i = y * outWidth + x
+                val c =
+                    when {
+                        plain -> src[i]
+                        changesShape -> {
+                            p[0] = (x + 0.5) / outWidth
+                            p[1] = (y + 0.5) / outHeight
+                            transformPoint(p, skinWidth, skinHeight)
+                            sampleLinear(src, w, h, p[0], p[1])
+                        }
+                        else -> sampleLinear(src, w, h, (x + 0.5) / outWidth, (y + 0.5) / outHeight)
+                    }
+                out[i] =
+                    if (cache == null) {
+                        c
+                    } else {
+                        cache[c] ?: transformColor(c).also { if (cache.size < COLOR_CACHE_LIMIT) cache[c] = it }
+                    }
+            }
+        }
     }
 
     private fun sampleLinear(src: IntArray, w: Int, h: Int, u: Double, v: Double): Int {
@@ -243,20 +293,31 @@ internal data class Effects(
 
         /** JavaScript's `Number.EPSILON`. */
         private val EPSILON = Math.ulp(1.0)
+
+        /** Output pixels from which [render] splits its rows across cores. */
+        private const val PARALLEL_PIXELS = 1 shl 15
+
+        /** Distinct colors a render keeps transformed results for, so a huge photo cannot balloon the cache. */
+        private const val COLOR_CACHE_LIMIT = 1 shl 16
     }
 }
 
 /**
- * A costume image as a target's graphic effects draw it. Built on first use and shared by clones,
- * which copy their parent's effects.
+ * A costume image as a target's graphic effects draw it, at [scale] times the costume's resolution
+ * (at most 1): the resolution the target is drawn at, so a large texture stamped small never pays
+ * for its full size. Built on first use and shared by clones, which copy their parent's effects.
  */
 internal class EffectedCostume(
     val source: Silhouette,
     private val skinWidth: Double,
     private val skinHeight: Double,
     val effects: Effects,
+    val scale: Double,
 ) {
-    val image: BufferedImage by lazy { effects.render(source, skinWidth, skinHeight) }
+    val width: Int = Math.max(1, Math.round(source.width * scale).toInt())
+    val height: Int = Math.max(1, Math.round(source.height * scale).toInt())
+
+    val image: BufferedImage by lazy { effects.render(source, skinWidth, skinHeight, width, height) }
 
     /** The outline of [image], for bounds. Touching samples the costume through the effects instead. */
     val silhouette: Silhouette by lazy { Silhouette(image) }

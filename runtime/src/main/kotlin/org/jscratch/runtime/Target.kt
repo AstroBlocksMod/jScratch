@@ -200,13 +200,42 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         if (!effects.active) return null
         val c = costume ?: return null
         val sil = c.silhouette ?: return null
+        val scale = drawnScale()
         val e = effected
-        if (e != null && e.source === sil && e.effects == effects) return e
-        return EffectedCostume(sil, c.width, c.height, effects).also { effected = it }
+        if (e != null && e.source === sil && e.effects == effects && e.scale == scale) return e
+        return EffectedCostume(sil, c.width, c.height, effects, scale).also { effected = it }
+    }
+
+    /**
+     * The resolution the target is drawn at, in output pixels per costume pixel: the pen layer and
+     * screenshots draw at twice the stage size. Bucketed to powers of two so a sprite growing
+     * smoothly re-renders its effects a few times, not on every size, and capped at the costume's
+     * own resolution, which rotation cannot raise.
+     */
+    private fun drawnScale(): Double {
+        val c = costume ?: return 1.0
+        val s = 2.0 * (if (isStage) 1.0 else size / 100.0) / c.imageResolution
+        if (s >= 1.0) return 1.0
+        var bucket = 1.0
+        while (bucket * 0.5 >= s && bucket > 1.0 / 16) bucket *= 0.5
+        return bucket
     }
 
     /** The pixels this target draws and stamps: its costume image with every effect but ghost. */
     fun drawnImage(): BufferedImage? = effectedCostume()?.image ?: costume?.image
+
+    /**
+     * The [renderTransform], adjusted when [drawnImage] is an effected image at reduced resolution,
+     * so stamping and drawing place it exactly where the full-size costume would go.
+     */
+    fun drawnTransform(): AffineTransform? {
+        val at = renderTransform() ?: return null
+        val e = effectedCostume() ?: return at
+        if (e.width != e.source.width || e.height != e.source.height) {
+            at.scale(e.source.width.toDouble() / e.width, e.source.height.toDouble() / e.height)
+        }
+        return at
+    }
 
     /** The costume's opaque pixels as drawn, which effects that move pixels change. */
     private fun drawnSilhouette(): Silhouette? =
@@ -282,7 +311,8 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
     private fun computeBounds(): Bounds? {
         val pts = drawnSilhouette()?.hull ?: return null
         if (pts.isEmpty()) return null
-        val at = renderTransform() ?: return null
+        // The hull of a reduced-resolution effected image is in its pixels, not the costume's.
+        val at = (if (effects.changesShape) drawnTransform() else renderTransform()) ?: return null
         val n = pts.size / 2
         val out = DoubleArray(pts.size)
         at.transform(pts, 0, out, 0, n)
@@ -1091,7 +1121,7 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
 
     fun stamp() {
         val img = drawnImage() ?: return
-        val at = renderTransform() ?: return
+        val at = drawnTransform() ?: return
         rt.pen.stamp(img, at, (1.0 - ghost / 100.0).toFloat())
     }
 
