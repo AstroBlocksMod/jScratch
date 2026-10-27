@@ -100,7 +100,7 @@ class SafeClassWriter : ClassWriter(COMPUTE_FRAMES or COMPUTE_MAXS) {
 }
 
 object ProjectCompiler {
-    fun compile(project: Project, options: CompileOptions = CompileOptions()): GeneratedProject {
+    fun compile(project: Project, options: CompileOptions): GeneratedProject {
         val ctx = ProjectContext(project, options)
         val classes = LinkedHashMap<String, ByteArray>()
         for (t in project.targets) {

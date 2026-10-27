@@ -98,6 +98,13 @@
 
   fileInput.addEventListener("change", () => choose(fileInput.files[0] || null));
 
+  // The setting is compiled into the JAR, so a JAR from before the change would not have it.
+  turboWarpCheckbox.addEventListener("change", () => {
+    if (result.classList.contains("hidden")) return;
+    result.classList.add("hidden");
+    setStatus("Compile again to apply the TurboWarp setting.");
+  });
+
   ["dragenter", "dragover"].forEach((ev) =>
     drop.addEventListener(ev, (e) => {
       e.preventDefault();
