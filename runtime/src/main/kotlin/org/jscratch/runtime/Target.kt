@@ -483,11 +483,11 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
     fun stopOtherScripts() = rt.stopOtherScripts(this)
 
     fun enterWarp() {
-        ScriptThread.current()?.enterWarp()
+        rt.currentScript?.enterWarp()
     }
 
     fun exitWarp() {
-        ScriptThread.current()?.exitWarp()
+        rt.currentScript?.exitWarp()
     }
 
     fun createCloneOf(option: Any?) {

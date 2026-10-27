@@ -3,6 +3,7 @@ package org.jscratch.runtime
 import java.net.NetworkInterface
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.Semaphore
 
 /**
  * The project runtime: owns the stage, the sprites, the script scheduler, the
@@ -82,6 +83,27 @@ class Runtime {
     @Volatile var redrawRequested: Boolean = false
     private var frameIndex: Long = 0
 
+    // Scheduler state of the frame in progress. Only the thread in control touches it: the scheduler
+    // thread between frames, the running script during one. Every handoff goes through a semaphore
+    // or a thread start, so each of them sees what the previous one wrote.
+
+    /** The script that is running, or null between frames. */
+    var currentScript: ScriptThread? = null
+        private set
+
+    /** The index of the next thread to consider in the current pass over [threads]. */
+    private var passIndex = 0
+
+    /** How many threads stepped in this pass are still active: not done and not waiting for the next frame. */
+    private var passActive = 0
+
+    /** Whether a thread finished during this pass, so the done ones need to be removed at its end. */
+    private var passStopped = false
+    private var frameStartNanos: Long = 0
+
+    /** Released by the last script of a frame to wake the scheduler thread in [frame]. */
+    private val frameOver = Semaphore(0)
+
     /** How many frames have run. */
     val frameCount: Long get() = frameIndex
     private var timerStartMs: Double = 0.0
@@ -136,28 +158,44 @@ class Runtime {
         }
         for (t in allTargets()) t.costumes.forEach { assets.load(it) }
         sounds.loadAll(allTargets().flatMap { it.sounds })
-        if (headless) {
-            val start = System.nanoTime()
-            resetTimer()
-            startHats(HAT_FLAG, "", null)
-            // Stop early once every script has finished: nothing but an edge-activated hat can start a new one
-            // without input.
-            while (frameIndex < headlessFrames && (threads.isNotEmpty() || edgeHatWaiting())) {
-                frame()
-                frameIndex++
+        // The scheduler runs on a virtual thread like the scripts, so handing a frame over to the first
+        // script and getting it back from the last one are virtual thread switches, not wakeups of a
+        // platform thread.
+        var failure: Throwable? = null
+        val scheduler =
+            Thread.ofVirtual().name("scheduler").start {
+                try {
+                    if (headless) runHeadless() else runWindowed()
+                } catch (t: Throwable) {
+                    failure = t
+                }
             }
-            if (java.lang.Boolean.getBoolean("jscratch.timing")) {
-                val ms = (System.nanoTime() - start) / 1_000_000.0
-                System.err.println("jscratch: $frameIndex frames in $ms ms")
-            }
-            System.getProperty("jscratch.screenshot")?.let { path ->
-                val img = StageRenderer.toImage(StageRenderer.snapshot(this), pen, 2)
-                javax.imageio.ImageIO.write(img, "png", java.io.File(path))
-            }
-            stopAllInternal()
-            return
-        }
+        scheduler.join()
+        failure?.let { throw it }
+    }
 
+    private fun runHeadless() {
+        val start = System.nanoTime()
+        resetTimer()
+        startHats(HAT_FLAG, "", null)
+        // Stop early once every script has finished: nothing but an edge-activated hat can start a new one
+        // without input.
+        while (frameIndex < headlessFrames && (threads.isNotEmpty() || edgeHatWaiting())) {
+            frame()
+            frameIndex++
+        }
+        if (java.lang.Boolean.getBoolean("jscratch.timing")) {
+            val ms = (System.nanoTime() - start) / 1_000_000.0
+            System.err.println("jscratch: $frameIndex frames in $ms ms")
+        }
+        System.getProperty("jscratch.screenshot")?.let { path ->
+            val img = StageRenderer.toImage(StageRenderer.snapshot(this), pen, 2)
+            javax.imageio.ImageIO.write(img, "png", java.io.File(path))
+        }
+        stopAllInternal()
+    }
+
+    private fun runWindowed() {
         val w = StageWindow(this)
         window = w
         w.open()
@@ -191,27 +229,75 @@ class Runtime {
 
     // ---- scheduler ------------------------------------------------------------------------------
 
-    /** Runs one frame: processes input events, then steps every script until it yields. */
+    /**
+     * Runs one frame: processes input events, then lets the scripts run until the frame is over. The
+     * scripts pass control among themselves through [nextToRun], so this thread only hands the frame to
+     * the first script and waits for the last one to hand it back.
+     */
     fun frame() {
         processEvents()
         startEdgeHats()
         redrawRequested = false
-        val start = System.nanoTime()
+        frameStartNanos = System.nanoTime()
         for (t in threads) t.tickYield = false
-        do {
-            var active = 0
-            var i = 0
-            while (i < threads.size) {
-                val t = threads[i]
-                i++
+        passIndex = 0
+        passActive = 0
+        passStopped = false
+        currentScript = null
+        val first = nextToRun()
+        if (first != null) {
+            first.resume()
+            frameOver.acquireUninterruptibly()
+        }
+        frameListener?.invoke(this)
+    }
+
+    /**
+     * The scheduler: picks the next script to step and makes it [currentScript], or returns null when the
+     * frame is over. Called by the script that is yielding or finishing, after it has set its own
+     * [ScriptThread.tickYield] or [ScriptThread.done], and by [frame] for the first script.
+     *
+     * A pass steps every thread that is not done and not waiting for the next frame, in order, including
+     * threads that were started during the pass. Killed threads are stepped so they unwind. Passes repeat,
+     * as scratch-vm's do, while some stepped thread is still active, no redraw was requested and less than
+     * 75 percent of the frame time is used. The yielding script is often the one picked next, when it is
+     * the only active one, and then it keeps running without a thread switch.
+     */
+    internal fun nextToRun(): ScriptThread? {
+        val prev = currentScript
+        if (prev != null) {
+            if (prev.done) {
+                passStopped = true
+            } else if (!prev.tickYield) {
+                passActive++
+            }
+        }
+        while (true) {
+            while (passIndex < threads.size) {
+                val t = threads[passIndex++]
                 if (t.done) continue
                 if (t.tickYield && !t.killed) continue
-                t.step()
-                if (!t.done && !t.tickYield) active++
+                if (!t.started && !t.start()) {
+                    passStopped = true
+                    continue
+                }
+                currentScript = t
+                return t
             }
-            threads.removeAll { it.done }
-        } while (active > 0 && !redrawRequested && System.nanoTime() - start < WORK_TIME_NANOS)
-        frameListener?.invoke(this)
+            if (passStopped) threads.removeAll { it.done }
+            if (passActive == 0 || redrawRequested || System.nanoTime() - frameStartNanos >= WORK_TIME_NANOS) {
+                currentScript = null
+                return null
+            }
+            passIndex = 0
+            passActive = 0
+            passStopped = false
+        }
+    }
+
+    /** Called by the last script of a frame, once [nextToRun] returned null: wakes the scheduler thread. */
+    internal fun endFrame() {
+        frameOver.release()
     }
 
     private fun processEvents() {
@@ -388,12 +474,12 @@ class Runtime {
 
     /** Called from inside a script: lets the other scripts run, then continues within the same frame if time allows. */
     fun yieldLoop() {
-        ScriptThread.current()?.yieldNow(false)
+        currentScript?.yieldNow(false)
     }
 
     /** Called from inside a script: waits for the next frame. */
     fun yieldTick() {
-        ScriptThread.current()?.yieldNow(true)
+        currentScript?.yieldNow(true)
     }
 
     /**
@@ -401,7 +487,7 @@ class Runtime {
      * like a block in scratch-vm that returns a promise.
      */
     fun yieldFrame() {
-        ScriptThread.current()?.yieldFrame()
+        currentScript?.yieldFrame()
     }
 
     fun wait(seconds: Double) {
@@ -428,7 +514,7 @@ class Runtime {
     /** `stop all` from a script: kills every script including the caller. */
     fun stopAll() {
         stopAllInternal()
-        if (ScriptThread.current() != null) throw StopScript()
+        if (currentScript != null) throw StopScript()
     }
 
     private fun stopAllInternal() {
@@ -450,7 +536,7 @@ class Runtime {
 
     fun stopOtherScripts(target: Target) {
         sounds.stopWaiting(target)
-        val me = ScriptThread.current()
+        val me = currentScript
         for (t in threads) {
             if (t.target === target && t !== me) t.killed = true
         }
@@ -475,7 +561,7 @@ class Runtime {
     fun removeClone(clone: Target) {
         sprites.remove(clone)
         sounds.remove(clone)
-        val me = ScriptThread.current()
+        val me = currentScript
         for (t in threads) {
             if (t.target === clone && t !== me) t.killed = true
         }

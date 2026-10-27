@@ -80,19 +80,20 @@ Comparisons use `Cast.compare`, which mirrors scratch-vm: numeric when both side
 
 Scratch scripts are cooperative green threads: a script runs until it reaches a yield point (the end of a loop iteration, a `wait`, a `glide`), then the next script runs, and the stage is redrawn once per frame.
 
-jScratch keeps that model with JVM virtual threads. Each running script is a `ScriptThread` that owns a virtual thread and two semaphores. The scheduler, which runs on one platform thread at 30 fps, hands control to a script with `step()` and blocks until the script calls `yieldNow()` or finishes. Exactly one script runs at any time and the scheduler decides the order, so generated code can be ordinary straight-line bytecode: a `forever` loop is a real loop that calls `yieldLoop()` at the end of each iteration.
+jScratch keeps that model with JVM virtual threads. Each running script is a `ScriptThread` that owns a virtual thread, and exactly one script runs at any time, so generated code can be ordinary straight-line bytecode: a `forever` loop is a real loop that calls `yieldLoop()` at the end of each iteration. The scheduler decides the order, but it is not a thread that steps the scripts one by one. When a script yields, it asks the scheduler (`Runtime.nextToRun()`) which script comes next, resumes that script's thread directly and parks its own until it is resumed. When the frame is over, the yielding script wakes the scheduler thread instead, which renders the frame and starts the next one at 30 fps. The scheduler thread is a virtual thread too, so every switch is a virtual thread switch, which costs well under a microsecond, and no platform thread has to be woken.
+
+The common case is cheaper still. A frame mostly has one script that is active, looping without waiting, while every other script waits for the next frame. The scheduler then picks the yielding script again, and the yield returns at once without any thread switch: it costs a few field reads and one clock read, so a loop that yields on every iteration runs almost as fast as one that does not.
 
 ```mermaid
 sequenceDiagram
-    participant S as Scheduler (30 fps)
+    participant S as Scheduler (30 fps, virtual thread)
     participant A as Script A (virtual thread)
     participant B as Script B (virtual thread)
-    S->>A: step()
-    A-->>S: yieldLoop()
-    S->>B: step()
-    B-->>S: wait() yields until next frame
-    S->>A: step() again if time is left and no redraw was requested
-    A-->>S: yieldLoop()
+    S->>A: resume() to start the frame
+    A->>B: yieldLoop() hands over to B
+    B->>A: wait() yields until next frame and hands back to A
+    A->>A: yieldLoop() returns at once, no other script is active
+    A->>S: frame time used up, wake the scheduler
     S->>S: render frame
 ```
 
@@ -100,7 +101,7 @@ Within one frame the scheduler keeps re-stepping loop-yielded scripts until 75 p
 
 Stopping a script sets a `killed` flag; the next time the script resumes it throws `StopScript`, which unwinds the virtual thread. "Run without screen refresh" increments a warp counter on the current script so yields return immediately, with the same 500 ms safety valve as Scratch.
 
-Edge-activated hats (`when timer greater than`, `when loudness greater than` and `when touching`) work like they do in scratch-vm. At the start of every frame the scheduler queues a `ScriptThread` for each of these hats whose script is not already running. When the thread first steps, it calls the hat's `hatPredicate` and compares the result with the value the target kept from the last check, and only a change from false to true (or a first check that is true) runs the script. The check happens on the scheduler thread, and a `ScriptThread` only starts its virtual thread once the script really runs, so a hat that does not fire costs one method call per frame. Each hat remembers the last thread it queued, so finding out whether its script still runs takes no search through the running scripts. Clones start with a copy of their parent's hat values, as scratch-vm's `makeClone` gives them, and the green flag forgets them all, so a condition that is already true fires again.
+Edge-activated hats (`when timer greater than`, `when loudness greater than` and `when touching`) work like they do in scratch-vm. At the start of every frame the scheduler queues a `ScriptThread` for each of these hats whose script is not already running. When the thread first steps, it calls the hat's `hatPredicate` and compares the result with the value the target kept from the last check, and only a change from false to true (or a first check that is true) runs the script. The check happens when the scheduler picks the thread, on whichever thread is choosing the next script, and a `ScriptThread` only starts its virtual thread once the script really runs, so a hat that does not fire costs one method call per frame. Each hat remembers the last thread it queued, so finding out whether its script still runs takes no search through the running scripts. Clones start with a copy of their parent's hat values, as scratch-vm's `makeClone` gives them, and the green flag forgets them all, so a condition that is already true fires again.
 
 ## Rendering and input
 
