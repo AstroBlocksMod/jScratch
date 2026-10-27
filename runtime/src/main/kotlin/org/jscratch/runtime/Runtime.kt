@@ -207,22 +207,23 @@ class Runtime {
         resetTimer()
         startHats(HAT_FLAG, "", null)
         // Stop early once every script has finished: nothing but an edge-activated hat or scripted input can
-        // start a new one.
-        while (frameIndex < headlessFrames) {
+        // start a new one. Input due once the last frame has run still runs, so it can take a screenshot.
+        while (true) {
             input?.runDue(this)
             val idle = threads.isEmpty() && events.isEmpty() && !edgeHatWaiting() && input?.pending != true
-            if (!running || idle) break
+            if (frameIndex >= headlessFrames || !running || idle) break
             frame()
             frameIndex++
+        }
+        input?.let {
+            if (running && it.pending) Log.warn("Scripted input after frame $frameIndex never ran: the run ended first")
+            it.finish()
         }
         if (java.lang.Boolean.getBoolean("jscratch.timing")) {
             val ms = (System.nanoTime() - start) / 1_000_000.0
             System.err.println("jscratch: $frameIndex frames in $ms ms")
         }
-        System.getProperty("jscratch.screenshot")?.let { path ->
-            val img = StageRenderer.toImage(StageRenderer.snapshot(this), pen.image, 2)
-            javax.imageio.ImageIO.write(img, "png", java.io.File(path))
-        }
+        System.getProperty("jscratch.screenshot")?.let { saveScreenshot(java.io.File(it)) }
         stopAllInternal()
     }
 
@@ -233,21 +234,34 @@ class Runtime {
         events.add(Event.GreenFlag)
         val frameNanos = 1_000_000_000L / FPS
         var next = System.nanoTime()
-        while (running) {
-            input?.runDue(this)
-            if (!running) break
-            frame()
-            frameIndex++
-            w.present()
-            next += frameNanos
-            val sleep = next - System.nanoTime()
-            if (sleep > 0) {
-                Thread.sleep(sleep / 1_000_000, (sleep % 1_000_000).toInt())
-            } else {
-                next = System.nanoTime()
+        // A failing input step ends the run like closing the window, instead of leaving it open and frozen.
+        try {
+            while (running) {
+                input?.runDue(this)
+                if (!running) break
+                frame()
+                frameIndex++
+                w.present()
+                next += frameNanos
+                val sleep = next - System.nanoTime()
+                if (sleep > 0) {
+                    Thread.sleep(sleep / 1_000_000, (sleep % 1_000_000).toInt())
+                } else {
+                    next = System.nanoTime()
+                }
             }
+            input?.finish()
+        } finally {
+            running = false
+            sounds.stopAll()
+            w.close()
         }
-        sounds.stopAll()
+    }
+
+    /** Saves the stage as it is now, between two frames, at twice its size. */
+    fun saveScreenshot(file: java.io.File) {
+        val img = StageRenderer.toImage(StageRenderer.snapshot(this), pen.image, 2)
+        javax.imageio.ImageIO.write(img, "png", file)
     }
 
     fun allTargets(): List<Target> {

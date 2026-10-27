@@ -5,6 +5,7 @@ import javax.imageio.ImageIO
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /** Scripted input from `-Djscratch.input`, run between frames of a headless run. */
@@ -25,9 +26,20 @@ class InputScriptTest {
     }
 
     private fun run(script: String, frames: Int = 30): Pair<Runtime, Backdrop> {
+        val old = System.getProperty("jscratch.headless")
         System.setProperty("jscratch.headless", frames.toString())
-        val rt = Runtime()
-        System.setProperty("jscratch.headless", "0")
+        val rt =
+            try {
+                Runtime()
+            } finally {
+                if (old == null) {
+                    System.clearProperty(
+                        "jscratch.headless",
+                    )
+                } else {
+                    System.setProperty("jscratch.headless", old)
+                }
+            }
         val stage = Backdrop(rt)
         rt.addTarget(stage)
         rt.input = InputScript.parse(script)
@@ -60,9 +72,51 @@ class InputScriptTest {
     }
 
     @Test
+    fun aClickLetsGoWhereTheMouseIsThen() {
+        val (rt, stage) = run("2 click 0 0\n3 move 100 50")
+        assertEquals(listOf(2L), stage.clicks)
+        assertEquals(100.0, rt.mouseX, "letting go does not move the mouse back")
+        assertEquals(50.0, rt.mouseY)
+        assertEquals(false, rt.mouseDown)
+    }
+
+    @Test
     fun quitEndsTheRun() {
-        val (rt, _) = run("3 quit\n20 move 0 0")
-        assertEquals(3, rt.frameCount)
+        val file = File.createTempFile("input", ".png")
+        file.delete()
+        try {
+            val (rt, _) = run("3 quit\n3 screenshot ${file.path}\n20 move 0 0")
+            assertEquals(3, rt.frameCount)
+            assertFalse(file.exists(), "steps after quit do not run, even on the same frame")
+        } finally {
+            file.delete()
+        }
+    }
+
+    @Test
+    fun inputDueAtTheFrameLimitStillRuns() {
+        val file = File.createTempFile("input", ".png")
+        file.delete()
+        try {
+            val (rt, _) = run("10 screenshot ${file.path}", frames = 10)
+            assertEquals(10, rt.frameCount)
+            assertTrue(file.exists())
+        } finally {
+            file.delete()
+        }
+    }
+
+    @Test
+    fun aFailingStepEndsTheRunWithItsLine() {
+        val missing = File(System.getProperty("java.io.tmpdir"), "no-such-dir-${System.nanoTime()}/shot.png")
+        val e = assertFailsWith<IllegalStateException> { run("\n4 screenshot ${missing.path}") }
+        assertTrue("line 2 (screenshot)" in e.message!!, e.message)
+    }
+
+    @Test
+    fun aWindowCaptureNeedsAWindow() {
+        val e = assertFailsWith<IllegalStateException> { run("1 window shot.png") }
+        assertTrue("headless" in e.message!!, e.message)
     }
 
     @Test
@@ -85,5 +139,9 @@ class InputScriptTest {
         val arity = assertFailsWith<IllegalArgumentException> { InputScript.parse("1 click 4") }
         assertTrue("line 1" in arity.message!!, arity.message)
         assertFailsWith<IllegalArgumentException> { InputScript.parse("soon flag") }
+        val number = assertFailsWith<IllegalArgumentException> { InputScript.parse("1 click 4 up") }
+        assertTrue("argument 2" in number.message!!, number.message)
+        val missing = assertFailsWith<IllegalArgumentException> { InputScript.parse("12") }
+        assertTrue("expected a command" in missing.message!!, missing.message)
     }
 }

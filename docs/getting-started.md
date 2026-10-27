@@ -83,7 +83,7 @@ Compiled JARs understand a few system properties that are handy for tests and au
 | `-Djscratch.screenshot=<file.png>` | In headless mode, save the final frame as a PNG at twice the stage resolution. |
 | `-Djscratch.timing=true` | In headless mode, print the number of frames and the wall time from the green flag to the end of the run to stderr, as `jscratch: <frames> frames in <ms> ms`. The [benchmarks](benchmarks.md) use it. |
 | `-Djscratch.username=<name>` | What the `username` block reports, in a window or headless. Without it the block reports an empty string, as for a player who is not signed in. |
-| `-Djscratch.input=<file>` | Play the [scripted input](#scripted-input) in that file, in a window or headless. A headless run keeps going until the last line has run, even when no script is running. |
+| `-Djscratch.input=<file>` | Play the [scripted input](#scripted-input) in that file, in a window or headless. A headless run keeps going until the last line has run, even when no script is running, and still runs the lines due once its last frame has run. Lines after that are reported as never run. |
 
 ```sh
 java -Djscratch.headless=90 -Djscratch.screenshot=frame.png -jar my-game.jar
@@ -97,13 +97,15 @@ Many projects open with menus that wait for a click. A scripted input file click
 | --- | --- |
 | `move <x> <y>` | Move the mouse there. |
 | `down <x> <y>`, `up <x> <y>` | Press or release the mouse there. |
-| `click <x> <y>` | Press the mouse there and release it two frames later, so scripts that poll `mouse down?` see it too. |
+| `click <x> <y>` | Press the mouse there and release it two frames later wherever it is by then, so scripts that poll `mouse down?` see it too. |
 | `key <name>`, `keyup <name>` | Press and hold a key, or release it. Names are the ones Scratch uses: `space`, `left arrow`, `a`. |
 | `flag`, `stop` | Click the green flag or the stop button. |
 | `screenshot <file.png>` | Save the stage as it is at this point between two frames, at twice its size. |
-| `window <file.png>` | In a window, save what the window paints, at twice its size. Swing paints it when it gets to it, while the next frame runs, as it does on screen. |
+| `window <file.png>` | In a window, save what the window paints, at twice its size. Swing paints it when it gets to it, while the next frame runs, as it does on screen, and the file is written in the background. |
 | `pause <ms>` | Wait that long before starting the next frame. |
-| `quit` | End the run, as closing the window does. |
+| `quit` | End the run, as closing the window does. Lines after it do not run, even those for the same frame. |
+
+A line that fails, such as a screenshot into a folder that does not exist, ends the run with an error that names the line. So does a `window` capture that fails after the run went on, and the run waits for its captures to be written before it ends.
 
 ```text
 # Pick English, then keyboard controls, then look at the first level.
