@@ -103,5 +103,4 @@ Music, Text to Speech, Translate, Video Sensing, Makey Makey and hardware extens
 
 ## Known limitations
 
-- A single script longer than the JVM's 64 KiB method limit will fail to compile. Very large lists are stored as resources, so they are fine.
 - Turbo mode and custom frame rates are not available.

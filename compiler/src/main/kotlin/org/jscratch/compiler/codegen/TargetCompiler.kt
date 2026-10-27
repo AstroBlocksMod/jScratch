@@ -86,8 +86,21 @@ class ProcInfo(
 class ScriptInfo(val id: Int, val method: String, val hat: Block, val hatKind: Int, val hatArg: String)
 
 /** Per-method emission state. */
-class MethodState(val mv: MethodVisitor, val proc: ProcInfo?, var nextLocal: Int) {
+class MethodState(val mv: MethodVisitor, val proc: ProcInfo?, var nextLocal: Int, val isHelper: Boolean = false) {
     val argSlots = HashMap<String, Int>()
+
+    /**
+     * Estimated bytecode bytes this method may still grow by before its statement chains spill into
+     * helper methods, so no method ends up past what HotSpot will compile. See `emitStack`.
+     */
+    var budget: Int = Int.MAX_VALUE
+
+    /** Whether a statement was emitted yet. The first one never spills, so every method makes progress. */
+    var emitted: Boolean = false
+
+    /** Jump target for `stop this script` and a stopped helper; emitted at the end of the method when used. */
+    val stop: Label = Label()
+    var stopUsed: Boolean = false
 
     fun allocLocal(size: Int): Int {
         val slot = nextLocal
@@ -117,6 +130,13 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
     private val procs = HashMap<String, ProcInfo>()
     private val scripts = ArrayList<ScriptInfo>()
 
+    /** Chain tails spilled out of a method that is reaching [SPLIT_BUDGET], waiting to become methods. */
+    private class Helper(val name: String, val firstId: String, val proc: ProcInfo?)
+
+    private val pendingHelpers = ArrayDeque<Helper>()
+    private var rootMethod = ""
+    private var helperCount = 0
+
     fun compile(): ByteArray {
         collectVariables()
         collectProcedures()
@@ -129,8 +149,14 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
         emitConstructor()
         emitRunScript()
         emitHatPredicate()
-        for (s in scripts) emitScript(s)
-        for (p in procs.values) emitProcedure(p)
+        for (s in scripts) {
+            emitScript(s)
+            drainHelpers()
+        }
+        for (p in procs.values) {
+            emitProcedure(p)
+            drainHelpers()
+        }
         if (!target.isStage) {
             emitNewInstance()
             emitCopyLocalsFrom()
@@ -535,8 +561,10 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
         val mv = cw.visitMethod(ACC_PRIVATE, s.method, "()V", null, null)
         mv.visitCode()
         val st = MethodState(mv, null, 1)
+        startRoot(st, s.method)
         emitStack(st, s.hat.next)
-        mv.visitInsn(RETURN)
+        emitReturn(st)
+        endRoot(st)
         mv.visitMaxs(0, 0)
         mv.visitEnd()
     }
@@ -546,17 +574,36 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
         val mv = cw.visitMethod(ACC_PRIVATE, p.method, desc, null, null)
         mv.visitCode()
         val st = MethodState(mv, p, 1 + p.argumentIds.size)
-        for ((i, name) in p.argumentNames.withIndex()) {
-            if (i < p.argumentIds.size) st.argSlots[name] = 1 + i
-        }
+        startRoot(st, p.method)
+        bindArguments(st, p)
         if (p.warp) {
             mv.visitVarInsn(ALOAD, 0)
             mv.visitMethodInsn(INVOKEVIRTUAL, RT.TARGET, "enterWarp", "()V", false)
         }
         emitStack(st, p.definition.next)
         emitReturn(st)
+        endRoot(st)
         mv.visitMaxs(0, 0)
         mv.visitEnd()
+    }
+
+    private fun bindArguments(st: MethodState, p: ProcInfo) {
+        for ((i, name) in p.argumentNames.withIndex()) {
+            if (i < p.argumentIds.size) st.argSlots[name] = 1 + i
+        }
+    }
+
+    private fun startRoot(st: MethodState, method: String) {
+        rootMethod = method
+        helperCount = 0
+        st.budget = SPLIT_BUDGET
+    }
+
+    /** `stop this script` jumps here when it cannot return directly; see [emitStack] for helpers. */
+    private fun endRoot(st: MethodState) {
+        if (!st.stopUsed) return
+        st.mv.visitLabel(st.stop)
+        emitReturn(st)
     }
 
     private fun emitReturn(st: MethodState) {
@@ -569,15 +616,131 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
 
     // ---- statements -----------------------------------------------------------------------------
 
-    /** Emits a chain of blocks linked through `next`. */
+    /**
+     * Emits a chain of blocks linked through `next`. Long chains are split across methods well before
+     * the JVM's 64 KiB method limit: once the estimated size of the method passes [SPLIT_BUDGET],
+     * which is chosen so methods stay under the 8000 bytes of bytecode HotSpot is willing to compile,
+     * the rest of the chain is spilled into a helper method that the method calls instead. The helper
+     * returns false when the script should stop, which the call site passes on through [MethodState.stop].
+     */
     private fun emitStack(st: MethodState, firstId: String?) {
         var id = firstId
         val seen = HashSet<String>()
         while (id != null && seen.add(id)) {
             val b = target.blocks[id] ?: break
+            val cost = estimateStatement(b)
+            if (st.emitted && st.budget < cost && shouldSpill(st, id) && helperCount < MAX_HELPERS) {
+                emitHelperCall(st, id)
+                return
+            }
+            st.budget -= cost
+            st.emitted = true
             emitStatement(st, b)
             id = b.next
         }
+    }
+
+    /**
+     * Whether the rest of the chain is worth a helper method. When the budget runs out deep inside
+     * nested substacks, every enclosing chain still has a short tail to emit; those go into the
+     * method anyway instead of becoming a cascade of tiny helpers, within a bounded overrun.
+     */
+    private fun shouldSpill(st: MethodState, firstId: String): Boolean {
+        if (st.budget < -SPLIT_OVERRUN) return true
+        var tail = 0
+        var id: String? = firstId
+        val seen = HashSet<String>()
+        while (id != null && seen.add(id)) {
+            val b = target.blocks[id] ?: break
+            tail += estimateStatement(b)
+            if (tail >= MIN_SPILL) return true
+            id = b.next
+        }
+        return false
+    }
+
+    /** Spills the chain starting at [firstId] into a helper method and calls it. */
+    private fun emitHelperCall(st: MethodState, firstId: String) {
+        val mv = st.mv
+        val name = rootMethod + "$" + helperCount++
+        pendingHelpers.add(Helper(name, firstId, st.proc))
+        val args = st.proc?.argumentIds?.size ?: 0
+        mv.visitVarInsn(ALOAD, 0)
+        for (i in 1..args) mv.visitVarInsn(ALOAD, i)
+        mv.visitMethodInsn(INVOKEVIRTUAL, className, name, helperDesc(args), false)
+        st.stopUsed = true
+        mv.visitJumpInsn(IFEQ, st.stop)
+    }
+
+    private fun helperDesc(args: Int) = "(" + RT.D_OBJECT.repeat(args) + ")Z"
+
+    private fun drainHelpers() {
+        while (true) {
+            val h = pendingHelpers.removeFirstOrNull() ?: break
+            emitHelper(h)
+        }
+    }
+
+    /** A spilled chain tail: the custom block's arguments again, returning false when the script stops. */
+    private fun emitHelper(h: Helper) {
+        val args = h.proc?.argumentIds?.size ?: 0
+        val mv = cw.visitMethod(ACC_PRIVATE, h.name, helperDesc(args), null, null)
+        mv.visitCode()
+        val st = MethodState(mv, h.proc, 1 + args, isHelper = true)
+        st.budget = SPLIT_BUDGET
+        h.proc?.let { bindArguments(st, it) }
+        emitStack(st, h.firstId)
+        mv.visitInsn(ICONST_1)
+        mv.visitInsn(IRETURN)
+        if (st.stopUsed) {
+            mv.visitLabel(st.stop)
+            mv.visitInsn(ICONST_0)
+            mv.visitInsn(IRETURN)
+        }
+        mv.visitMaxs(0, 0)
+        mv.visitEnd()
+    }
+
+    // ---- size estimation ------------------------------------------------------------------------
+    //
+    // Rough upper bounds on the bytecode emitStatement produces, tuned against the actual sizes
+    // javap reports for real projects. They only steer where chains are split, so they need to be
+    // a little above the real size without being so far above that methods come out tiny.
+
+    /** Estimated bytecode bytes of one statement without its substacks. */
+    private fun estimateStatement(b: Block): Int {
+        var cost =
+            when {
+                // Lists lazily allocate at the use site and sets may box, see emitGetSlot and emitSetSlot.
+                b.opcode.startsWith("data_") -> 30
+                b.opcode.startsWith("control_") -> 30
+                b.opcode == "procedures_call" -> 8
+                else -> 12
+            }
+        for ((name, input) in b.inputs) {
+            if (!name.startsWith("SUBSTACK")) cost += estimateInput(input)
+        }
+        return cost
+    }
+
+    private fun estimateInput(input: Input?): Int = when (input) {
+        null, is Input.Empty, is Input.Literal, is Input.BroadcastRef -> 5
+        is Input.VariableRef -> 8
+        is Input.ListRef -> 32
+        is Input.BlockRef -> {
+            val b = target.blocks[input.id]
+            when {
+                b == null -> 5
+                isMenu(b) -> 3
+                else -> estimateReporter(b)
+            }
+        }
+    }
+
+    private fun estimateReporter(b: Block): Int {
+        var cost = if (b.opcode.startsWith("data_")) 32 else 14
+        for (input in b.inputs.values) cost += estimateInput(input)
+        return cost
     }
 
     private fun emitSubstack(st: MethodState, b: Block, name: String) {
@@ -837,7 +1000,13 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
             "control_stop" -> {
                 when (field(b, "STOP_OPTION")) {
                     "all" -> thisCall(st, "stopAll", "()V") {}
-                    "this script" -> emitReturn(st)
+                    // In a helper the stop has to travel back through the call sites, see emitStack.
+                    "this script" -> if (st.isHelper) {
+                        st.stopUsed = true
+                        mv.visitJumpInsn(GOTO, st.stop)
+                    } else {
+                        emitReturn(st)
+                    }
                     else -> thisCall(st, "stopOtherScripts", "()V") {}
                 }
             }
@@ -1634,6 +1803,22 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
 
     companion object {
         const val INLINE_LIST_LIMIT = 32
+
+        /**
+         * Estimated bytes at which a method stops taking statements and spills the rest of the chain.
+         * HotSpot refuses to compile methods past 8000 bytes of bytecode (-XX:-DontCompileHugeMethods),
+         * so with the safety margin between the estimate and the real size, methods land well below that.
+         */
+        const val SPLIT_BUDGET = 4800
+
+        /** Chain tails estimated below this stay in their method; see [shouldSpill]. */
+        const val MIN_SPILL = 256
+
+        /** How far past the budget the short tails can take a method before they spill regardless. */
+        const val SPLIT_OVERRUN = 1024
+
+        /** Cap on helpers per script, in case a corrupt project links its blocks into a cycle. */
+        const val MAX_HELPERS = 10_000
 
         /**
          * Mirrors the runtime's `Cast.parseNumber` (JavaScript `Number()` on a string) so literals fold at
