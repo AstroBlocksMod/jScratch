@@ -49,6 +49,9 @@ class ScriptThread(
     var warpDepth: Int = 0
     var warpStartNanos: Long = 0
 
+    /** Loop yields left in warp mode before [yieldNow] looks at the clock and [killed] again. */
+    private var warpChecksSkipped: Int = 0
+
     /** Whether the scheduler has picked the script once, so [start] has decided whether it runs. */
     var started: Boolean = false
         private set
@@ -123,6 +126,10 @@ class ScriptThread(
     fun yieldNow(untilNextTick: Boolean) {
         if (warpDepth > 0) {
             // "Run without screen refresh": keep going, but never hog the frame for more than 500 ms.
+            // Reading the clock and the volatile stop flag costs more than a cheap loop body, so only
+            // every WARP_CHECK_INTERVAL-th yield does it.
+            if (--warpChecksSkipped > 0) return
+            warpChecksSkipped = WARP_CHECK_INTERVAL
             if (System.nanoTime() - warpStartNanos < WARP_TIME_NANOS) {
                 if (killed) throw StopScript()
                 return
@@ -159,5 +166,12 @@ class ScriptThread(
 
     companion object {
         private const val WARP_TIME_NANOS = 500_000_000L
+
+        /**
+         * How many loop yields in warp mode share one look at the clock. Small enough that a loop whose body
+         * takes a millisecond, like stamping a large costume, still overshoots the 500 ms by a fraction of a
+         * second at most.
+         */
+        private const val WARP_CHECK_INTERVAL = 256
     }
 }

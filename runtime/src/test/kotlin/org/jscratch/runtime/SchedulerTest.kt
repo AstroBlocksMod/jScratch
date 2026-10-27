@@ -185,6 +185,21 @@ class SchedulerTest {
     }
 
     @Test
+    fun aWarpLoopGivesUpTheFrameAfter500Ms() {
+        bot.onFlag {
+            bot.enterWarp()
+            val start = System.nanoTime()
+            while (System.nanoTime() - start < 700_000_000L) rt.yieldLoop()
+            log.add("w")
+            bot.exitWarp()
+        }
+        bot.onFlag { log.add("b") }
+        flag()
+        runUntilDone()
+        assertEquals(listOf("b", "w"), log)
+    }
+
+    @Test
     fun aBroadcastStartsScriptsInTheSamePass() {
         bot.onFlag {
             log.add("flag")
