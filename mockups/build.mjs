@@ -11,13 +11,17 @@ import { fileURLToPath } from "node:url"
 
 const here = (path) => fileURLToPath(new URL(path, import.meta.url))
 const outDir = here("../docs/assets/mockups/")
-const sources = readdirSync(here("src/"))
+const names = readdirSync(here("src/"))
   .filter((name) => name.endsWith(".txt"))
-  .map((name) => here(`src/${name}`))
+  .map((name) => name.slice(0, -".txt".length))
 
 const result = spawnSync(
   process.execPath,
-  [here("node_modules/mockblocks/bin/mockblocks.js"), "--pack", "jscratch", "--scale", "0.75", "--out-dir", outDir, ...sources],
+  [
+    here("node_modules/mockblocks/bin/mockblocks.js"),
+    "--pack", "jscratch", "--scale", "0.75", "--out-dir", outDir,
+    ...names.map((name) => here(`src/${name}.txt`)),
+  ],
   {
     stdio: "inherit",
     // Pango uses CoreText on macOS unless told to use fontconfig.
@@ -28,11 +32,13 @@ if (result.status !== 0) process.exit(result.status ?? 1)
 
 const measured = "Helvetica Neue, Helvetica, sans-serif"
 const drawn = "Helvetica, Arial, sans-serif"
-for (const name of readdirSync(outDir).filter((name) => name.endsWith(".svg"))) {
-  const svg = readFileSync(outDir + name, "utf8")
+// Only the SVGs written just now: one left over from a renamed mockup was already rewritten.
+for (const name of names) {
+  const file = `${outDir}${name}.svg`
+  const svg = readFileSync(file, "utf8")
   if (!svg.includes(measured)) {
-    console.error(`${name} does not use the font mockblocks used to, check build.mjs against the new mockblocks.`)
+    console.error(`${name}.svg does not use the font mockblocks used to, check build.mjs against the new mockblocks.`)
     process.exit(1)
   }
-  writeFileSync(outDir + name, svg.replaceAll(measured, drawn))
+  writeFileSync(file, svg.replaceAll(measured, drawn))
 }
