@@ -6,7 +6,7 @@
     "build": "node build.mjs"
   },
   "devDependencies": {
-    "mockblocks": "https://codeload.github.com/AstroBlocksMod/mockblocks/tar.gz/6ddf3fd1caf50f7127bfeb5b2c7abbc921f1260b"
+    "mockblocks": "https://codeload.github.com/AstroBlocksMod/mockblocks/tar.gz/d21f3e98345d62946ec2a785343411530e9fd11d"
   },
   "allowScripts": {
     "canvas@3.2.3": true
