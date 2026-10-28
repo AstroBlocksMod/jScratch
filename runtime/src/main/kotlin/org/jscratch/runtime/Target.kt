@@ -742,8 +742,10 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
     fun think(message: Any?) = sayInternal(message, true)
 
     private fun sayInternal(message: Any?, isThink: Boolean) {
+        // scratch-vm says numbers as parseFloat(n.toFixed(2)). Every double from 2^52 up is a whole number
+        // already, and Math.round would saturate at Long.MAX_VALUE there, so only smaller ones are rounded.
         var text =
-            if (message is Double) {
+            if (message is Double && Math.abs(message) < TWO_POW_52) {
                 Cast.toString(Math.round(message * 100.0) / 100.0)
             } else {
                 Cast.toString(message)
@@ -1111,6 +1113,9 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
 
     companion object {
         const val FENCE_WIDTH = 15.0
+
+        /** 2 to the 52nd: from here up, a double has no fractional part. */
+        private const val TWO_POW_52 = 4503599627370496.0
     }
 }
 

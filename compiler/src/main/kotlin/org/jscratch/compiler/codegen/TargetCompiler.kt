@@ -58,6 +58,7 @@ import org.objectweb.asm.Opcodes.PUTSTATIC
 import org.objectweb.asm.Opcodes.RETURN
 import org.objectweb.asm.Opcodes.SIPUSH
 import org.objectweb.asm.Opcodes.V21
+import java.math.BigInteger
 
 /** Static type of a value on the JVM operand stack. */
 enum class VType(val desc: String) {
@@ -1167,25 +1168,19 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
     private fun emitLiteral(mv: MethodVisitor, lit: Input.Literal, want: VType) {
         val numeric = lit.type in PrimitiveType.NUMBER..PrimitiveType.ANGLE
         val n = parseNumber(lit.value)
+        // Only a decimal literal becomes a number where text is wanted: the project may have stored it as a
+        // JSON number. Prefixed forms like 0x10 and Infinity can only have been typed as text, which Scratch
+        // shows as typed, so they stay text there and become numbers only where a number is wanted.
+        val foldsToNumber = numeric && !n.isNaN() && isDecimal(lit.value)
         when (want) {
             VType.NUM -> pushDouble(mv, if (n.isNaN()) 0.0 else n)
-            VType.STR -> {
-                mv.visitLdcInsn(
-                    if (numeric && !n.isNaN() &&
-                        lit.value.isNotBlank()
-                    ) {
-                        formatNumber(n)
-                    } else {
-                        lit.value
-                    },
-                )
-            }
+            VType.STR -> mv.visitLdcInsn(if (foldsToNumber) formatNumber(n) else lit.value)
             VType.BOOL -> {
                 val b = !(lit.value.isEmpty() || lit.value == "0" || lit.value.equals("false", ignoreCase = true))
                 mv.visitInsn(if (b) ICONST_1 else ICONST_0)
             }
             VType.ANY -> {
-                if (numeric && !n.isNaN() && lit.value.isNotBlank()) {
+                if (foldsToNumber) {
                     pushDouble(mv, n)
                     coerce(mv, VType.NUM, VType.ANY)
                 } else {
@@ -1640,24 +1635,63 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
     companion object {
         const val INLINE_LIST_LIMIT = 32
 
-        private val decimal = Regex("""^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$""")
-
-        /** Mirrors `Cast.toNumberOrNaN` for strings so literals can be folded at compile time. */
+        /**
+         * Mirrors the runtime's `Cast.parseNumber` (JavaScript `Number()` on a string) so literals fold at
+         * compile time to what the blocks would compute: `[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?`,
+         * `[+-]?Infinity`, and unsigned `0x`, `0o` and `0b` integers of ASCII digits, rounded once.
+         */
         fun parseNumber(raw: String): Double {
             val s = raw.trim()
             if (s.isEmpty()) return 0.0
-            return when {
-                decimal.matches(s) -> s.toDouble()
-                s == "Infinity" || s == "+Infinity" -> Double.POSITIVE_INFINITY
-                s == "-Infinity" -> Double.NEGATIVE_INFINITY
-                s.length > 2 && (s.startsWith("0x") || s.startsWith("0X")) -> {
-                    s.substring(2).toLongOrNull(16)?.toDouble()
-                        ?: Double.NaN
-                }
-                else -> {
-                    Double.NaN
+            if (isDecimal(s)) return s.toDouble()
+            return when (s) {
+                "Infinity", "+Infinity" -> Double.POSITIVE_INFINITY
+                "-Infinity" -> Double.NEGATIVE_INFINITY
+                else -> parsePrefixed(s)
+            }
+        }
+
+        /** Whether [raw], trimmed, is a number in decimal notation, the only kind JSON can store as a number. */
+        fun isDecimal(raw: String): Boolean {
+            val s = raw.trim()
+            val n = s.length
+            var i = if (n > 0 && (s[0] == '+' || s[0] == '-')) 1 else 0
+            var digits = 0
+            while (i < n && s[i] in '0'..'9') {
+                digits++
+                i++
+            }
+            if (i < n && s[i] == '.') {
+                i++
+                while (i < n && s[i] in '0'..'9') {
+                    digits++
+                    i++
                 }
             }
+            if (digits == 0) return false
+            if (i < n && (s[i] == 'e' || s[i] == 'E')) {
+                i++
+                if (i < n && (s[i] == '+' || s[i] == '-')) i++
+                if (i == n || s[i] !in '0'..'9') return false
+                while (i < n && s[i] in '0'..'9') i++
+            }
+            return i == n
+        }
+
+        private fun parsePrefixed(s: String): Double {
+            if (s.length < 3 || s[0] != '0') return Double.NaN
+            val radix =
+                when (s[1]) {
+                    'x', 'X' -> 16
+                    'o', 'O' -> 8
+                    'b', 'B' -> 2
+                    else -> return Double.NaN
+                }
+            for (i in 2 until s.length) {
+                val c = s[i]
+                if (c.code >= 128 || Character.digit(c, radix) < 0) return Double.NaN
+            }
+            return BigInteger(s.substring(2), radix).toDouble()
         }
 
         /** Mirrors `Cast.toString(double)` for the common cases literals hit. */

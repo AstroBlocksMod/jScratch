@@ -1,6 +1,7 @@
 package org.jscratch.runtime
 
 import java.math.BigDecimal
+import java.math.BigInteger
 
 /**
  * Scratch value conversions. Scratch values are dynamically typed: a value is a
@@ -96,14 +97,23 @@ object Cast {
         return s.toDouble()
     }
 
+    /**
+     * The digits after a `0x`, `0o` or `0b` prefix. Only ASCII digits count, as in JavaScript, where
+     * `Character.digit` alone would also take fullwidth and other Unicode digits. JavaScript rounds the
+     * exact value once, so digits that do not fit a long go through BigInteger instead of a double
+     * that would round after every digit.
+     */
     private fun parsePrefixed(s: String, radix: Int): Double {
-        var value = 0.0
+        var value = 0L
+        var exact = true
         for (i in 2 until s.length) {
-            val d = Character.digit(s[i], radix)
+            val c = s[i]
+            val d = if (c.code < 128) Character.digit(c, radix) else -1
             if (d < 0) return Double.NaN
-            value = value * radix + d
+            if (value > (Long.MAX_VALUE - d) / radix) exact = false
+            if (exact) value = value * radix + d
         }
-        return value
+        return if (exact) value.toDouble() else BigInteger(s.substring(2), radix).toDouble()
     }
 
     /** Scratch `toNumber`: like JavaScript `Number()` but NaN becomes 0. */
