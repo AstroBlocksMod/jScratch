@@ -103,4 +103,5 @@ Music, Text to Speech, Translate, Video Sensing, Makey Makey and hardware extens
 
 ## Known limitations
 
+- Long scripts are split into several methods between blocks, but a single block cannot be split. A block whose inputs nest many thousands of reporters, like one `say` around a huge chain of `join` blocks, still compiles into one method, and one past the JVM's 64 KiB limit fails to compile. The same goes for the generated code that sets up a sprite with tens of thousands of variables, costumes or scripts. Very large lists are stored as resources, so they are fine.
 - Turbo mode and custom frame rates are not available.

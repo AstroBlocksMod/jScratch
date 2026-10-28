@@ -1,12 +1,7 @@
 package org.jscratch.compiler.jvm
 
 import org.jscratch.compiler.JScratch
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import java.io.File
-import java.util.zip.ZipEntry
-import java.util.zip.ZipInputStream
-import java.util.zip.ZipOutputStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -43,6 +38,48 @@ class SplitScriptsTest {
         assertEquals(listOf("Py says: 1200/4200"), out.lines().filter { it.startsWith("Py ") })
     }
 
+    /**
+     * A corrupt project can link a chain into a cycle. The cycle is emitted once, as before splitting,
+     * even when it is long enough to span several helper methods.
+     */
+    @Test
+    fun aCycleSpanningHelpersIsEmittedOnce() {
+        val blocks = StringBuilder()
+        blocks.append(
+            """
+            "flag": {"opcode": "event_whenflagclicked", "next": "k0", "parent": null, "inputs": {},
+                     "fields": {}, "shadow": false, "topLevel": true, "x": 0, "y": 0},
+            "flag2": {"opcode": "event_whenflagclicked", "next": "pause", "parent": null, "inputs": {},
+                      "fields": {}, "shadow": false, "topLevel": true, "x": 0, "y": 0},
+            "pause": {"opcode": "control_wait", "next": "sayit", "parent": null,
+                      "inputs": {"DURATION": [1, [5, "0.1"]]}, "fields": {}, "shadow": false, "topLevel": false},
+            "sayit": {"opcode": "looks_say", "next": null, "parent": null,
+                      "inputs": {"MESSAGE": [3, [12, "n", "v_n"], [10, ""]]}, "fields": {},
+                      "shadow": false, "topLevel": false},
+            """,
+        )
+        // 600 blocks whose last one links back to the first.
+        val cycle = 600
+        for (i in 0 until cycle) {
+            val sep = if (i == cycle - 1) "" else ","
+            blocks.append(
+                """
+                "k$i": {"opcode": "data_changevariableby", "next": "k${(i + 1) % cycle}", "parent": null,
+                        "inputs": {"VALUE": [1, [4, "1"]]}, "fields": {"VARIABLE": ["n", "v_n"]},
+                        "shadow": false, "topLevel": false}$sep
+                """,
+            )
+        }
+        val sb3 = syntheticSb3(samplesDir, "Py", blocks.toString(), variables = mapOf("n" to 0))
+        val result = JScratch.compile(sb3, runtimeJar.readBytes(), json)
+        val listing = JScratch.disassemble(result.classes.getValue("jscratch/project/Sprite_Py"))
+        val helpers = Regex("""script_\d+\$\d+\(""").findAll(listing).map { it.value }.toSet()
+        assertTrue(helpers.size in 1..8, "expected a few helpers for 600 blocks, got ${helpers.size}")
+
+        val out = runHeadless(result.jar, frames = 10)
+        assertEquals(listOf("Py says: 600"), out.lines().filter { it.startsWith("Py ") })
+    }
+
     /** Lines of each method body in a Textifier listing, a rough stand-in for bytecode bytes. */
     private fun methodSizes(listing: String): Map<String, Int> {
         val sizes = LinkedHashMap<String, Int>()
@@ -66,25 +103,10 @@ class SplitScriptsTest {
         return sizes
     }
 
-    /** hello.sb3 with its project.json swapped for the synthesized long-script project. */
-    private fun longProject(): ByteArray {
-        val out = ByteArrayOutputStream()
-        ZipOutputStream(out).use { zip ->
-            ZipInputStream(ByteArrayInputStream(File(samplesDir, "hello.sb3").readBytes())).use { src ->
-                while (true) {
-                    val entry = src.nextEntry ?: break
-                    if (entry.name == "project.json") continue
-                    zip.putNextEntry(ZipEntry(entry.name))
-                    src.copyTo(zip)
-                }
-            }
-            zip.putNextEntry(ZipEntry("project.json"))
-            zip.write(projectJson().toByteArray(Charsets.UTF_8))
-        }
-        return out.toByteArray()
-    }
+    private fun longProject(): ByteArray =
+        syntheticSb3(samplesDir, "Py", longBlocks(), variables = mapOf("n" to 0, "m" to 0))
 
-    private fun projectJson(): String {
+    private fun longBlocks(): String {
         val blocks = StringBuilder()
         blocks.append(
             """
@@ -99,7 +121,7 @@ class SplitScriptsTest {
             blocks.append(
                 """
                 "c$i": {"opcode": "data_changevariableby", "next": "$next", "parent": null,
-                        "inputs": {"VALUE": [1, [4, "1"]]}, "fields": {"VARIABLE": ["n", "vn"]},
+                        "inputs": {"VALUE": [1, [4, "1"]]}, "fields": {"VARIABLE": ["n", "v_n"]},
                         "shadow": false, "topLevel": false},
                 """,
             )
@@ -114,12 +136,12 @@ class SplitScriptsTest {
                       "inputs": {"MESSAGE": [3, "joined", [10, ""]]}, "fields": {},
                       "shadow": false, "topLevel": false},
             "joined": {"opcode": "operator_join", "next": null, "parent": "sayit",
-                       "inputs": {"STRING1": [3, [12, "n", "vn"], [10, ""]],
+                       "inputs": {"STRING1": [3, [12, "n", "v_n"], [10, ""]],
                                   "STRING2": [3, "joined2", [10, ""]]},
                        "fields": {}, "shadow": false, "topLevel": false},
             "joined2": {"opcode": "operator_join", "next": null, "parent": "joined",
                         "inputs": {"STRING1": [1, [10, "/"]],
-                                   "STRING2": [3, [12, "m", "vm"], [10, ""]]},
+                                   "STRING2": [3, [12, "m", "v_m"], [10, ""]]},
                         "fields": {}, "shadow": false, "topLevel": false},
             "def": {"opcode": "procedures_definition", "next": "p0", "parent": null,
                     "inputs": {"custom_block": [1, "proto"]}, "fields": {}, "shadow": false,
@@ -140,7 +162,7 @@ class SplitScriptsTest {
             blocks.append(
                 """
                 "p$i": {"opcode": "data_changevariableby", "next": "$next", "parent": null,
-                        "inputs": {"VALUE": [3, "arg$i", [4, "1"]]}, "fields": {"VARIABLE": ["m", "vm"]},
+                        "inputs": {"VALUE": [3, "arg$i", [4, "1"]]}, "fields": {"VARIABLE": ["m", "v_m"]},
                         "shadow": false, "topLevel": false},
                 "arg$i": {"opcode": "argument_reporter_string_number", "next": null, "parent": "p$i",
                           "inputs": {}, "fields": {"VALUE": ["x", null]}, "shadow": false, "topLevel": false},
@@ -153,39 +175,10 @@ class SplitScriptsTest {
                      "fields": {"STOP_OPTION": ["this script", null]}, "shadow": false, "topLevel": false,
                      "mutation": {"tagName": "mutation", "children": [], "hasnext": "true"}},
             "after": {"opcode": "data_changevariableby", "next": null, "parent": null,
-                      "inputs": {"VALUE": [1, [4, "1"]]}, "fields": {"VARIABLE": ["m", "vm"]},
+                      "inputs": {"VALUE": [1, [4, "1"]]}, "fields": {"VARIABLE": ["m", "v_m"]},
                       "shadow": false, "topLevel": false}
             """,
         )
-        return """
-            {
-              "targets": [
-                {
-                  "isStage": true, "name": "Stage", "variables": {}, "lists": {}, "broadcasts": {},
-                  "blocks": {}, "comments": {}, "currentCostume": 0,
-                  "costumes": [{"name": "Blue Sky", "bitmapResolution": 1, "dataFormat": "svg",
-                                "assetId": "e7c147730f19d284bcd7b3f00af19bb6",
-                                "rotationCenterX": 240, "rotationCenterY": 180}],
-                  "sounds": [], "volume": 100, "layerOrder": 0, "tempo": 60,
-                  "videoTransparency": 50, "videoState": "on", "textToSpeechLanguage": null
-                },
-                {
-                  "isStage": false, "name": "Py",
-                  "variables": {"vn": ["n", 0], "vm": ["m", 0]},
-                  "lists": {}, "broadcasts": {},
-                  "blocks": { $blocks },
-                  "comments": {}, "currentCostume": 0,
-                  "costumes": [{"name": "Cat", "bitmapResolution": 1, "dataFormat": "svg",
-                                "assetId": "6ac3a6339b85092fa9b1694f2da7779d",
-                                "rotationCenterX": 48, "rotationCenterY": 50}],
-                  "sounds": [], "volume": 100, "layerOrder": 1, "visible": true,
-                  "x": 0, "y": 0, "size": 100, "direction": 90, "draggable": false,
-                  "rotationStyle": "all around"
-                }
-              ],
-              "monitors": [], "extensions": [],
-              "meta": {"semver": "3.0.0", "vm": "2.0.0", "agent": "jscratch-test"}
-            }
-        """.trimIndent()
+        return blocks.toString()
     }
 }

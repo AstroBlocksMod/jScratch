@@ -131,7 +131,7 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
     private val scripts = ArrayList<ScriptInfo>()
 
     /** Chain tails spilled out of a method that is reaching [SPLIT_BUDGET], waiting to become methods. */
-    private class Helper(val name: String, val firstId: String, val proc: ProcInfo?)
+    private class Helper(val name: String, val firstId: String, val proc: ProcInfo?, val seen: HashSet<String>)
 
     private val pendingHelpers = ArrayDeque<Helper>()
     private var rootMethod = ""
@@ -622,15 +622,19 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
      * which is chosen so methods stay under the 8000 bytes of bytecode HotSpot is willing to compile,
      * the rest of the chain is spilled into a helper method that the method calls instead. The helper
      * returns false when the script should stop, which the call site passes on through [MethodState.stop].
+     *
+     * [seen] holds the blocks of the chain emitted so far. A helper goes on with the same set, so a chain
+     * that a corrupt project links into a cycle still ends after one round, however many helpers it spans.
      */
-    private fun emitStack(st: MethodState, firstId: String?) {
+    private fun emitStack(st: MethodState, firstId: String?, seen: HashSet<String> = HashSet()) {
         var id = firstId
-        val seen = HashSet<String>()
         while (id != null && seen.add(id)) {
             val b = target.blocks[id] ?: break
             val cost = estimateStatement(b)
-            if (st.emitted && st.budget < cost && shouldSpill(st, id) && helperCount < MAX_HELPERS) {
-                emitHelperCall(st, id)
+            if (st.emitted && st.budget < cost && shouldSpill(st, id)) {
+                // The helper emits this block, so it must not count as seen yet.
+                seen.remove(id)
+                emitHelperCall(st, id, seen)
                 return
             }
             st.budget -= cost
@@ -660,10 +664,10 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
     }
 
     /** Spills the chain starting at [firstId] into a helper method and calls it. */
-    private fun emitHelperCall(st: MethodState, firstId: String) {
+    private fun emitHelperCall(st: MethodState, firstId: String, seen: HashSet<String>) {
         val mv = st.mv
         val name = rootMethod + "$" + helperCount++
-        pendingHelpers.add(Helper(name, firstId, st.proc))
+        pendingHelpers.add(Helper(name, firstId, st.proc, seen))
         val args = st.proc?.argumentIds?.size ?: 0
         mv.visitVarInsn(ALOAD, 0)
         for (i in 1..args) mv.visitVarInsn(ALOAD, i)
@@ -689,7 +693,7 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
         val st = MethodState(mv, h.proc, 1 + args, isHelper = true)
         st.budget = SPLIT_BUDGET
         h.proc?.let { bindArguments(st, it) }
-        emitStack(st, h.firstId)
+        emitStack(st, h.firstId, h.seen)
         mv.visitInsn(ICONST_1)
         mv.visitInsn(IRETURN)
         if (st.stopUsed) {
@@ -1816,9 +1820,6 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
 
         /** How far past the budget the short tails can take a method before they spill regardless. */
         const val SPLIT_OVERRUN = 1024
-
-        /** Cap on helpers per script, in case a corrupt project links its blocks into a cycle. */
-        const val MAX_HELPERS = 10_000
 
         /**
          * Mirrors the runtime's `Cast.parseNumber` (JavaScript `Number()` on a string) so literals fold at
