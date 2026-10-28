@@ -1,0 +1,12 @@
+declare
+variable [score] for [all sprites v] = (0)
+variable [lives] for [all sprites v] = (3)
+variable [speed] for [this sprite only v] = (pick random (2) to (5))
+list [high scores] for [all sprites v]
+end
+
+when flag clicked
+forever
+move (speed) steps
+if on edge, bounce
+end

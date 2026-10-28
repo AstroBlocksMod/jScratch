@@ -1,6 +1,6 @@
 # Language features
 
-This page sketches the [advanced language features](roadmap.md#advanced-language-features) on the roadmap: functions, macros and objects. None of it exists yet. The pictures are mockups drawn with [mockblocks](https://github.com/AstroBlocksMod/mockblocks), and the block names, shapes and colors are a draft that will change once the work starts.
+This page sketches the [advanced language features](roadmap.md#advanced-language-features) on the roadmap: functions, macros, objects, lambdas, maps, variables declared in code and broadcasts that carry data. None of it exists yet. The pictures are mockups drawn with [mockblocks](https://github.com/AstroBlocksMod/mockblocks), and the block names, shapes and colors are a draft that will change once the work starts.
 
 The one rule that will not change: jScratch stays a strict superset of Scratch. Every block Scratch has keeps its meaning, every Scratch project compiles and behaves the same way it does today, and the new blocks only matter in a project that uses them.
 
@@ -130,6 +130,94 @@ Objects mix freely with sprites and clones. A clone can create an object, keep i
 
 ![A clone that creates an Enemy object, adds it to a list and deletes itself when its health runs out](assets/mockups/objects-sprites.svg)
 
+## Lambdas
+
+A lambda is a function without a name, made right where it is needed. `function` wraps a reporter, a boolean or a stack block and reports the function itself instead of running it. Its inputs go after the word `function` and work like the arguments of a custom block. Functions are values, so they can be kept in variables, lists and fields, passed into custom blocks and returned from them.
+
+`call` runs a function and reports what it returns. A function that takes inputs gets them after `with`:
+
+![Two lambdas kept in variables, double and shout, called one inside the other](assets/mockups/lambdas-basics.svg)
+
+### Working on lists
+
+Lambdas make it possible to have list blocks that ask a question about every item. `keep items of` removes every item the function answers false for, and `sort by` orders the list by what the function reports for each item:
+
+![A script that removes defeated enemies from a list, sorts the rest by health and targets the weakest](assets/mockups/lambdas-lists.svg)
+
+### Capturing values
+
+A lambda can use the arguments and locals of the custom block or script it was made in, and keeps them after that block has returned. Here each function remembers its own `factor`:
+
+![A custom block that returns a function multiplying its input by a factor, used to make double and triple](assets/mockups/lambdas-closure.svg)
+
+### Running code later
+
+A function made from stack blocks runs with `run`, or can be handed to a block that runs it later. `after seconds run` starts the function as a separate script once the time is up, while the script that set it up carries on straight away:
+
+![A script that sets a ghost effect, schedules clearing it after two seconds and keeps going with a broadcast](assets/mockups/lambdas-run.svg)
+
+The function runs in the sprite or clone that made it. If that clone is deleted first, the function never runs.
+
+## Maps
+
+A list finds things by position. A map finds them by name: it holds pairs of a key and a value, and looking up a key is just as fast with a thousand pairs as with three. Doing that in Scratch today takes two lists kept in step, one for the names and one for the values:
+
+=== "With maps"
+
+    ![A script that counts a picked up item in an inventory map with one block](assets/mockups/maps-inventory.svg)
+
+=== "Scratch today"
+
+    ![The same inventory written with two lists, one for item names and one for counts](assets/mockups/maps-today.svg)
+
+`change key` treats a missing key as 0, the same way `change by` treats an empty variable, so the first pickup needs no special case.
+
+Like objects, maps are values. `empty map` makes a new one, and it can be kept in a variable, a list, a field or another map. Keys are text, and values can be anything a variable can hold:
+
+![A shop that sets up prices in a map and sells an item if the player has enough coins](assets/mockups/maps-blocks.svg)
+
+`for each key` runs its body once for every key, in the order the keys were added:
+
+![A script that lists every item in the inventory and how many of it there are](assets/mockups/maps-for-each.svg)
+
+An object has a fixed set of fields that the class decides. A map is the better fit when the keys are only known while the project runs, like item names, player names or the cells of a grid.
+
+## Variables in code
+
+New variables and lists are made through the "Make a Variable" dialog today, and every one of them starts out empty or 0. A `declare` block lists them in the code area instead, each with its scope and starting value. Declared variables show up in the palette, in the variable dropdowns and as monitors like any other, so the rest of the project uses them the usual way:
+
+![A declare block with score, lives, a per-sprite speed and a high scores list, and a script that moves at that speed](assets/mockups/variables-declare.svg)
+
+On the stage, `for` only offers "all sprites". The starting values are set when the project starts, before any green flag script runs, so no script ever sees a variable that has not been set up yet. A "this sprite only" variable gets its own starting value in each sprite, and a clone copies its parent's value as it does today.
+
+The starting value can be any reporter, which is the natural place to set up the values from the sections above:
+
+![Declared variables that start out as an empty map, a new Enemy object and a lambda](assets/mockups/variables-values.svg)
+
+Because the declarations are blocks, they can be copied between sprites and projects with the code that uses them, and a macro can declare the variables it needs.
+
+## Broadcasts with data
+
+A broadcast can only say that something happened. Anything else the receivers need has to go through a global variable, which breaks as soon as two broadcasts are sent in the same frame:
+
+=== "With data"
+
+    ![A sprite that broadcasts score points with 10, and a receiver that adds the points it was sent to the score](assets/mockups/broadcasts-data.svg)
+
+=== "Scratch today"
+
+    ![The same thing with a global variable set just before the broadcast](assets/mockups/broadcasts-today.svg)
+
+`broadcast with` and `broadcast with and wait` send one value along. `when I receive with` gets an events-colored reporter, which holds the value inside that script the way an argument does in a custom block. Every run of the script has its own copy, so two broadcasts in one frame each deliver their own value. To send more than one value, send a map or an object.
+
+The old blocks keep working with the new ones. A plain `when I receive` also runs for a broadcast that carries data and ignores the value, and a plain `broadcast` delivers an empty value to receivers that expect one.
+
+### Clones
+
+Clones have the same problem: a new clone starts with a copy of its parent's variables, so the parent has to set them just before `create clone` and hope nothing changes them in between. `create clone with` hands a value to the new clone, and `when I start as a clone with` receives it:
+
+![A wave script that creates clones at random x positions, and a clone script that moves to the x position it was given](assets/mockups/broadcasts-clones.svg)
+
 ## Open questions
 
 These are the parts the design does not answer yet:
@@ -137,4 +225,8 @@ These are the parts the design does not answer yet:
 - **Objects in Scratch blocks.** What `say`, `join` or `=` should do when given an object. Showing the class name is the likely answer for text, and comparing identity for `=`.
 - **Constructors.** Whether a class gets a method that runs on `new` with arguments, or whether field defaults are enough.
 - **Inheritance.** Whether a class can extend another one, and whether sprites themselves should become classes that clones are instances of.
+- **Lists as values.** Lambdas, maps and objects are values, but lists are still named containers. `keep items of` and `sort by` change a list in place for that reason. Making lists values too would allow blocks that report a new list instead, and keys of a map as a list.
+- **Map keys.** Scratch compares text without caring about case, so `apple` and `Apple` are equal with `=`. Whether map keys follow that rule or tell the two apart.
+- **Resetting declared variables.** Whether declared variables go back to their starting values each time the green flag is clicked, or keep their values like variables do today.
+- **Replies to broadcasts.** Whether `broadcast and wait` should be able to report values that the receivers send back.
 - **Saving projects.** How the new blocks are stored in a project file.

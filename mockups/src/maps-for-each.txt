@@ -1,0 +1,5 @@
+when [i v] key pressed
+say (join [Different items: ] (number of keys in (inventory))) for (1) seconds
+for each key [name v] in (inventory)
+say (join (name) (join [: ] (key (name) of (inventory)))) for (1) seconds
+end

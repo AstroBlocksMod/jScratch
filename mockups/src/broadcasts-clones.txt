@@ -1,0 +1,9 @@
+when I receive [wave started v] with (wave)
+repeat ((wave) * (3))
+create clone of [myself v] with (pick random (-200) to (200))
+wait (0.5) seconds
+end
+
+when I start as a clone with (start x)
+go to x (start x) y (180)
+show
