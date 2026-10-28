@@ -15,20 +15,22 @@ class FenceTest {
         override fun runScript(id: Int) {}
     }
 
-    /** A 40 by 40 costume centered on its position, opaque or fully transparent. */
-    private class Box(rt: Runtime, name: String, opaque: Boolean) : Sprite(rt, name) {
+    /**
+     * A 40 by 40 costume centered on its position, with an opaque square of [opaque] pixels in its
+     * middle and transparent padding around it: 40 fills it, 0 leaves it blank.
+     */
+    private class Box(rt: Runtime, name: String, private val opaque: Int) : Sprite(rt, name) {
         init {
             addCostume("box", "box.png", 20.0, 20.0, 1.0)
             val img = BufferedImage(40, 40, BufferedImage.TYPE_INT_ARGB)
-            if (opaque) {
-                for (y in 0 until 40) for (x in 0 until 40) img.setRGB(x, y, 0xFF336699.toInt())
-            }
+            val from = (40 - opaque) / 2
+            for (y in from until from + opaque) for (x in from until from + opaque) img.setRGB(x, y, 0xFF336699.toInt())
             costumes[0].setImage(img, 20.0, 20.0, 1.0, Silhouette(img))
         }
 
         override fun runScript(id: Int) {}
 
-        override fun newInstance(): Target = Box(rt, name, true)
+        override fun newInstance(): Target = Box(rt, name, opaque)
     }
 
     private val rt: Runtime
@@ -38,13 +40,15 @@ class FenceTest {
         rt = Runtime()
     }
 
-    private val box = Box(rt, "Box", opaque = true)
-    private val blank = Box(rt, "Blank", opaque = false)
+    private val box = Box(rt, "Box", opaque = 40)
+    private val blank = Box(rt, "Blank", opaque = 0)
+    private val padded = Box(rt, "Padded", opaque = 10)
 
     init {
         rt.addTarget(Backdrop(rt))
         rt.addTarget(box)
         rt.addTarget(blank)
+        rt.addTarget(padded)
     }
 
     @Test
@@ -67,5 +71,19 @@ class FenceTest {
         // No pixel is opaque, so the tight bounds are empty, but the costume box still fences.
         blank.goToXY(9999999.0, 9999999.0)
         assertEquals(245.0 to 185.0, blank.x to blank.y)
+    }
+
+    /**
+     * Transparent padding counts, and the tight bounds `if on edge, bounce` works out do not change
+     * that, as in scratch-render's own fencing test.
+     */
+    @Test
+    fun paddingCountsBeforeAndAfterABounce() {
+        padded.goToXY(9999999.0, 0.0)
+        assertEquals(245.0, padded.x)
+        padded.goToXY(0.0, 0.0)
+        padded.ifOnEdgeBounce()
+        padded.goToXY(9999999.0, 0.0)
+        assertEquals(245.0, padded.x)
     }
 }

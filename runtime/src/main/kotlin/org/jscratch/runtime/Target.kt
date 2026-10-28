@@ -314,6 +314,14 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         if (pts.isEmpty()) return null
         // The hull of a reduced-resolution effected image is in its pixels, not the costume's.
         val at = (if (effects.changesShape) drawnTransform() else renderTransform()) ?: return null
+        return transformedBounds(pts, at)
+    }
+
+    /**
+     * The box around image points [pts] (flat x, y pairs) moved by [at], in Scratch stage coordinates:
+     * the origin in the middle and y up, where [at] maps to stage pixels from the top left.
+     */
+    private fun transformedBounds(pts: DoubleArray, at: AffineTransform): Bounds {
         val n = pts.size / 2
         val out = DoubleArray(pts.size)
         at.transform(pts, 0, out, 0, n)
@@ -327,7 +335,6 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
             minY = Math.min(minY, out[i * 2 + 1])
             maxY = Math.max(maxY, out[i * 2 + 1])
         }
-
         val hw = Runtime.STAGE_WIDTH / 2.0
         val hh = Runtime.STAGE_HEIGHT / 2.0
         return Bounds(minX - hw, maxX - hw, hh - minY, hh - maxY)
@@ -615,36 +622,18 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
      * scratch-render fences with. Unlike [bounds] it counts transparent pixels and is never empty,
      * so a sprite wearing a blank costume is fenced too. Projects depend on that to measure the
      * stage: they move such a sprite to a huge position and read the fenced coordinates back.
+     *
+     * scratch-render once fenced with the tight bounds when it happened to have them, which made
+     * fencing change after `if on edge, bounce`. It has used the box for every costume since 2020
+     * (scratch-render pull request 478), which is also what Scratch 2 did.
      */
     private fun fenceBounds(): Bounds {
         val img = costume?.image
         val at = renderTransform()
         if (img == null || at == null) return Bounds(x, x, y, y)
-        val pts =
-            doubleArrayOf(
-                0.0,
-                0.0,
-                img.width.toDouble(),
-                0.0,
-                0.0,
-                img.height.toDouble(),
-                img.width.toDouble(),
-                img.height.toDouble(),
-            )
-        at.transform(pts, 0, pts, 0, 4)
-        var minX = pts[0]
-        var maxX = pts[0]
-        var minY = pts[1]
-        var maxY = pts[1]
-        for (i in 1 until 4) {
-            minX = Math.min(minX, pts[i * 2])
-            maxX = Math.max(maxX, pts[i * 2])
-            minY = Math.min(minY, pts[i * 2 + 1])
-            maxY = Math.max(maxY, pts[i * 2 + 1])
-        }
-        val hw = Runtime.STAGE_WIDTH / 2.0
-        val hh = Runtime.STAGE_HEIGHT / 2.0
-        return Bounds(minX - hw, maxX - hw, hh - minY, hh - maxY)
+        val w = img.width.toDouble()
+        val h = img.height.toDouble()
+        return transformedBounds(doubleArrayOf(0.0, 0.0, w, 0.0, 0.0, h, w, h), at)
     }
 
     fun setDirection(d: Double) {

@@ -33,12 +33,11 @@ class Costume(
         private set
     var imageResolution: Double = if (bitmapResolution > 0) bitmapResolution else 1.0
         private set
-    private var radius: Double = -1.0
     private var boxRadius: Double = -1.0
 
     /**
      * Sets the loaded pixels and everything derived from them in one step, so the
-     * silhouette and [radius] always describe the current image.
+     * silhouette and [boxRadius] always describe the current image.
      */
     fun setImage(img: BufferedImage, centerX: Double, centerY: Double, resolution: Double, sil: Silhouette) {
         image = img
@@ -46,7 +45,6 @@ class Costume(
         imageRotationCenterX = centerX
         imageRotationCenterY = centerY
         imageResolution = resolution
-        radius = -1.0
         boxRadius = -1.0
     }
 
@@ -55,21 +53,6 @@ class Costume(
         val img = other.image ?: return
         val sil = other.silhouette ?: return
         setImage(img, other.imageRotationCenterX, other.imageRotationCenterY, other.imageResolution, sil)
-    }
-
-    /**
-     * Distance in costume units from the rotation center to the farthest corner of an
-     * opaque pixel, or 0 when nothing is opaque. No rotation moves a pixel further.
-     */
-    fun radius(): Double {
-        if (radius >= 0) return radius
-        val pts = silhouette?.hull ?: return 0.0
-        var max = 0.0
-        for (i in 0 until pts.size / 2) {
-            max = Math.max(max, Math.hypot(pts[i * 2] - imageRotationCenterX, pts[i * 2 + 1] - imageRotationCenterY))
-        }
-        radius = max / imageResolution
-        return radius
     }
 
     /** Distance in costume units from the rotation center to the farthest corner of the whole image. */
