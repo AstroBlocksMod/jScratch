@@ -1,0 +1,7 @@
+when I receive [picked up v]
+if <[item names v] contains (thing)?> then
+replace item (item # of (thing) in [item names v]) of [item counts v] with ((item (item # of (thing) in [item names v]) of [item counts v]) + (1))
+else
+add (thing) to [item names v]
+add (1) to [item counts v]
+end

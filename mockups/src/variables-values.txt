@@ -1,0 +1,5 @@
+declare
+variable [inventory] for [this sprite only v] = (empty map)
+variable [boss] for [all sprites v] = (new [Enemy])
+variable [on win] for [all sprites v] = (function {say [You win!]})
+end

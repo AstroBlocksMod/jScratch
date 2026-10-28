@@ -1,0 +1,5 @@
+when this sprite clicked
+broadcast [score points v] with (10)
+
+when I receive [score points v] with (points)
+change [score v] by (points)

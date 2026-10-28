@@ -1,0 +1,4 @@
+when flag clicked
+set [double v] to (function (x) ((x) * (2)))
+set [shout v] to (function (text) (join (text) [!]))
+say (call (shout) with (call (double) with (21))) for (2) seconds

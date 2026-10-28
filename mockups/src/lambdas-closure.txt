@@ -1,0 +1,7 @@
+define (multiply by (factor))
+return (function (x) ((x) * (factor)))
+
+when flag clicked
+set [double v] to (multiply by (2))
+set [triple v] to (multiply by (3))
+say (join (call (double) with (5)) (join [ and ] (call (triple) with (5))))

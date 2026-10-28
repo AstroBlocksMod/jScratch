@@ -1,0 +1,2 @@
+when I receive [picked up v]
+change key (thing) of (inventory) by (1)

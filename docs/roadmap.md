@@ -99,6 +99,10 @@ Scratch is easy to start with, but larger projects outgrow it: custom blocks can
 - [ ] **Functions.** Custom blocks that report a value, local variables scoped to a script or a custom block, and recursion that does not need a list as a manual stack.
 - [ ] **Macros.** Blocks that expand into other blocks at compile time, so repeated patterns can be written once without the cost of a call at run time.
 - [ ] **Objects.** Classes with their own fields and methods, and instances that can be created, passed around and stored in variables and lists. Sprites and clones keep working as they do now, and could later be described as classes themselves.
+- [ ] **Lambdas.** Functions made inline from a reporter or a stack of blocks, kept in variables and passed around like any value, and list blocks that take them, such as keeping the items that pass a test or sorting by a key.
+- [ ] **Maps.** A value that stores pairs of keys and values, so looking something up by name no longer needs two lists kept in step.
+- [ ] **Variables declared in code.** A `declare` block that creates variables and lists with their scope and starting value, instead of going through the "Make a Variable" dialog.
+- [ ] **Broadcasts with data.** Broadcasts that carry a value to the scripts receiving them, and clones that receive a value from the script that created them.
 
 ### Desktop IDE
 

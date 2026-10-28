@@ -1,0 +1,4 @@
+when this sprite clicked
+set [ghost v] effect to (50)
+after (2) seconds run (function {clear graphic effects})
+broadcast [ghost hit v]

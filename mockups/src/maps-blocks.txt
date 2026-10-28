@@ -1,0 +1,13 @@
+when flag clicked
+set [prices v] to (empty map)
+set key [sword] of (prices) to (50)
+set key [shield] of (prices) to (30)
+
+when I receive [buy v]
+if <(prices) has key (thing)?> then
+if <not <(coins) < (key (thing) of (prices))>> then
+change [coins v] by ((0) - (key (thing) of (prices)))
+change key (thing) of (inventory) by (1)
+remove key (thing) from (prices)
+end
+end

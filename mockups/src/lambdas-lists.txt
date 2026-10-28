@@ -1,0 +1,4 @@
+when I receive [next turn v]
+keep items of [enemies v] where (function (enemy) <(field [health] of (enemy)) > (0)>)
+sort [enemies v] by (function (enemy) (field [health] of (enemy)))
+set [target v] to (item (1) of [enemies v])
