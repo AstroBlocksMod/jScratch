@@ -3,7 +3,7 @@
   "private": true,
   "description": "Renders the block mockups in src/ to SVG images for the docs.",
   "scripts": {
-    "build": "mockblocks --pack jscratch --scale 0.75 --out-dir ../docs/assets/mockups src/*.txt"
+    "build": "node build.mjs"
   },
   "devDependencies": {
     "mockblocks": "https://codeload.github.com/AstroBlocksMod/mockblocks/tar.gz/28fa4306060521d6747d92785209148a3efd423d"
