@@ -36,15 +36,31 @@ class Costume(
     private var boxRadius: Double = -1.0
 
     /**
+     * Whether the costume has no size in Scratch: an SVG whose viewBox is 0 by 0, like the empty costume
+     * the editor makes, or one that failed to load. It still gets a transparent pixel to draw, but it
+     * measures 0 by 0, as scratch-render's empty skins do, which decides how it is fenced and sized.
+     */
+    var isEmpty: Boolean = false
+        private set
+
+    /**
      * Sets the loaded pixels and everything derived from them in one step, so the
      * silhouette and [boxRadius] always describe the current image.
      */
-    fun setImage(img: BufferedImage, centerX: Double, centerY: Double, resolution: Double, sil: Silhouette) {
+    fun setImage(
+        img: BufferedImage,
+        centerX: Double,
+        centerY: Double,
+        resolution: Double,
+        sil: Silhouette,
+        empty: Boolean = false,
+    ) {
         image = img
         silhouette = sil
         imageRotationCenterX = centerX
         imageRotationCenterY = centerY
         imageResolution = resolution
+        isEmpty = empty
         boxRadius = -1.0
     }
 
@@ -52,12 +68,13 @@ class Costume(
     fun shareImage(other: Costume) {
         val img = other.image ?: return
         val sil = other.silhouette ?: return
-        setImage(img, other.imageRotationCenterX, other.imageRotationCenterY, other.imageResolution, sil)
+        setImage(img, other.imageRotationCenterX, other.imageRotationCenterY, other.imageResolution, sil, other.isEmpty)
     }
 
     /** Distance in costume units from the rotation center to the farthest corner of the whole image. */
     fun boxRadius(): Double {
         if (boxRadius >= 0) return boxRadius
+        if (isEmpty) return 0.0
         val img = image ?: return 0.0
         val dx = Math.max(imageRotationCenterX, img.width - imageRotationCenterX)
         val dy = Math.max(imageRotationCenterY, img.height - imageRotationCenterY)
@@ -67,9 +84,9 @@ class Costume(
 
     val isSvg: Boolean get() = resource.endsWith(".svg", ignoreCase = true)
 
-    /** Logical width in Scratch stage units. */
-    val width: Double get() = (image?.width ?: 0) / imageResolution
-    val height: Double get() = (image?.height ?: 0) / imageResolution
+    /** Logical size in Scratch stage units. */
+    val width: Double get() = if (isEmpty) 0.0 else (image?.width ?: 0) / imageResolution
+    val height: Double get() = if (isEmpty) 0.0 else (image?.height ?: 0) / imageResolution
 }
 
 class SoundAsset(val name: String, val resource: String)
@@ -105,8 +122,10 @@ class Assets {
         costume.setImage(img, centerX, centerY, resolution, Silhouette(img))
     }
 
+    /** An empty costume: 0 by 0 with its rotation center at the origin, as scratch-render's empty skin. */
     private fun blank(costume: Costume) {
-        set(costume, BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB), 0.0, 0.0, 1.0)
+        val img = BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB)
+        costume.setImage(img, 0.0, 0.0, 1.0, Silhouette(img), empty = true)
     }
 
     private fun loadBitmap(costume: Costume, bytes: ByteArray) {

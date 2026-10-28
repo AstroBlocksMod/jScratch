@@ -44,11 +44,26 @@ class FenceTest {
     private val blank = Box(rt, "Blank", opaque = 0)
     private val padded = Box(rt, "Padded", opaque = 10)
 
+    /** Wears the empty costume the editor makes: an SVG with a 0 by 0 viewBox. */
+    private val empty =
+        object : Sprite(rt, "Empty") {
+            init {
+                addCostume("empty", "empty.svg", 0.0, 0.0, 1.0)
+                val img = BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB)
+                costumes[0].setImage(img, 0.0, 0.0, 1.0, Silhouette(img), empty = true)
+            }
+
+            override fun runScript(id: Int) {}
+
+            override fun newInstance(): Target = this
+        }
+
     init {
         rt.addTarget(Backdrop(rt))
         rt.addTarget(box)
         rt.addTarget(blank)
         rt.addTarget(padded)
+        rt.addTarget(empty)
     }
 
     @Test
@@ -85,5 +100,36 @@ class FenceTest {
         padded.ifOnEdgeBounce()
         padded.goToXY(9999999.0, 0.0)
         assertEquals(245.0, padded.x)
+    }
+
+    /**
+     * The empty costume measures 0 by 0, as in scratch-render, so it is fenced as a point that stays on
+     * the stage, however large the sprite is set.
+     */
+    @Test
+    fun anEmptyCostumeIsFencedAsAPoint() {
+        empty.setSize(54000.0)
+        empty.goToXY(-9999999.0, 9999999.0)
+        assertEquals(-240.0 to 180.0, empty.x to empty.y)
+    }
+
+    /** scratch-vm's size limits divide by the costume's size, which for the empty costume is 0. */
+    @Test
+    fun anEmptyCostumeCanBeAnySizeFrom100Up() {
+        empty.setSize(10.0)
+        assertEquals(100.0, empty.size)
+        empty.setSize(1e9)
+        assertEquals(1e9, empty.size)
+    }
+
+    /**
+     * At size Infinity the empty costume's box is 0 times Infinity, NaN in scratch-render, so the sprite
+     * is not fenced at all. 3D engines park their pen sprite that way to move it anywhere.
+     */
+    @Test
+    fun anEmptyCostumeAtSizeInfinityIsNotFenced() {
+        empty.setSize(Double.POSITIVE_INFINITY)
+        empty.goToXY(-1506.5, 2431.5)
+        assertEquals(-1506.5 to 2431.5, empty.x to empty.y)
     }
 }

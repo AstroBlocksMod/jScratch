@@ -619,18 +619,29 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
 
     /**
      * The whole costume box under the current transform, in stage coordinates: the `getAABB` bounds
-     * scratch-render fences with. Unlike [bounds] it counts transparent pixels and is never empty,
-     * so a sprite wearing a blank costume is fenced too. Projects depend on that to measure the
-     * stage: they move such a sprite to a huge position and read the fenced coordinates back.
+     * scratch-render fences with. Unlike [bounds] it counts transparent pixels and is never empty, so
+     * a costume with nothing drawn is fenced too, and the empty costume, which measures 0 by 0, is a
+     * point that has to stay on the stage. Projects depend on that to measure the stage: they move
+     * such a sprite to a huge position and read the fenced coordinates back.
+     *
+     * scratch-render works the box out as the costume's size times the sprite's scale, and for the
+     * empty costume at size Infinity that is 0 times Infinity: NaN, which no fence comparison passes,
+     * so the sprite is not fenced at all. 3D engines use exactly that to move a pen sprite anywhere,
+     * so the empty costume's box is the sprite's position plus 0 times its scale, with the same NaN.
      *
      * scratch-render once fenced with the tight bounds when it happened to have them, which made
      * fencing change after `if on edge, bounce`. It has used the box for every costume since 2020
      * (scratch-render pull request 478), which is also what Scratch 2 did.
      */
     private fun fenceBounds(): Bounds {
-        val img = costume?.image
+        val c = costume
+        val img = c?.image
         val at = renderTransform()
-        if (img == null || at == null) return Bounds(x, x, y, y)
+        if (c == null || img == null || at == null) return Bounds(x, x, y, y)
+        if (c.isEmpty) {
+            val zero = 0.0 * size
+            return Bounds(x + zero, x + zero, y + zero, y + zero)
+        }
         val w = img.width.toDouble()
         val h = img.height.toDouble()
         return transformedBounds(doubleArrayOf(0.0, 0.0, w, 0.0, 0.0, h, w, h), at)
@@ -888,17 +899,14 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         val c = costume
         var minScale = 5.0
         var maxScale = 1500.0
-        if (c != null && c.width > 0 && c.height > 0) {
-            // Scratch limits size so the costume stays between 5 px and 1.5 stage sizes.
+        if (c != null) {
+            // Scratch limits size so the costume stays between 5 px and 1.5 stage sizes, with scratch-vm's
+            // arithmetic: an empty costume divides by 0 into a range of 100 percent and up, and when the
+            // upper limit is below the lower one, the upper one wins.
             minScale = Math.min(1.0, Math.max(5.0 / c.width, 5.0 / c.height)) * 100.0
-            maxScale =
-                Math.min(
-                    1.5 * Runtime.STAGE_WIDTH / c.width,
-                    1.5 * Runtime.STAGE_HEIGHT / c.height,
-                ) * 100.0
-            if (maxScale < minScale) maxScale = minScale
+            maxScale = Math.min(1.5 * Runtime.STAGE_WIDTH / c.width, 1.5 * Runtime.STAGE_HEIGHT / c.height) * 100.0
         }
-        size = (if (s.isNaN()) 100.0 else s).coerceIn(minScale, maxScale)
+        size = Math.min(Math.max(if (s.isNaN()) 100.0 else s, minScale), maxScale)
         if (visible) rt.requestRedraw()
     }
 
