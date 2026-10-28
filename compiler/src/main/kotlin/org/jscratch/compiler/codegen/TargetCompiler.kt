@@ -58,6 +58,7 @@ import org.objectweb.asm.Opcodes.PUTSTATIC
 import org.objectweb.asm.Opcodes.RETURN
 import org.objectweb.asm.Opcodes.SIPUSH
 import org.objectweb.asm.Opcodes.V21
+import java.math.BigInteger
 
 /** Static type of a value on the JVM operand stack. */
 enum class VType(val desc: String) {
@@ -85,8 +86,21 @@ class ProcInfo(
 class ScriptInfo(val id: Int, val method: String, val hat: Block, val hatKind: Int, val hatArg: String)
 
 /** Per-method emission state. */
-class MethodState(val mv: MethodVisitor, val proc: ProcInfo?, var nextLocal: Int) {
+class MethodState(val mv: MethodVisitor, val proc: ProcInfo?, var nextLocal: Int, val isHelper: Boolean = false) {
     val argSlots = HashMap<String, Int>()
+
+    /**
+     * Estimated bytecode bytes this method may still grow by before its statement chains spill into
+     * helper methods, so no method ends up past what HotSpot will compile. See `emitStack`.
+     */
+    var budget: Int = Int.MAX_VALUE
+
+    /** Whether a statement was emitted yet. The first one never spills, so every method makes progress. */
+    var emitted: Boolean = false
+
+    /** Jump target for `stop this script` and a stopped helper; emitted at the end of the method when used. */
+    val stop: Label = Label()
+    var stopUsed: Boolean = false
 
     fun allocLocal(size: Int): Int {
         val slot = nextLocal
@@ -116,6 +130,13 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
     private val procs = HashMap<String, ProcInfo>()
     private val scripts = ArrayList<ScriptInfo>()
 
+    /** Chain tails spilled out of a method that is reaching [SPLIT_BUDGET], waiting to become methods. */
+    private class Helper(val name: String, val firstId: String, val proc: ProcInfo?, val seen: HashSet<String>)
+
+    private val pendingHelpers = ArrayDeque<Helper>()
+    private var rootMethod = ""
+    private var helperCount = 0
+
     fun compile(): ByteArray {
         collectVariables()
         collectProcedures()
@@ -128,8 +149,14 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
         emitConstructor()
         emitRunScript()
         emitHatPredicate()
-        for (s in scripts) emitScript(s)
-        for (p in procs.values) emitProcedure(p)
+        for (s in scripts) {
+            emitScript(s)
+            drainHelpers()
+        }
+        for (p in procs.values) {
+            emitProcedure(p)
+            drainHelpers()
+        }
         if (!target.isStage) {
             emitNewInstance()
             emitCopyLocalsFrom()
@@ -534,8 +561,10 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
         val mv = cw.visitMethod(ACC_PRIVATE, s.method, "()V", null, null)
         mv.visitCode()
         val st = MethodState(mv, null, 1)
+        startRoot(st, s.method)
         emitStack(st, s.hat.next)
-        mv.visitInsn(RETURN)
+        emitReturn(st)
+        endRoot(st)
         mv.visitMaxs(0, 0)
         mv.visitEnd()
     }
@@ -545,17 +574,36 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
         val mv = cw.visitMethod(ACC_PRIVATE, p.method, desc, null, null)
         mv.visitCode()
         val st = MethodState(mv, p, 1 + p.argumentIds.size)
-        for ((i, name) in p.argumentNames.withIndex()) {
-            if (i < p.argumentIds.size) st.argSlots[name] = 1 + i
-        }
+        startRoot(st, p.method)
+        bindArguments(st, p)
         if (p.warp) {
             mv.visitVarInsn(ALOAD, 0)
             mv.visitMethodInsn(INVOKEVIRTUAL, RT.TARGET, "enterWarp", "()V", false)
         }
         emitStack(st, p.definition.next)
         emitReturn(st)
+        endRoot(st)
         mv.visitMaxs(0, 0)
         mv.visitEnd()
+    }
+
+    private fun bindArguments(st: MethodState, p: ProcInfo) {
+        for ((i, name) in p.argumentNames.withIndex()) {
+            if (i < p.argumentIds.size) st.argSlots[name] = 1 + i
+        }
+    }
+
+    private fun startRoot(st: MethodState, method: String) {
+        rootMethod = method
+        helperCount = 0
+        st.budget = SPLIT_BUDGET
+    }
+
+    /** `stop this script` jumps here when it cannot return directly; see [emitStack] for helpers. */
+    private fun endRoot(st: MethodState) {
+        if (!st.stopUsed) return
+        st.mv.visitLabel(st.stop)
+        emitReturn(st)
     }
 
     private fun emitReturn(st: MethodState) {
@@ -568,15 +616,135 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
 
     // ---- statements -----------------------------------------------------------------------------
 
-    /** Emits a chain of blocks linked through `next`. */
-    private fun emitStack(st: MethodState, firstId: String?) {
+    /**
+     * Emits a chain of blocks linked through `next`. Long chains are split across methods well before
+     * the JVM's 64 KiB method limit: once the estimated size of the method passes [SPLIT_BUDGET],
+     * which is chosen so methods stay under the 8000 bytes of bytecode HotSpot is willing to compile,
+     * the rest of the chain is spilled into a helper method that the method calls instead. The helper
+     * returns false when the script should stop, which the call site passes on through [MethodState.stop].
+     *
+     * [seen] holds the blocks of the chain emitted so far. A helper goes on with the same set, so a chain
+     * that a corrupt project links into a cycle still ends after one round, however many helpers it spans.
+     */
+    private fun emitStack(st: MethodState, firstId: String?, seen: HashSet<String> = HashSet()) {
         var id = firstId
-        val seen = HashSet<String>()
         while (id != null && seen.add(id)) {
             val b = target.blocks[id] ?: break
+            val cost = estimateStatement(b)
+            if (st.emitted && st.budget < cost && shouldSpill(st, id)) {
+                // The helper emits this block, so it must not count as seen yet.
+                seen.remove(id)
+                emitHelperCall(st, id, seen)
+                return
+            }
+            st.budget -= cost
+            st.emitted = true
             emitStatement(st, b)
             id = b.next
         }
+    }
+
+    /**
+     * Whether the rest of the chain is worth a helper method. When the budget runs out deep inside
+     * nested substacks, every enclosing chain still has a short tail to emit; those go into the
+     * method anyway instead of becoming a cascade of tiny helpers, within a bounded overrun.
+     */
+    private fun shouldSpill(st: MethodState, firstId: String): Boolean {
+        if (st.budget < -SPLIT_OVERRUN) return true
+        var tail = 0
+        var id: String? = firstId
+        val seen = HashSet<String>()
+        while (id != null && seen.add(id)) {
+            val b = target.blocks[id] ?: break
+            tail += estimateStatement(b)
+            if (tail >= MIN_SPILL) return true
+            id = b.next
+        }
+        return false
+    }
+
+    /** Spills the chain starting at [firstId] into a helper method and calls it. */
+    private fun emitHelperCall(st: MethodState, firstId: String, seen: HashSet<String>) {
+        val mv = st.mv
+        val name = rootMethod + "$" + helperCount++
+        pendingHelpers.add(Helper(name, firstId, st.proc, seen))
+        val args = st.proc?.argumentIds?.size ?: 0
+        mv.visitVarInsn(ALOAD, 0)
+        for (i in 1..args) mv.visitVarInsn(ALOAD, i)
+        mv.visitMethodInsn(INVOKEVIRTUAL, className, name, helperDesc(args), false)
+        st.stopUsed = true
+        mv.visitJumpInsn(IFEQ, st.stop)
+    }
+
+    private fun helperDesc(args: Int) = "(" + RT.D_OBJECT.repeat(args) + ")Z"
+
+    private fun drainHelpers() {
+        while (true) {
+            val h = pendingHelpers.removeFirstOrNull() ?: break
+            emitHelper(h)
+        }
+    }
+
+    /** A spilled chain tail: the custom block's arguments again, returning false when the script stops. */
+    private fun emitHelper(h: Helper) {
+        val args = h.proc?.argumentIds?.size ?: 0
+        val mv = cw.visitMethod(ACC_PRIVATE, h.name, helperDesc(args), null, null)
+        mv.visitCode()
+        val st = MethodState(mv, h.proc, 1 + args, isHelper = true)
+        st.budget = SPLIT_BUDGET
+        h.proc?.let { bindArguments(st, it) }
+        emitStack(st, h.firstId, h.seen)
+        mv.visitInsn(ICONST_1)
+        mv.visitInsn(IRETURN)
+        if (st.stopUsed) {
+            mv.visitLabel(st.stop)
+            mv.visitInsn(ICONST_0)
+            mv.visitInsn(IRETURN)
+        }
+        mv.visitMaxs(0, 0)
+        mv.visitEnd()
+    }
+
+    // ---- size estimation ------------------------------------------------------------------------
+    //
+    // Rough upper bounds on the bytecode emitStatement produces, tuned against the actual sizes
+    // javap reports for real projects. They only steer where chains are split, so they need to be
+    // a little above the real size without being so far above that methods come out tiny.
+
+    /** Estimated bytecode bytes of one statement without its substacks. */
+    private fun estimateStatement(b: Block): Int {
+        var cost =
+            when {
+                // Lists lazily allocate at the use site and sets may box, see emitGetSlot and emitSetSlot.
+                b.opcode.startsWith("data_") -> 30
+                b.opcode.startsWith("control_") -> 30
+                b.opcode == "procedures_call" -> 8
+                else -> 12
+            }
+        for ((name, input) in b.inputs) {
+            if (!name.startsWith("SUBSTACK")) cost += estimateInput(input)
+        }
+        return cost
+    }
+
+    private fun estimateInput(input: Input?): Int = when (input) {
+        null, is Input.Empty, is Input.Literal, is Input.BroadcastRef -> 5
+        is Input.VariableRef -> 8
+        is Input.ListRef -> 32
+        is Input.BlockRef -> {
+            val b = target.blocks[input.id]
+            when {
+                b == null -> 5
+                isMenu(b) -> 3
+                else -> estimateReporter(b)
+            }
+        }
+    }
+
+    private fun estimateReporter(b: Block): Int {
+        var cost = if (b.opcode.startsWith("data_")) 32 else 14
+        for (input in b.inputs.values) cost += estimateInput(input)
+        return cost
     }
 
     private fun emitSubstack(st: MethodState, b: Block, name: String) {
@@ -836,7 +1004,13 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
             "control_stop" -> {
                 when (field(b, "STOP_OPTION")) {
                     "all" -> thisCall(st, "stopAll", "()V") {}
-                    "this script" -> emitReturn(st)
+                    // In a helper the stop has to travel back through the call sites, see emitStack.
+                    "this script" -> if (st.isHelper) {
+                        st.stopUsed = true
+                        mv.visitJumpInsn(GOTO, st.stop)
+                    } else {
+                        emitReturn(st)
+                    }
                     else -> thisCall(st, "stopOtherScripts", "()V") {}
                 }
             }
@@ -1167,25 +1341,19 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
     private fun emitLiteral(mv: MethodVisitor, lit: Input.Literal, want: VType) {
         val numeric = lit.type in PrimitiveType.NUMBER..PrimitiveType.ANGLE
         val n = parseNumber(lit.value)
+        // Only a decimal literal becomes a number where text is wanted: the project may have stored it as a
+        // JSON number. Prefixed forms like 0x10 and Infinity can only have been typed as text, which Scratch
+        // shows as typed, so they stay text there and become numbers only where a number is wanted.
+        val foldsToNumber = numeric && !n.isNaN() && isDecimal(lit.value)
         when (want) {
             VType.NUM -> pushDouble(mv, if (n.isNaN()) 0.0 else n)
-            VType.STR -> {
-                mv.visitLdcInsn(
-                    if (numeric && !n.isNaN() &&
-                        lit.value.isNotBlank()
-                    ) {
-                        formatNumber(n)
-                    } else {
-                        lit.value
-                    },
-                )
-            }
+            VType.STR -> mv.visitLdcInsn(if (foldsToNumber) formatNumber(n) else lit.value)
             VType.BOOL -> {
                 val b = !(lit.value.isEmpty() || lit.value == "0" || lit.value.equals("false", ignoreCase = true))
                 mv.visitInsn(if (b) ICONST_1 else ICONST_0)
             }
             VType.ANY -> {
-                if (numeric && !n.isNaN() && lit.value.isNotBlank()) {
+                if (foldsToNumber) {
                     pushDouble(mv, n)
                     coerce(mv, VType.NUM, VType.ANY)
                 } else {
@@ -1640,24 +1808,76 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
     companion object {
         const val INLINE_LIST_LIMIT = 32
 
-        private val decimal = Regex("""^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$""")
+        /**
+         * Estimated bytes at which a method stops taking statements and spills the rest of the chain.
+         * HotSpot refuses to compile methods past 8000 bytes of bytecode (-XX:-DontCompileHugeMethods),
+         * so with the safety margin between the estimate and the real size, methods land well below that.
+         */
+        const val SPLIT_BUDGET = 4800
 
-        /** Mirrors `Cast.toNumberOrNaN` for strings so literals can be folded at compile time. */
+        /** Chain tails estimated below this stay in their method; see [shouldSpill]. */
+        const val MIN_SPILL = 256
+
+        /** How far past the budget the short tails can take a method before they spill regardless. */
+        const val SPLIT_OVERRUN = 1024
+
+        /**
+         * Mirrors the runtime's `Cast.parseNumber` (JavaScript `Number()` on a string) so literals fold at
+         * compile time to what the blocks would compute: `[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?`,
+         * `[+-]?Infinity`, and unsigned `0x`, `0o` and `0b` integers of ASCII digits, rounded once.
+         */
         fun parseNumber(raw: String): Double {
             val s = raw.trim()
             if (s.isEmpty()) return 0.0
-            return when {
-                decimal.matches(s) -> s.toDouble()
-                s == "Infinity" || s == "+Infinity" -> Double.POSITIVE_INFINITY
-                s == "-Infinity" -> Double.NEGATIVE_INFINITY
-                s.length > 2 && (s.startsWith("0x") || s.startsWith("0X")) -> {
-                    s.substring(2).toLongOrNull(16)?.toDouble()
-                        ?: Double.NaN
-                }
-                else -> {
-                    Double.NaN
+            if (isDecimal(s)) return s.toDouble()
+            return when (s) {
+                "Infinity", "+Infinity" -> Double.POSITIVE_INFINITY
+                "-Infinity" -> Double.NEGATIVE_INFINITY
+                else -> parsePrefixed(s)
+            }
+        }
+
+        /** Whether [raw], trimmed, is a number in decimal notation, the only kind JSON can store as a number. */
+        fun isDecimal(raw: String): Boolean {
+            val s = raw.trim()
+            val n = s.length
+            var i = if (n > 0 && (s[0] == '+' || s[0] == '-')) 1 else 0
+            var digits = 0
+            while (i < n && s[i] in '0'..'9') {
+                digits++
+                i++
+            }
+            if (i < n && s[i] == '.') {
+                i++
+                while (i < n && s[i] in '0'..'9') {
+                    digits++
+                    i++
                 }
             }
+            if (digits == 0) return false
+            if (i < n && (s[i] == 'e' || s[i] == 'E')) {
+                i++
+                if (i < n && (s[i] == '+' || s[i] == '-')) i++
+                if (i == n || s[i] !in '0'..'9') return false
+                while (i < n && s[i] in '0'..'9') i++
+            }
+            return i == n
+        }
+
+        private fun parsePrefixed(s: String): Double {
+            if (s.length < 3 || s[0] != '0') return Double.NaN
+            val radix =
+                when (s[1]) {
+                    'x', 'X' -> 16
+                    'o', 'O' -> 8
+                    'b', 'B' -> 2
+                    else -> return Double.NaN
+                }
+            for (i in 2 until s.length) {
+                val c = s[i]
+                if (c.code >= 128 || Character.digit(c, radix) < 0) return Double.NaN
+            }
+            return BigInteger(s.substring(2), radix).toDouble()
         }
 
         /** Mirrors `Cast.toString(double)` for the common cases literals hit. */

@@ -34,6 +34,32 @@ class Silhouette(private val image: BufferedImage) {
         px
     }
 
+    private data class EffectedKey(
+        val skinWidth: Double,
+        val skinHeight: Double,
+        val effects: Effects,
+        val scale: Double,
+    )
+
+    /**
+     * The last few effected versions of this image, shared by every target and clone that wears it, so
+     * clones drawn at different sizes and a sprite whose size crosses a resolution step do not render the
+     * same effects over and over. Each target also keeps its latest one, which it checks first.
+     */
+    private val effectedCache =
+        object : LinkedHashMap<EffectedKey, EffectedCostume>(EFFECTED_CACHE_SIZE * 2, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<EffectedKey, EffectedCostume>): Boolean =
+                size > EFFECTED_CACHE_SIZE
+        }
+
+    /** This image with [effects] at [scale] times its resolution, from the cache or new. */
+    internal fun effected(skinWidth: Double, skinHeight: Double, effects: Effects, scale: Double): EffectedCostume =
+        synchronized(effectedCache) {
+            effectedCache.getOrPut(EffectedKey(skinWidth, skinHeight, effects, scale)) {
+                EffectedCostume(this, skinWidth, skinHeight, effects, scale)
+            }
+        }
+
     /** Whether the pixel at integer image coordinates ([x], [y]) is opaque. Out of range is transparent. */
     fun opaque(x: Int, y: Int): Boolean {
         if (x < 0 || y < 0 || x >= width || y >= height) return false
@@ -93,6 +119,9 @@ class Silhouette(private val image: BufferedImage) {
     }
 
     companion object {
+        /** How many effected versions of one image [effected] keeps. */
+        private const val EFFECTED_CACHE_SIZE = 4
+
         /** Andrew's monotone chain. Returns the hull as flat x, y pairs. */
         fun convexHull(input: List<DoubleArray>): DoubleArray {
             val pts = input.sortedWith(compareBy<DoubleArray>({ it[0] }, { it[1] }))

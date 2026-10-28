@@ -182,32 +182,87 @@ internal data class Effects(
     /**
      * Draws [sil]'s costume image with these effects, as scratch-render's sprite shader does. Moved
      * pixels are sampled bilinearly from the premultiplied costume, clamped at its edges like a WebGL
-     * texture. The result has the costume's size and comes back premultiplied.
+     * texture. The result is [outWidth] by [outHeight] pixels, at most the costume's own size: a
+     * sprite drawn small gets a small image, so the effects only pay for the pixels that end up on
+     * the stage. The work is split across cores for large images, and [transformColor] results are
+     * cached by color, which a drawing with flat areas hits constantly. Comes back
+     * premultiplied.
      */
-    fun render(sil: Silhouette, skinWidth: Double, skinHeight: Double): BufferedImage {
-        val w = sil.width
-        val h = sil.height
+    fun render(
+        sil: Silhouette,
+        skinWidth: Double,
+        skinHeight: Double,
+        outWidth: Int = sil.width,
+        outHeight: Int = sil.height,
+    ): BufferedImage {
         val src = sil.premultiplied
-        val out = IntArray(w * h)
-        val p = DoubleArray(2)
-        for (y in 0 until h) {
-            for (x in 0 until w) {
-                val i = y * w + x
-                val c =
-                    if (changesShape) {
-                        p[0] = (x + 0.5) / w
-                        p[1] = (y + 0.5) / h
-                        transformPoint(p, skinWidth, skinHeight)
-                        sampleLinear(src, w, h, p[0], p[1])
-                    } else {
-                        src[i]
-                    }
-                out[i] = transformColor(c)
+        val out = IntArray(outWidth * outHeight)
+        val cores = java.lang.Runtime.getRuntime().availableProcessors()
+        val chunks = if (outWidth * outHeight >= PARALLEL_PIXELS) Math.min(cores, outHeight) else 1
+        if (chunks <= 1) {
+            renderRows(sil, src, skinWidth, skinHeight, out, outWidth, outHeight, 0, outHeight)
+        } else {
+            val rows = (outHeight + chunks - 1) / chunks
+            java.util.stream.IntStream.range(0, chunks).parallel().forEach { c ->
+                val from = c * rows
+                val to = Math.min(outHeight, from + rows)
+                renderRows(sil, src, skinWidth, skinHeight, out, outWidth, outHeight, from, to)
             }
         }
-        val img = BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB_PRE)
-        img.raster.setDataElements(0, 0, w, h, out)
+        val img = BufferedImage(outWidth, outHeight, BufferedImage.TYPE_INT_ARGB_PRE)
+        img.raster.setDataElements(0, 0, outWidth, outHeight, out)
         return img
+    }
+
+    /** Renders the rows [fromRow] until [toRow] of [out], with its own color cache so chunks never share state. */
+    private fun renderRows(
+        sil: Silhouette,
+        src: IntArray,
+        skinWidth: Double,
+        skinHeight: Double,
+        out: IntArray,
+        outWidth: Int,
+        outHeight: Int,
+        fromRow: Int,
+        toRow: Int,
+    ) {
+        val w = sil.width
+        val h = sil.height
+        val plain = !changesShape && outWidth == w && outHeight == h
+        // A direct-mapped cache of transformColor: a slot keeps the last color that hashed to it, so a
+        // lookup is two array reads and never allocates. Keys are the colors as unsigned longs, and -1
+        // marks an empty slot, which no color can be.
+        val keys = if (changesColor) LongArray(COLOR_CACHE_SLOTS) { -1L } else null
+        val values = if (changesColor) IntArray(COLOR_CACHE_SLOTS) else null
+        val p = DoubleArray(2)
+        for (y in fromRow until toRow) {
+            for (x in 0 until outWidth) {
+                val i = y * outWidth + x
+                val c =
+                    when {
+                        plain -> src[i]
+                        changesShape -> {
+                            p[0] = (x + 0.5) / outWidth
+                            p[1] = (y + 0.5) / outHeight
+                            transformPoint(p, skinWidth, skinHeight)
+                            sampleLinear(src, w, h, p[0], p[1])
+                        }
+                        else -> sampleLinear(src, w, h, (x + 0.5) / outWidth, (y + 0.5) / outHeight)
+                    }
+                out[i] =
+                    if (keys == null || values == null) {
+                        c
+                    } else {
+                        val slot = (c * GOLDEN_RATIO) ushr (32 - COLOR_CACHE_BITS)
+                        val key = c.toLong() and 0xFFFFFFFFL
+                        if (keys[slot] != key) {
+                            keys[slot] = key
+                            values[slot] = transformColor(c)
+                        }
+                        values[slot]
+                    }
+            }
+        }
     }
 
     private fun sampleLinear(src: IntArray, w: Int, h: Int, u: Double, v: Double): Int {
@@ -243,20 +298,36 @@ internal data class Effects(
 
         /** JavaScript's `Number.EPSILON`. */
         private val EPSILON = Math.ulp(1.0)
+
+        /** Output pixels from which [render] splits its rows across cores. */
+        private const val PARALLEL_PIXELS = 1 shl 15
+
+        /** The color cache of each render chunk has 2 to this many slots. */
+        private const val COLOR_CACHE_BITS = 12
+        private const val COLOR_CACHE_SLOTS = 1 shl COLOR_CACHE_BITS
+
+        /** Fibonacci hashing spreads colors that differ in a few low bits over the cache's slots. */
+        private const val GOLDEN_RATIO = -0x61c88647
     }
 }
 
 /**
- * A costume image as a target's graphic effects draw it. Built on first use and shared by clones,
- * which copy their parent's effects.
+ * A costume image as a target's graphic effects draw it, at [scale] times the costume's resolution
+ * (at most 1): the resolution the target is drawn at, so a large texture stamped small never pays
+ * for its full size. Made through [Silhouette.effected], which shares it among every target that wears
+ * the image, and drawn on first use.
  */
 internal class EffectedCostume(
     val source: Silhouette,
     private val skinWidth: Double,
     private val skinHeight: Double,
     val effects: Effects,
+    val scale: Double,
 ) {
-    val image: BufferedImage by lazy { effects.render(source, skinWidth, skinHeight) }
+    val width: Int = Math.max(1, Math.round(source.width * scale).toInt())
+    val height: Int = Math.max(1, Math.round(source.height * scale).toInt())
+
+    val image: BufferedImage by lazy { effects.render(source, skinWidth, skinHeight, width, height) }
 
     /** The outline of [image], for bounds. Touching samples the costume through the effects instead. */
     val silhouette: Silhouette by lazy { Silhouette(image) }

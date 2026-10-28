@@ -1,6 +1,7 @@
 package org.jscratch.runtime
 
 import java.math.BigDecimal
+import java.math.BigInteger
 
 /**
  * Scratch value conversions. Scratch values are dynamically typed: a value is a
@@ -12,11 +13,6 @@ import java.math.BigDecimal
  * is a `@JvmStatic` with a stable signature.
  */
 object Cast {
-    private val decimal = Regex("""^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$""")
-    private val hex = Regex("""^0[xX][0-9a-fA-F]+$""")
-    private val octal = Regex("""^0[oO][0-7]+$""")
-    private val binary = Regex("""^0[bB][01]+$""")
-
     /** JavaScript `Number(value)` with NaN preserved. */
     @JvmStatic
     fun toNumberOrNaN(value: Any?): Double = when (value) {
@@ -28,18 +24,96 @@ object Cast {
         else -> parseNumber(value.toString())
     }
 
-    private fun parseNumber(raw: String): Double {
+    /**
+     * JavaScript `Number(string)`. The grammar is checked by hand instead of a regex, since number
+     * parsing is on the hot path of every comparison and arithmetic block that meets a string:
+     * `[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?`, `[+-]?Infinity`, and the `0x`, `0o` and `0b` integer
+     * forms. Anything else, including the whitespace and underscore forms `Double.parseDouble`
+     * would accept, is NaN.
+     */
+    @JvmStatic
+    internal fun parseNumber(raw: String): Double {
         val s = raw.trim()
-        if (s.isEmpty()) return 0.0
-        return when {
-            decimal.matches(s) -> s.toDouble()
-            s == "Infinity" || s == "+Infinity" -> Double.POSITIVE_INFINITY
-            s == "-Infinity" -> Double.NEGATIVE_INFINITY
-            hex.matches(s) -> s.substring(2).toLong(16).toDouble()
-            octal.matches(s) -> s.substring(2).toLong(8).toDouble()
-            binary.matches(s) -> s.substring(2).toLong(2).toDouble()
-            else -> Double.NaN
+        val n = s.length
+        if (n == 0) return 0.0
+        var i = 0
+        val first = s[0]
+        val negative = first == '-'
+        if (negative || first == '+') i = 1
+        if (i == n) return Double.NaN
+        when (s[i]) {
+            'I' -> {
+                return when {
+                    s.regionMatches(i, "Infinity", 0, 8) && i + 8 == n ->
+                        if (negative) Double.NEGATIVE_INFINITY else Double.POSITIVE_INFINITY
+                    else -> Double.NaN
+                }
+            }
+            '0' -> {
+                // The prefixed integer forms take no sign, like JavaScript.
+                if (i == 0 && n > 2) {
+                    val radix = when (s[1]) {
+                        'x', 'X' -> 16
+                        'o', 'O' -> 8
+                        'b', 'B' -> 2
+                        else -> 0
+                    }
+                    if (radix != 0) return parsePrefixed(s, radix)
+                }
+            }
         }
+
+        // Validate the decimal grammar in one pass, tracking an integer value for the common case.
+        var digits = 0
+        var intValue = 0L
+        var intDigits = 0
+        while (i < n && s[i] in '0'..'9') {
+            intValue = intValue * 10 + (s[i] - '0')
+            digits++
+            intDigits++
+            i++
+        }
+        if (i < n && s[i] == '.') {
+            i++
+            while (i < n && s[i] in '0'..'9') {
+                digits++
+                i++
+            }
+        }
+        if (digits == 0) return Double.NaN
+        var exponent = false
+        if (i < n && (s[i] == 'e' || s[i] == 'E')) {
+            exponent = true
+            i++
+            if (i < n && (s[i] == '+' || s[i] == '-')) i++
+            if (i == n || s[i] !in '0'..'9') return Double.NaN
+            while (i < n && s[i] in '0'..'9') i++
+        }
+        if (i != n) return Double.NaN
+        // A plain integer of up to 15 digits is exact in a double, so skip Double.parseDouble.
+        if (!exponent && digits == intDigits && intDigits <= 15) {
+            return if (negative) -intValue.toDouble() else intValue.toDouble()
+        }
+        return s.toDouble()
+    }
+
+    /**
+     * The digits after a `0x`, `0o` or `0b` prefix. Only ASCII digits count, as in JavaScript, where
+     * `Character.digit` alone would also take fullwidth and other Unicode digits. JavaScript rounds the
+     * exact value once, so digits that do not fit a long go through BigInteger instead of a double
+     * that would round after every digit.
+     */
+    private fun parsePrefixed(s: String, radix: Int): Double {
+        var value = 0L
+        var exact = true
+        for (i in 2 until s.length) {
+            val c = s[i]
+            val d = if (c.code < 128) Character.digit(c, radix) else -1
+            if (d < 0) return Double.NaN
+            if (value > (Long.MAX_VALUE - d) / radix) exact = false
+            if (exact) value = value * radix + d
+        }
+        return if (exact) value.toDouble() else BigInteger(s.substring(2), radix).toDouble()
     }
 
     /** Scratch `toNumber`: like JavaScript `Number()` but NaN becomes 0. */

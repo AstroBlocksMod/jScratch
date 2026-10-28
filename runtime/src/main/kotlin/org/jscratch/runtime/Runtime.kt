@@ -64,6 +64,12 @@ class Runtime {
     /** Window pixels per stage unit, which the window sets as it resizes. The drag threshold is in window pixels. */
     @Volatile var windowScale: Double = 1.0
 
+    /**
+     * Device pixels per stage unit the window paints at: [windowScale] times the display's own scale on
+     * HiDPI screens. Graphic effects render at least this sharp. Stays 0 without a window.
+     */
+    @Volatile var windowDeviceScale: Double = 0.0
+
     /** The sprite the mouse is dragging, and the sprite's position relative to the mouse. */
     private var dragged: Sprite? = null
     private var dragOffsetX: Double = 0.0

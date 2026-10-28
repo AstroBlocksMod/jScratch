@@ -33,56 +33,60 @@ class Costume(
         private set
     var imageResolution: Double = if (bitmapResolution > 0) bitmapResolution else 1.0
         private set
-    private var radius: Double = -1.0
+    private var boxRadius: Double = -1.0
+
+    /**
+     * Whether the costume has no size in Scratch: an SVG whose viewBox is 0 by 0, like the empty costume
+     * the editor makes, or one that failed to load. It still gets a transparent pixel to draw, but it
+     * measures 0 by 0, as scratch-render's empty skins do, which decides how it is fenced and sized.
+     */
+    var isEmpty: Boolean = false
+        private set
 
     /**
      * Sets the loaded pixels and everything derived from them in one step, so the
-     * silhouette and [radius] always describe the current image.
+     * silhouette and [boxRadius] always describe the current image.
      */
-    fun setImage(img: BufferedImage, centerX: Double, centerY: Double, resolution: Double, sil: Silhouette) {
+    fun setImage(
+        img: BufferedImage,
+        centerX: Double,
+        centerY: Double,
+        resolution: Double,
+        sil: Silhouette,
+        empty: Boolean = false,
+    ) {
         image = img
         silhouette = sil
         imageRotationCenterX = centerX
         imageRotationCenterY = centerY
         imageResolution = resolution
-        radius = -1.0
+        isEmpty = empty
+        boxRadius = -1.0
     }
 
     /** Takes the pixels of [other], an already loaded costume of the same resource, without copying them. */
     fun shareImage(other: Costume) {
         val img = other.image ?: return
         val sil = other.silhouette ?: return
-        setImage(img, other.imageRotationCenterX, other.imageRotationCenterY, other.imageResolution, sil)
-    }
-
-    /**
-     * Distance in costume units from the rotation center to the farthest corner of an
-     * opaque pixel, or 0 when nothing is opaque. No rotation moves a pixel further.
-     */
-    fun radius(): Double {
-        if (radius >= 0) return radius
-        val pts = silhouette?.hull ?: return 0.0
-        var max = 0.0
-        for (i in 0 until pts.size / 2) {
-            max = Math.max(max, Math.hypot(pts[i * 2] - imageRotationCenterX, pts[i * 2 + 1] - imageRotationCenterY))
-        }
-        radius = max / imageResolution
-        return radius
+        setImage(img, other.imageRotationCenterX, other.imageRotationCenterY, other.imageResolution, sil, other.isEmpty)
     }
 
     /** Distance in costume units from the rotation center to the farthest corner of the whole image. */
     fun boxRadius(): Double {
+        if (boxRadius >= 0) return boxRadius
+        if (isEmpty) return 0.0
         val img = image ?: return 0.0
         val dx = Math.max(imageRotationCenterX, img.width - imageRotationCenterX)
         val dy = Math.max(imageRotationCenterY, img.height - imageRotationCenterY)
-        return Math.hypot(dx, dy) / imageResolution
+        boxRadius = Math.hypot(dx, dy) / imageResolution
+        return boxRadius
     }
 
     val isSvg: Boolean get() = resource.endsWith(".svg", ignoreCase = true)
 
-    /** Logical width in Scratch stage units. */
-    val width: Double get() = (image?.width ?: 0) / imageResolution
-    val height: Double get() = (image?.height ?: 0) / imageResolution
+    /** Logical size in Scratch stage units. */
+    val width: Double get() = if (isEmpty) 0.0 else (image?.width ?: 0) / imageResolution
+    val height: Double get() = if (isEmpty) 0.0 else (image?.height ?: 0) / imageResolution
 }
 
 class SoundAsset(val name: String, val resource: String)
@@ -118,8 +122,10 @@ class Assets {
         costume.setImage(img, centerX, centerY, resolution, Silhouette(img))
     }
 
+    /** An empty costume: 0 by 0 with its rotation center at the origin, as scratch-render's empty skin. */
     private fun blank(costume: Costume) {
-        set(costume, BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB), 0.0, 0.0, 1.0)
+        val img = BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB)
+        costume.setImage(img, 0.0, 0.0, 1.0, Silhouette(img), empty = true)
     }
 
     private fun loadBitmap(costume: Costume, bytes: ByteArray) {

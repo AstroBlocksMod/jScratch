@@ -200,13 +200,43 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         if (!effects.active) return null
         val c = costume ?: return null
         val sil = c.silhouette ?: return null
+        val scale = drawnScale()
         val e = effected
-        if (e != null && e.source === sil && e.effects == effects) return e
-        return EffectedCostume(sil, c.width, c.height, effects).also { effected = it }
+        if (e != null && e.source === sil && e.effects == effects && e.scale == scale) return e
+        return sil.effected(c.width, c.height, effects, scale).also { effected = it }
+    }
+
+    /**
+     * The resolution the target is drawn at, in output pixels per costume pixel: the pen layer and
+     * screenshots draw at twice the stage size, and a large window on a HiDPI screen at more. Bucketed
+     * to powers of two so a sprite growing smoothly re-renders its effects a few times, not on every
+     * size, and capped at the costume's own resolution, which rotation cannot raise.
+     */
+    private fun drawnScale(): Double {
+        val c = costume ?: return 1.0
+        val output = Math.max(rt.pen.scale.toDouble(), rt.windowDeviceScale)
+        val s = output * (if (isStage) 1.0 else size / 100.0) / c.imageResolution
+        if (s >= 1.0) return 1.0
+        var bucket = 1.0
+        while (bucket * 0.5 >= s && bucket > 1.0 / 16) bucket *= 0.5
+        return bucket
     }
 
     /** The pixels this target draws and stamps: its costume image with every effect but ghost. */
     fun drawnImage(): BufferedImage? = effectedCostume()?.image ?: costume?.image
+
+    /**
+     * The [renderTransform], adjusted when [drawnImage] is an effected image at reduced resolution,
+     * so stamping and drawing place it exactly where the full-size costume would go.
+     */
+    fun drawnTransform(): AffineTransform? {
+        val at = renderTransform() ?: return null
+        val e = effectedCostume() ?: return at
+        if (e.width != e.source.width || e.height != e.source.height) {
+            at.scale(e.source.width.toDouble() / e.width, e.source.height.toDouble() / e.height)
+        }
+        return at
+    }
 
     /** The costume's opaque pixels as drawn, which effects that move pixels change. */
     private fun drawnSilhouette(): Silhouette? =
@@ -282,7 +312,16 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
     private fun computeBounds(): Bounds? {
         val pts = drawnSilhouette()?.hull ?: return null
         if (pts.isEmpty()) return null
-        val at = renderTransform() ?: return null
+        // The hull of a reduced-resolution effected image is in its pixels, not the costume's.
+        val at = (if (effects.changesShape) drawnTransform() else renderTransform()) ?: return null
+        return transformedBounds(pts, at)
+    }
+
+    /**
+     * The box around image points [pts] (flat x, y pairs) moved by [at], in Scratch stage coordinates:
+     * the origin in the middle and y up, where [at] maps to stage pixels from the top left.
+     */
+    private fun transformedBounds(pts: DoubleArray, at: AffineTransform): Bounds {
         val n = pts.size / 2
         val out = DoubleArray(pts.size)
         at.transform(pts, 0, out, 0, n)
@@ -296,7 +335,6 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
             minY = Math.min(minY, out[i * 2 + 1])
             maxY = Math.max(maxY, out[i * 2 + 1])
         }
-
         val hw = Runtime.STAGE_WIDTH / 2.0
         val hh = Runtime.STAGE_HEIGHT / 2.0
         return Bounds(minX - hw, maxX - hw, hh - minY, hh - maxY)
@@ -551,15 +589,13 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
     /** Keeps at least a sliver of the sprite on stage, like scratch-render's fencing. */
     private fun fence(nx: Double, ny: Double): DoubleArray {
         // Far from the edges no part of the costume can leave the fence, so skip the exact bounds.
-        // Effects that move pixels keep them inside the costume's box, so its corners bound them
-        // without drawing the effects.
-        val radius = if (effects.changesShape) costume?.boxRadius() else costume?.radius()
-        val r = (radius ?: 0.0) * size / 100.0
+        // The costume's box bounds the fence bounds whatever the rotation or effects.
+        val r = (costume?.boxRadius() ?: 0.0) * size / 100.0
         val clear =
             Math.abs(nx) + r <= Runtime.STAGE_WIDTH / 2.0 - FENCE_WIDTH &&
                 Math.abs(ny) + r <= Runtime.STAGE_HEIGHT / 2.0 - FENCE_WIDTH
         if (clear) return doubleArrayOf(nx, ny)
-        val b = bounds() ?: return doubleArrayOf(nx, ny)
+        val b = fenceBounds()
         var rx = nx
         var ry = ny
         val dx = nx - x
@@ -579,6 +615,36 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
             ry = Math.floor(y + (sy - b.bottom))
         }
         return doubleArrayOf(rx, ry)
+    }
+
+    /**
+     * The whole costume box under the current transform, in stage coordinates: the `getAABB` bounds
+     * scratch-render fences with. Unlike [bounds] it counts transparent pixels and is never empty, so
+     * a costume with nothing drawn is fenced too, and the empty costume, which measures 0 by 0, is a
+     * point that has to stay on the stage. Projects depend on that to measure the stage: they move
+     * such a sprite to a huge position and read the fenced coordinates back.
+     *
+     * scratch-render works the box out as the costume's size times the sprite's scale, and for the
+     * empty costume at size Infinity that is 0 times Infinity: NaN, which no fence comparison passes,
+     * so the sprite is not fenced at all. 3D engines use exactly that to move a pen sprite anywhere,
+     * so the empty costume's box is the sprite's position plus 0 times its scale, with the same NaN.
+     *
+     * scratch-render once fenced with the tight bounds when it happened to have them, which made
+     * fencing change after `if on edge, bounce`. It has used the box for every costume since 2020
+     * (scratch-render pull request 478), which is also what Scratch 2 did.
+     */
+    private fun fenceBounds(): Bounds {
+        val c = costume
+        val img = c?.image
+        val at = renderTransform()
+        if (c == null || img == null || at == null) return Bounds(x, x, y, y)
+        if (c.isEmpty) {
+            val zero = 0.0 * size
+            return Bounds(x + zero, x + zero, y + zero, y + zero)
+        }
+        val w = img.width.toDouble()
+        val h = img.height.toDouble()
+        return transformedBounds(doubleArrayOf(0.0, 0.0, w, 0.0, 0.0, h, w, h), at)
     }
 
     fun setDirection(d: Double) {
@@ -742,8 +808,10 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
     fun think(message: Any?) = sayInternal(message, true)
 
     private fun sayInternal(message: Any?, isThink: Boolean) {
+        // scratch-vm says numbers as parseFloat(n.toFixed(2)). Every double from 2^52 up is a whole number
+        // already, and Math.round would saturate at Long.MAX_VALUE there, so only smaller ones are rounded.
         var text =
-            if (message is Double) {
+            if (message is Double && Math.abs(message) < TWO_POW_52) {
                 Cast.toString(Math.round(message * 100.0) / 100.0)
             } else {
                 Cast.toString(message)
@@ -831,17 +899,14 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         val c = costume
         var minScale = 5.0
         var maxScale = 1500.0
-        if (c != null && c.width > 0 && c.height > 0) {
-            // Scratch limits size so the costume stays between 5 px and 1.5 stage sizes.
+        if (c != null) {
+            // Scratch limits size so the costume stays between 5 px and 1.5 stage sizes, with scratch-vm's
+            // arithmetic: an empty costume divides by 0 into a range of 100 percent and up, and when the
+            // upper limit is below the lower one, the upper one wins.
             minScale = Math.min(1.0, Math.max(5.0 / c.width, 5.0 / c.height)) * 100.0
-            maxScale =
-                Math.min(
-                    1.5 * Runtime.STAGE_WIDTH / c.width,
-                    1.5 * Runtime.STAGE_HEIGHT / c.height,
-                ) * 100.0
-            if (maxScale < minScale) maxScale = minScale
+            maxScale = Math.min(1.5 * Runtime.STAGE_WIDTH / c.width, 1.5 * Runtime.STAGE_HEIGHT / c.height) * 100.0
         }
-        size = (if (s.isNaN()) 100.0 else s).coerceIn(minScale, maxScale)
+        size = Math.min(Math.max(if (s.isNaN()) 100.0 else s, minScale), maxScale)
         if (visible) rt.requestRedraw()
     }
 
@@ -1089,7 +1154,7 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
 
     fun stamp() {
         val img = drawnImage() ?: return
-        val at = renderTransform() ?: return
+        val at = drawnTransform() ?: return
         rt.pen.stamp(img, at, (1.0 - ghost / 100.0).toFloat())
     }
 
@@ -1111,6 +1176,9 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
 
     companion object {
         const val FENCE_WIDTH = 15.0
+
+        /** 2 to the 52nd: from here up, a double has no fractional part. */
+        private const val TWO_POW_52 = 4503599627370496.0
     }
 }
 

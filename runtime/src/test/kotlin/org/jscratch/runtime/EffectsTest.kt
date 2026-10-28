@@ -4,6 +4,8 @@ import java.awt.image.BufferedImage
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotSame
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class EffectsTest {
@@ -115,5 +117,86 @@ class EffectsTest {
         val tiled = Silhouette(effect("mosaic", 10.0).render(sil, 4.0, 4.0))
         assertTrue(tiled.opaque(0, 0) && tiled.opaque(2, 0) && tiled.opaque(0, 2) && tiled.opaque(2, 2))
         assertFalse(tiled.opaque(1, 1))
+    }
+
+    @Test
+    fun renderShrinksToTheDrawnSize() {
+        val img = BufferedImage(4, 4, BufferedImage.TYPE_INT_ARGB)
+        for (y in 0 until 4) for (x in 0 until 4) img.setRGB(x, y, 0xFFFF0000.toInt())
+        val small = effect("color", 100.0).render(Silhouette(img), 4.0, 4.0, 2, 2)
+        assertEquals(2, small.width)
+        assertEquals(2, small.height)
+        // Solid red everywhere, so the bilinear samples stay pure and every pixel turns cyan.
+        for (y in 0 until 2) for (x in 0 until 2) assertEquals(0xFF01FFFF.toInt(), small.getRGB(x, y))
+    }
+
+    @Test
+    fun renderSplitsLargeImagesAcrossCores() {
+        // 256 x 256 is past the parallel threshold; every pixel must still come out transformed.
+        val img = BufferedImage(256, 256, BufferedImage.TYPE_INT_ARGB)
+        for (y in 0 until 256) for (x in 0 until 256) img.setRGB(x, y, 0xFF000000.toInt())
+        val bright = effect("brightness", 100.0).render(Silhouette(img), 256.0, 256.0)
+        for (y in 0 until 256 step 51) {
+            for (x in 0 until 256 step 51) {
+                assertEquals(0xFFFFFFFF.toInt(), bright.getRGB(x, y))
+            }
+        }
+    }
+
+    @Test
+    fun theColorCacheMatchesTransformColorForEveryColor() {
+        // 4096 distinct opaque colors, as many as the cache has slots, so plenty of them share a slot.
+        val img = BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB)
+        val random = java.util.Random(1)
+        for (y in 0 until 64) for (x in 0 until 64) img.setRGB(x, y, 0xFF000000.toInt() or random.nextInt(0x1000000))
+        val e = effect("color", 40.0).with("brightness", 30.0)
+        val out = e.render(Silhouette(img), 64.0, 64.0)
+        for (y in 0 until 64) for (x in 0 until 64) assertEquals(e.transformColor(img.getRGB(x, y)), out.getRGB(x, y))
+    }
+
+    @Test
+    fun targetsWearingTheSameImageShareEffectedVersions() {
+        val sil = Silhouette(BufferedImage(8, 8, BufferedImage.TYPE_INT_ARGB))
+        val e = effect("brightness", 10.0)
+        val half = sil.effected(8.0, 8.0, e, 0.5)
+        assertSame(half, sil.effected(8.0, 8.0, e, 0.5))
+        assertNotSame(half, sil.effected(8.0, 8.0, e, 1.0))
+        // It keeps only the last few: four more push both of those out.
+        for (v in 1..4) sil.effected(8.0, 8.0, effect("color", v.toDouble()), 1.0)
+        assertNotSame(half, sil.effected(8.0, 8.0, e, 0.5))
+    }
+
+    private class Backdrop(rt: Runtime) : Stage(rt, "Stage") {
+        override fun runScript(id: Int) {}
+    }
+
+    /** A 64 by 64 opaque square. */
+    private class Box(rt: Runtime) : Sprite(rt, "Box") {
+        init {
+            addCostume("box", "box.png", 32.0, 32.0, 1.0)
+            val img = BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB)
+            for (y in 0 until 64) for (x in 0 until 64) img.setRGB(x, y, 0xFF336699.toInt())
+            costumes[0].setImage(img, 32.0, 32.0, 1.0, Silhouette(img))
+        }
+
+        override fun runScript(id: Int) {}
+
+        override fun newInstance(): Target = Box(rt)
+    }
+
+    @Test
+    fun effectsRenderAsSharpAsTheWindowDraws() {
+        System.setProperty("jscratch.headless", "0")
+        val rt = Runtime()
+        val box = Box(rt)
+        rt.addTarget(Backdrop(rt))
+        rt.addTarget(box)
+        box.setSize(25.0)
+        box.setEffect("brightness", 10.0)
+        // The pen layer draws at twice the stage size, so a quarter-size sprite needs half its pixels.
+        assertEquals(32, box.drawnImage()!!.width)
+        // A large window on a HiDPI screen draws 8 device pixels per stage unit: all of them.
+        rt.windowDeviceScale = 8.0
+        assertEquals(64, box.drawnImage()!!.width)
     }
 }

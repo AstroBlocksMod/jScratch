@@ -36,6 +36,41 @@ class CastTest {
     }
 
     @Test
+    fun parseNumberFollowsTheNumberGrammar() {
+        assertEquals(100000.0, Cast.parseNumber("1e5"))
+        assertEquals(120.0, Cast.parseNumber("12e+1"))
+        assertEquals(1.2, Cast.parseNumber("12e-1"))
+        assertEquals(12.0, Cast.parseNumber("12."))
+        assertEquals(0.5, Cast.parseNumber(".5"))
+        assertEquals(-0.5, Cast.parseNumber("-.5"))
+        assertEquals(3.0, Cast.parseNumber("+3"))
+        assertEquals(123456789012345.0, Cast.parseNumber("123456789012345"))
+        assertEquals(1234567890123456789.0, Cast.parseNumber("1234567890123456789"))
+        assertEquals(0.1, Cast.parseNumber("0.1"))
+        assertEquals(255.0, Cast.parseNumber("0xff"))
+        assertEquals(255.0, Cast.parseNumber("0XFF"))
+        assertEquals(15.0, Cast.parseNumber("0o17"))
+        assertEquals(5.0, Cast.parseNumber("0b101"))
+        assertEquals(1.2089258196146292e24, Cast.parseNumber("0x" + "ff".repeat(10)))
+        // JavaScript rounds the exact value once; rounding after every digit would give 1.2069015531825268e24.
+        assertEquals(1.206901553182527e24, Cast.parseNumber("0xff9243a8f506b40928b5"))
+        assertEquals(1.1805916207174113e21, Cast.parseNumber("0b" + "1".repeat(70)))
+        assertEquals(Double.POSITIVE_INFINITY, Cast.parseNumber("+Infinity"))
+        assertEquals(Double.NEGATIVE_INFINITY, Cast.parseNumber("-Infinity"))
+        assertEquals(Double.POSITIVE_INFINITY, Cast.parseNumber("1e400"))
+        for (
+        bad in listOf(
+            ".", "+", "-", "e5", "1e", "1e+", "1x", "0x", "0xg1", "0b12", "0o8", "+0x10", "-0b1",
+            "1 2", "12d", "0x10p1", "Infinity5", "1_000", "NaN", "infinity",
+            // Only ASCII digits count, as in JavaScript: Arabic-Indic one, fullwidth a and 1.
+            "0x١", "0xａ", "0b１", "١",
+        )
+        ) {
+            assertTrue(Cast.parseNumber(bad).isNaN(), "'$bad' should be NaN")
+        }
+    }
+
+    @Test
     fun booleans() {
         assertFalse(Cast.toBoolean(""))
         assertFalse(Cast.toBoolean("0"))
