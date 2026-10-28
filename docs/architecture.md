@@ -61,7 +61,7 @@ The bundle returns a promise. On the JVM, `RhinoProjectConverter` runs it in Rhi
 | Sprite variable | `public Object` field on the sprite class (clones copy it) |
 | List | `ScratchList` field; large initial contents live in `data/*.txt` resources |
 | Hat script | `private void script_N()` registered through `registerHat(kind, arg, N)` |
-| Long block chain | spilled into `script_N$K(...)` helper methods once a method's estimated size nears 4800 bytes, so every method stays small enough for HotSpot to JIT-compile (it refuses anything over 8000 bytes); a helper returns false when the script stopped inside it |
+| Long block chain | spilled into `script_N$K(...)` helper methods once a method's estimated size nears 4800 bytes, so script and custom block methods stay small enough for HotSpot to JIT-compile (it refuses anything over 8000 bytes), unless a single block is that large by itself; a helper returns false when the script stopped inside it |
 | Condition of `when timer greater than`, `when loudness greater than` and `when touching` | `hatPredicate(int)` override, a `lookupswitch` over the numbers of those scripts |
 | Custom block | `private void proc_N(Object... args)`, wrapped in `enterWarp` and `exitWarp` when "run without screen refresh" is on |
 | Clone support | `newInstance()` and `copyLocalsFrom(Target)` overrides |
