@@ -185,7 +185,7 @@ internal data class Effects(
      * texture. The result is [outWidth] by [outHeight] pixels, at most the costume's own size: a
      * sprite drawn small gets a small image, so the effects only pay for the pixels that end up on
      * the stage. The work is split across cores for large images, and [transformColor] results are
-     * cached per distinct color, which a drawing with flat areas hits constantly. Comes back
+     * cached by color, which a drawing with flat areas hits constantly. Comes back
      * premultiplied.
      */
     fun render(
@@ -205,13 +205,8 @@ internal data class Effects(
             val rows = (outHeight + chunks - 1) / chunks
             java.util.stream.IntStream.range(0, chunks).parallel().forEach { c ->
                 val from = c * rows
-                renderRows(
-                    sil, src, skinWidth, skinHeight, out, outWidth, outHeight, from,
-                    Math.min(
-                        outHeight,
-                        from + rows,
-                    ),
-                )
+                val to = Math.min(outHeight, from + rows)
+                renderRows(sil, src, skinWidth, skinHeight, out, outWidth, outHeight, from, to)
             }
         }
         val img = BufferedImage(outWidth, outHeight, BufferedImage.TYPE_INT_ARGB_PRE)
@@ -234,7 +229,11 @@ internal data class Effects(
         val w = sil.width
         val h = sil.height
         val plain = !changesShape && outWidth == w && outHeight == h
-        val cache = if (changesColor) HashMap<Int, Int>() else null
+        // A direct-mapped cache of transformColor: a slot keeps the last color that hashed to it, so a
+        // lookup is two array reads and never allocates. Keys are the colors as unsigned longs, and -1
+        // marks an empty slot, which no color can be.
+        val keys = if (changesColor) LongArray(COLOR_CACHE_SLOTS) { -1L } else null
+        val values = if (changesColor) IntArray(COLOR_CACHE_SLOTS) else null
         val p = DoubleArray(2)
         for (y in fromRow until toRow) {
             for (x in 0 until outWidth) {
@@ -251,10 +250,16 @@ internal data class Effects(
                         else -> sampleLinear(src, w, h, (x + 0.5) / outWidth, (y + 0.5) / outHeight)
                     }
                 out[i] =
-                    if (cache == null) {
+                    if (keys == null || values == null) {
                         c
                     } else {
-                        cache[c] ?: transformColor(c).also { if (cache.size < COLOR_CACHE_LIMIT) cache[c] = it }
+                        val slot = (c * GOLDEN_RATIO) ushr (32 - COLOR_CACHE_BITS)
+                        val key = c.toLong() and 0xFFFFFFFFL
+                        if (keys[slot] != key) {
+                            keys[slot] = key
+                            values[slot] = transformColor(c)
+                        }
+                        values[slot]
                     }
             }
         }
@@ -297,15 +302,20 @@ internal data class Effects(
         /** Output pixels from which [render] splits its rows across cores. */
         private const val PARALLEL_PIXELS = 1 shl 15
 
-        /** Distinct colors a render keeps transformed results for, so a huge photo cannot balloon the cache. */
-        private const val COLOR_CACHE_LIMIT = 1 shl 16
+        /** The color cache of each render chunk has 2 to this many slots. */
+        private const val COLOR_CACHE_BITS = 12
+        private const val COLOR_CACHE_SLOTS = 1 shl COLOR_CACHE_BITS
+
+        /** Fibonacci hashing spreads colors that differ in a few low bits over the cache's slots. */
+        private const val GOLDEN_RATIO = -0x61c88647
     }
 }
 
 /**
  * A costume image as a target's graphic effects draw it, at [scale] times the costume's resolution
  * (at most 1): the resolution the target is drawn at, so a large texture stamped small never pays
- * for its full size. Built on first use and shared by clones, which copy their parent's effects.
+ * for its full size. Made through [Silhouette.effected], which shares it among every target that wears
+ * the image, and drawn on first use.
  */
 internal class EffectedCostume(
     val source: Silhouette,

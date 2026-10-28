@@ -203,18 +203,19 @@ abstract class Target(@JvmField val rt: Runtime, @JvmField val name: String, @Jv
         val scale = drawnScale()
         val e = effected
         if (e != null && e.source === sil && e.effects == effects && e.scale == scale) return e
-        return EffectedCostume(sil, c.width, c.height, effects, scale).also { effected = it }
+        return sil.effected(c.width, c.height, effects, scale).also { effected = it }
     }
 
     /**
      * The resolution the target is drawn at, in output pixels per costume pixel: the pen layer and
-     * screenshots draw at twice the stage size. Bucketed to powers of two so a sprite growing
-     * smoothly re-renders its effects a few times, not on every size, and capped at the costume's
-     * own resolution, which rotation cannot raise.
+     * screenshots draw at twice the stage size, and a large window on a HiDPI screen at more. Bucketed
+     * to powers of two so a sprite growing smoothly re-renders its effects a few times, not on every
+     * size, and capped at the costume's own resolution, which rotation cannot raise.
      */
     private fun drawnScale(): Double {
         val c = costume ?: return 1.0
-        val s = 2.0 * (if (isStage) 1.0 else size / 100.0) / c.imageResolution
+        val output = Math.max(rt.pen.scale.toDouble(), rt.windowDeviceScale)
+        val s = output * (if (isStage) 1.0 else size / 100.0) / c.imageResolution
         if (s >= 1.0) return 1.0
         var bucket = 1.0
         while (bucket * 0.5 >= s && bucket > 1.0 / 16) bucket *= 0.5
