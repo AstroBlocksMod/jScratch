@@ -1,8 +1,7 @@
 name: Docs
 
 # Checks that the docs build without warnings. Runs only when the docs change.
-# Deploying is the Pages workflow's job. Runs on macOS because the block mockups
-# are sized with the fonts installed on the runner, and Linux has no Helvetica Neue.
+# Deploying is the Pages workflow's job.
 
 on:
   push:
@@ -29,9 +28,13 @@ env:
 jobs:
   docs:
     name: Docs
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+
+      # The block mockups are measured with Liberation Sans, see mockups/fonts.conf.
+      - name: Install fonts
+        run: sudo apt-get update && sudo apt-get install -y fonts-liberation
 
       - uses: actions/setup-node@v7
         with:
