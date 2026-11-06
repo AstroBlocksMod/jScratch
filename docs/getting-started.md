@@ -2,10 +2,21 @@
 
 ## Requirements
 
-- A JDK, version 21 or newer, both to build jScratch and to run compiled projects.
-- [mise](https://mise.jdx.dev), to build jScratch. Run `mise install` once in the repository root. It installs Emscripten, which compiles the runtime's sound decoders, and the Python version Emscripten runs on.
+- A JDK, version 21 or newer, to run the CLI and compiled projects, and to build jScratch.
+- [mise](https://mise.jdx.dev), only to build jScratch. Run `mise install` once in the repository root. It installs Emscripten, which compiles the runtime's sound decoders, and the Python version Emscripten runs on.
 
 The Gradle wrapper downloads the build tool and everything else. Compiled JARs carry their own runtime, so running them needs only Java.
+
+## Download a nightly build
+
+Every push to `main` that passes CI replaces the JAR on the [nightly prerelease](https://github.com/AstroBlocksMod/jScratch/releases/tag/nightly), so this link always gets the newest build:
+
+```sh
+curl -LO https://github.com/AstroBlocksMod/jScratch/releases/download/nightly/jscratch.jar
+java -jar jscratch.jar my-game.sb3
+```
+
+The release also has `jscratch.jar.sha256` to check the download against. Nightly builds follow `main` and have no version number, so expect them to change between downloads. In the examples below, use `jscratch.jar` wherever they run `cli/build/libs/cli-0.1.0-SNAPSHOT-all.jar`.
 
 ## Build the CLI
 

@@ -11,6 +11,8 @@ java -jar my-game.jar
 java -jar cli/build/libs/cli-0.1.0-SNAPSHOT-all.jar https://scratch.mit.edu/projects/10128407/
 ```
 
+To skip the build, download the [nightly JAR](https://github.com/AstroBlocksMod/jScratch/releases/download/nightly/jscratch.jar), built from `main` on every push, and run it with `java -jar jscratch.jar my-game.sb3`.
+
 ## Highlights
 
 - Real bytecode generated with [ASM](https://asm.ow2.io): primitive arithmetic, real loops, custom blocks as method calls.

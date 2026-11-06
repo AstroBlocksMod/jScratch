@@ -73,6 +73,7 @@ Cloud variables behave as ordinary variables today, so their values are lost whe
 
 ## Distribution
 
+- [x] **Nightly builds.** Every push to `main` that passes CI replaces the CLI JAR on the rolling `nightly` prerelease. See [Download a nightly build](getting-started.md#download-a-nightly-build).
 - [ ] **Release builds.** Publish the CLI JAR on GitHub Releases for every tagged version.
 - [ ] **Native launchers.** An option to package a compiled project with `jpackage`, so players do not need a Java install.
 - [ ] **Gradle plugin.** Compile `.sb3` files as part of another project's build.

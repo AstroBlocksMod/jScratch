@@ -1,8 +1,9 @@
 name: CI
 
 # Lints, tests and assembles everything. Runs only when a file the Gradle build
-# reads changes. The Docs workflow checks the docs, and deploying is the Pages
-# workflow's job.
+# reads changes. After a push to main that passes on every JDK, the CLI fat JAR
+# goes to the rolling "nightly" prerelease. The Docs workflow checks the docs,
+# and deploying the site is the Pages workflow's job.
 
 on:
   push:
@@ -60,6 +61,17 @@ jobs:
       - name: Build and test
         run: ./gradlew build
 
+      # Only one leg hands the CLI to the nightly job, which publishes it once
+      # every leg has passed.
+      - name: Keep the CLI for the nightly release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && matrix.java == '25'
+        uses: actions/upload-artifact@v7
+        with:
+          name: cli-jar
+          path: cli/build/libs/cli-*-all.jar
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Upload test reports
         if: failure()
         uses: actions/upload-artifact@v7
@@ -68,3 +80,43 @@ jobs:
           path: "**/build/reports/tests/"
           if-no-files-found: ignore
 
+  # Moves the nightly tag to this commit and replaces the JAR on its prerelease,
+  # so the download link never changes. It is a prerelease so it never shows up
+  # as the latest release.
+  nightly:
+    name: Publish nightly
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: cli-jar
+
+      - name: Name the JAR and checksum it
+        run: |
+          mv cli-*-all.jar jscratch.jar
+          sha256sum jscratch.jar > jscratch.jar.sha256
+
+      - name: Move the nightly tag
+        run: |
+          if gh api "repos/$GH_REPO/git/refs/tags/nightly" > /dev/null 2>&1; then
+            gh api -X PATCH "repos/$GH_REPO/git/refs/tags/nightly" -f sha="$GITHUB_SHA" -F force=true > /dev/null
+          else
+            gh api -X POST "repos/$GH_REPO/git/refs" -f ref=refs/tags/nightly -f sha="$GITHUB_SHA" > /dev/null
+          fi
+
+      - name: Update the release
+        run: |
+          notes="Built from ${GITHUB_SHA::7} on $(date -u +%Y-%m-%d). This build follows main and is replaced on every push, so it is not a stable release. Run it with \`java -jar jscratch.jar\` on JDK 21 or newer."
+          if gh release view nightly > /dev/null 2>&1; then
+            gh release edit nightly --prerelease --notes "$notes"
+          else
+            gh release create nightly --prerelease --verify-tag --title "Nightly" --notes "$notes"
+          fi
+          gh release upload nightly jscratch.jar jscratch.jar.sha256 --clobber
