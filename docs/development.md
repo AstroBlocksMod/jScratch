@@ -29,13 +29,17 @@
 ./gradlew :benchmarks:benchmark # time the benchmarks on jScratch, TurboWarp and scratch-vm (a few minutes)
 ```
 
-The build uses the Gradle wrapper (Gradle 9), Kotlin 2.4, a JDK of version 21 or newer on the path, and Emscripten from `mise.toml` (run `mise install` once). Generated classes and the runtime target Java 21 because the scheduler uses virtual threads. To update JavaScript dependencies, edit `sb3js/package.json` or `benchmarks/js/package.json`, run `npm install` in the same directory to refresh `package-lock.json`, and commit both.
+The build uses the Gradle wrapper (Gradle 9), Kotlin 2.4, a JDK of version 21 or newer on the path, and Emscripten from `mise.toml` (run `mise install` once). Generated classes and the runtime target Java 21 because the scheduler uses virtual threads. Kotlin and Java both compile against the JDK 21 class library (`-Xjdk-release=21` and `options.release`), so a build on a newer JDK still runs on 21. To update JavaScript dependencies, edit `sb3js/package.json` or `benchmarks/js/package.json`, run `npm install` in the same directory to refresh `package-lock.json`, and commit both.
 
 ## Continuous integration
 
 Each workflow runs only when a file it depends on changes, so a docs-only change skips the Gradle build and a code change skips the docs check. Every workflow can also be started by hand from the Actions tab. When you add a module or a top-level file the build reads, add it to the `paths` list of the workflows that need it.
 
-The `CI` workflow in `.github/workflows/ci.yml` runs on pull requests and pushes to `main` that touch a module, the Gradle setup, `.editorconfig` or `mise.toml`. It installs the tools in `mise.toml` with `jdx/mise-action`, then runs `./gradlew build` on JDK 21 and JDK 25, so both the oldest supported JDK and the current one are covered. When a test fails, the HTML test reports are attached to the run as an artifact. CI never deploys anything; publishing the site is the `Pages` workflow's job (see [Deployment](web-playground.md#deployment)).
+The `CI` workflow in `.github/workflows/ci.yml` runs on pull requests and pushes to `main` that touch a module, the Gradle setup, `.editorconfig` or `mise.toml`. It installs the tools in `mise.toml` with `jdx/mise-action`, then runs `./gradlew build` on JDK 21 and JDK 25, so both the oldest supported JDK and the current one are covered. When a test fails, the HTML test reports are attached to the run as an artifact.
+
+When a run on `main` passes on both JDKs (a push or one started by hand), the `nightly` job publishes the CLI (see [Download a nightly build](getting-started.md#download-a-nightly-build)). It takes the `cli-*-all.jar` from the JDK 21 leg, the oldest JDK the release promises to run on. The job writes `jscratch.jar.sha256` next to it and uploads both under temporary names to the `nightly` prerelease. Then it deletes the old files and renames the new ones over them, so the download link is only gone for that moment. Last, it updates the notes with the commit and moves the `nightly` tag to it. GitHub can refuse to let the workflow token move a tag to a commit that changes a workflow file. The job then only warns, since the JAR and the notes are already current.
+
+The release is marked as a prerelease so it never shows up as the latest release. Only this job gets write access to the repository, and pull requests never run it. Publishes run one at a time and a newer push never cancels one halfway, while a newer push does cancel the build of an older one. Publishing the site is the `Pages` workflow's job (see [Deployment](web-playground.md#deployment)).
 
 The `Docs` workflow in `.github/workflows/docs.yml` runs on pull requests and pushes to `main` that touch `docs/`, `mockups/` or `zensical.toml`. It renders the [block mockups](#block-mockups) and builds the docs with `zensical build --strict`.
 
