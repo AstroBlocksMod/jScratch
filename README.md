@@ -11,7 +11,7 @@ java -jar my-game.jar
 java -jar cli/build/libs/cli-0.1.0-SNAPSHOT-all.jar https://scratch.mit.edu/projects/10128407/
 ```
 
-To skip the build, download the [nightly JAR](https://github.com/AstroBlocksMod/jScratch/releases/download/nightly/jscratch.jar), built from `main` on every push, and run it with `java -jar jscratch.jar my-game.sb3`.
+To skip the build, download the [nightly JAR](https://github.com/AstroBlocksMod/jScratch/releases/download/nightly/jscratch.jar), rebuilt whenever CI passes on `main`, and run it with `java -jar jscratch.jar my-game.sb3`.
 
 ## Highlights
 

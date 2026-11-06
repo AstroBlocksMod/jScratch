@@ -1,8 +1,8 @@
 name: CI
 
 # Lints, tests and assembles everything. Runs only when a file the Gradle build
-# reads changes. After a push to main that passes on every JDK, the CLI fat JAR
-# goes to the rolling "nightly" prerelease. The Docs workflow checks the docs,
+# reads changes. When a run on main (a push or a manual one) passes on every
+# JDK, the CLI fat JAR goes to the rolling "nightly" prerelease. The Docs workflow checks the docs,
 # and deploying the site is the Pages workflow's job.
 
 on:
@@ -32,14 +32,15 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   build:
     name: Build (JDK ${{ matrix.java }})
     runs-on: ubuntu-latest
+    # A newer push cancels the build, but never a nightly publish halfway
+    # through, so the concurrency group is set here and not for the workflow.
+    concurrency:
+      group: ci-${{ github.ref }}-jdk${{ matrix.java }}
+      cancel-in-progress: true
     strategy:
       fail-fast: false
       matrix:
@@ -62,9 +63,10 @@ jobs:
         run: ./gradlew build
 
       # Only one leg hands the CLI to the nightly job, which publishes it once
-      # every leg has passed.
+      # every leg has passed. Kotlin compiles against the class library of the
+      # JDK it runs on, so the JAR comes from the oldest supported one.
       - name: Keep the CLI for the nightly release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && matrix.java == '25'
+        if: github.ref == 'refs/heads/main' && matrix.java == '21'
         uses: actions/upload-artifact@v7
         with:
           name: cli-jar
@@ -80,14 +82,22 @@ jobs:
           path: "**/build/reports/tests/"
           if-no-files-found: ignore
 
-  # Moves the nightly tag to this commit and replaces the JAR on its prerelease,
-  # so the download link never changes. It is a prerelease so it never shows up
-  # as the latest release.
+  # Replaces the JAR on the nightly prerelease, so the download link never
+  # changes. It is a prerelease so it never shows up as the latest release.
+  # The new files go up under temporary names first and are then renamed over
+  # the old ones, so the link is only missing for the moment between deleting
+  # an old file and renaming its replacement. The notes and the tag move last,
+  # so they never name a commit whose JAR is not there yet.
   nightly:
     name: Publish nightly
     needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    # Publishes run one after another and are never cancelled. A newer one
+    # still waiting replaces an older one that has not started.
+    concurrency:
+      group: nightly
+      cancel-in-progress: false
     permissions:
       contents: write
     env:
@@ -102,21 +112,53 @@ jobs:
         run: |
           mv cli-*-all.jar jscratch.jar
           sha256sum jscratch.jar > jscratch.jar.sha256
+          mv jscratch.jar jscratch.jar.next
+          mv jscratch.jar.sha256 jscratch.jar.sha256.next
 
+      # Only a missing release (HTTP 404) creates one. Any other error stops
+      # the job and is shown.
+      - name: Find or create the release
+        id: release
+        run: |
+          if ! id=$(gh api "repos/$GH_REPO/releases/tags/nightly" --jq .id 2> error.txt); then
+            if ! grep -q "HTTP 404" error.txt; then
+              cat error.txt >&2
+              exit 1
+            fi
+            id=$(gh api -X POST "repos/$GH_REPO/releases" -f tag_name=nightly -f target_commitish="$GITHUB_SHA" \
+              -f name=Nightly -F prerelease=true -f body="The first nightly build is on its way." --jq .id)
+          fi
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+
+      - name: Upload the new files
+        run: gh release upload nightly jscratch.jar.next jscratch.jar.sha256.next --clobber
+
+      - name: Swap the new files in
+        env:
+          RELEASE: ${{ steps.release.outputs.id }}
+        run: |
+          asset() {
+            gh api --paginate "repos/$GH_REPO/releases/$RELEASE/assets" --jq ".[] | select(.name == \"$1\") | .id"
+          }
+          for name in jscratch.jar jscratch.jar.sha256; do
+            new=$(asset "$name.next")
+            old=$(asset "$name")
+            if [ -n "$old" ]; then
+              gh api -X DELETE "repos/$GH_REPO/releases/assets/$old"
+            fi
+            gh api -X PATCH "repos/$GH_REPO/releases/assets/$new" -f name="$name" > /dev/null
+          done
+
+      - name: Update the notes
+        run: |
+          notes="Built from $GITHUB_SERVER_URL/$GH_REPO/commit/$GITHUB_SHA on $(date -u +%Y-%m-%d). This build follows main and is replaced whenever CI passes there, so it is not a stable release. Run it with \`java -jar jscratch.jar\` on JDK 21 or newer."
+          gh release edit nightly --prerelease --notes "$notes"
+
+      # GitHub can refuse to let the workflow token move a tag to a commit that
+      # changes a workflow file. The JAR and the notes are already current by
+      # then, so that only leaves the tag and its source archives behind.
       - name: Move the nightly tag
         run: |
-          if gh api "repos/$GH_REPO/git/refs/tags/nightly" > /dev/null 2>&1; then
-            gh api -X PATCH "repos/$GH_REPO/git/refs/tags/nightly" -f sha="$GITHUB_SHA" -F force=true > /dev/null
-          else
-            gh api -X POST "repos/$GH_REPO/git/refs" -f ref=refs/tags/nightly -f sha="$GITHUB_SHA" > /dev/null
+          if ! gh api -X PATCH "repos/$GH_REPO/git/refs/tags/nightly" -f sha="$GITHUB_SHA" -F force=true > /dev/null; then
+            echo "::warning::Could not move the nightly tag to $GITHUB_SHA. The JAR and the notes are current, the tag is not."
           fi
-
-      - name: Update the release
-        run: |
-          notes="Built from ${GITHUB_SHA::7} on $(date -u +%Y-%m-%d). This build follows main and is replaced on every push, so it is not a stable release. Run it with \`java -jar jscratch.jar\` on JDK 21 or newer."
-          if gh release view nightly > /dev/null 2>&1; then
-            gh release edit nightly --prerelease --notes "$notes"
-          else
-            gh release create nightly --prerelease --verify-tag --title "Nightly" --notes "$notes"
-          fi
-          gh release upload nightly jscratch.jar jscratch.jar.sha256 --clobber

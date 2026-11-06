@@ -9,7 +9,7 @@ The Gradle wrapper downloads the build tool and everything else. Compiled JARs c
 
 ## Download a nightly build
 
-Every push to `main` that passes CI replaces the JAR on the [nightly prerelease](https://github.com/AstroBlocksMod/jScratch/releases/tag/nightly), so this link always gets the newest build:
+Whenever CI passes on `main`, it replaces the JAR on the [nightly prerelease](https://github.com/AstroBlocksMod/jScratch/releases/tag/nightly). CI only runs for changes to the code or the build, so a docs-only push leaves the JAR as it is, and the release notes link the commit it was built from. This link always gets the newest build:
 
 ```sh
 curl -LO https://github.com/AstroBlocksMod/jScratch/releases/download/nightly/jscratch.jar
