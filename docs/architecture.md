@@ -3,17 +3,26 @@
 ## Pipeline
 
 ```mermaid
-flowchart LR
-    sb3[".sb3 archive"] --> unzip["Sb3Parser<br>java.util.zip"]
-    unzip --> sp["scratch-parser<br>parse + schema validation"]
-    sp --> tree["JSON tree<br>JsonValue"]
-    tree --> model["Project model<br>targets, blocks, inputs"]
-    model --> codegen["ProjectCompiler + TargetCompiler<br>ASM bytecode"]
-    codegen --> classes["Stage, Sprite_*, Main classes"]
-    classes --> jar["JarWriter"]
-    assets["costumes, sounds"] --> jar
-    runtime["runtime fat JAR"] --> jar
-    jar --> out["executable JAR"]
+flowchart TB
+    subgraph read ["Read the project"]
+        direction LR
+        sb3[".sb3 archive"] --> unzip["Sb3Parser<br>java.util.zip"]
+        unzip --> sp["scratch-parser<br>parse + schema validation"]
+        sp --> tree["JSON tree<br>JsonValue"]
+    end
+    subgraph compile ["Compile"]
+        direction LR
+        model["Project model<br>targets, blocks, inputs"] --> codegen["ProjectCompiler + TargetCompiler<br>ASM bytecode"]
+        codegen --> classes["Stage, Sprite_*, Main classes"]
+    end
+    subgraph package ["Package"]
+        direction LR
+        assets["costumes, sounds"] --> jar["JarWriter"]
+        runtime["runtime fat JAR"] --> jar
+        jar --> out["executable JAR"]
+    end
+    read --> compile
+    compile --> package
 ```
 
 1. **Unpacking.** `Sb3Parser` unzips the archive with `java.util.zip`, which works on the JVM and under TeaVM alike.
