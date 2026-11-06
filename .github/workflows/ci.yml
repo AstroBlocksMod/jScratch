@@ -63,8 +63,8 @@ jobs:
         run: ./gradlew build
 
       # Only one leg hands the CLI to the nightly job, which publishes it once
-      # every leg has passed. Kotlin compiles against the class library of the
-      # JDK it runs on, so the JAR comes from the oldest supported one.
+      # every leg has passed. The build pins the JDK 21 class library anyway,
+      # but the JAR comes from the JDK the release promises to run on.
       - name: Keep the CLI for the nightly release
         if: github.ref == 'refs/heads/main' && matrix.java == '21'
         uses: actions/upload-artifact@v7

@@ -21,6 +21,10 @@ subprojects {
         extensions.configure<org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension> {
             compilerOptions {
                 jvmTarget.set(JvmTarget.JVM_21)
+                // Compile against the JDK 21 class library whatever JDK runs the
+                // build, like options.release does for Java, so a JAR built on a
+                // newer JDK never calls a method that 21 lacks.
+                freeCompilerArgs.add("-Xjdk-release=21")
                 allWarningsAsErrors.set(false)
             }
         }
