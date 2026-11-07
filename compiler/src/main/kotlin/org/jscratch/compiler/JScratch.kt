@@ -2,8 +2,8 @@ package org.jscratch.compiler
 
 import org.jscratch.compiler.codegen.ProjectCompiler
 import org.jscratch.compiler.json.ProjectJson
-import org.jscratch.compiler.sb3.Project
 import org.jscratch.compiler.sb3.Sb3Parser
+import org.jscratch.sb3o.model.Project
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.util.TraceClassVisitor
 import java.io.PrintWriter

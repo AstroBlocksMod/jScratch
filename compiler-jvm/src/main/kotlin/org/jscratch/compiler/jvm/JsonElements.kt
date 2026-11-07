@@ -7,13 +7,13 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.doubleOrNull
-import org.jscratch.compiler.json.JsonValue
-import org.jscratch.compiler.json.JsonArray as TreeArray
-import org.jscratch.compiler.json.JsonBoolean as TreeBoolean
-import org.jscratch.compiler.json.JsonNull as TreeNull
-import org.jscratch.compiler.json.JsonNumber as TreeNumber
-import org.jscratch.compiler.json.JsonObject as TreeObject
-import org.jscratch.compiler.json.JsonString as TreeString
+import org.jscratch.sb3o.json.JsonValue
+import org.jscratch.sb3o.json.JsonArray as TreeArray
+import org.jscratch.sb3o.json.JsonBoolean as TreeBoolean
+import org.jscratch.sb3o.json.JsonNull as TreeNull
+import org.jscratch.sb3o.json.JsonNumber as TreeNumber
+import org.jscratch.sb3o.json.JsonObject as TreeObject
+import org.jscratch.sb3o.json.JsonString as TreeString
 
 /** Converts a kotlinx-serialization element into the compiler's JSON tree. */
 fun JsonElement.toTree(): JsonValue = when (this) {

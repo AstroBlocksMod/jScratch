@@ -1,8 +1,8 @@
 package org.jscratch.cli
 
-import org.jscratch.compiler.Archives
 import org.jscratch.compiler.convert.ProjectFormat
 import org.jscratch.compiler.jvm.RhinoProjectJson
+import org.jscratch.sb3o.Archives
 import java.io.ByteArrayInputStream
 import java.util.zip.ZipInputStream
 import kotlin.test.Test

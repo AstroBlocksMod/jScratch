@@ -1,8 +1,8 @@
 package org.jscratch.compiler.jvm
 
-import org.jscratch.compiler.json.JsonArray
-import org.jscratch.compiler.json.JsonObject
-import org.jscratch.compiler.sb3.Sb3Exception
+import org.jscratch.sb3o.json.JsonArray
+import org.jscratch.sb3o.json.JsonObject
+import org.jscratch.sb3o.model.Sb3Exception
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

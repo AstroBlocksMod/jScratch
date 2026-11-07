@@ -4,8 +4,8 @@ import org.jscratch.compiler.JScratch
 import org.jscratch.compiler.convert.OldProject
 import org.jscratch.compiler.convert.OldProjects
 import org.jscratch.compiler.convert.ProjectFormat
-import org.jscratch.compiler.sb3.Sb3Exception
 import org.jscratch.compiler.sb3.Sb3Parser
+import org.jscratch.sb3o.model.Sb3Exception
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.security.MessageDigest

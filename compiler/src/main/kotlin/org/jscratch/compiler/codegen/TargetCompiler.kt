@@ -1,9 +1,11 @@
 package org.jscratch.compiler.codegen
 
-import org.jscratch.compiler.sb3.Block
-import org.jscratch.compiler.sb3.Input
-import org.jscratch.compiler.sb3.PrimitiveType
-import org.jscratch.compiler.sb3.Target
+import org.jscratch.sb3o.model.Block
+import org.jscratch.sb3o.model.Input
+import org.jscratch.sb3o.model.PrimitiveType
+import org.jscratch.sb3o.model.Target
+import org.jscratch.sb3o.values.JsNumbers
+import org.jscratch.sb3o.values.ScratchValues
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.ACC_FINAL
@@ -58,7 +60,6 @@ import org.objectweb.asm.Opcodes.PUTSTATIC
 import org.objectweb.asm.Opcodes.RETURN
 import org.objectweb.asm.Opcodes.SIPUSH
 import org.objectweb.asm.Opcodes.V21
-import java.math.BigInteger
 
 /** Static type of a value on the JVM operand stack. */
 enum class VType(val desc: String) {
@@ -1339,6 +1340,20 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
     private fun isMenu(b: Block): Boolean = b.shadow && b.inputs.isEmpty() && b.fields.size == 1
 
     private fun emitLiteral(mv: MethodVisitor, lit: Input.Literal, want: VType) {
+        // A literal stored as a JSON number (Scratch 2 imports and SB3O write those) is a number wherever it
+        // goes, as in scratch-vm, where the shadow block reports the stored value as it is.
+        lit.numberValue?.let { n ->
+            when (want) {
+                VType.NUM -> pushDouble(mv, if (n.isNaN()) 0.0 else n)
+                VType.STR -> mv.visitLdcInsn(formatNumber(n))
+                VType.BOOL -> mv.visitInsn(if (n != 0.0 && !n.isNaN()) ICONST_1 else ICONST_0)
+                VType.ANY -> {
+                    pushDouble(mv, n)
+                    coerce(mv, VType.NUM, VType.ANY)
+                }
+            }
+            return
+        }
         val numeric = lit.type in PrimitiveType.NUMBER..PrimitiveType.ANGLE
         val n = parseNumber(lit.value)
         // Only a decimal literal becomes a number where text is wanted: the project may have stored it as a
@@ -1822,69 +1837,17 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
         const val SPLIT_OVERRUN = 1024
 
         /**
-         * Mirrors the runtime's `Cast.parseNumber` (JavaScript `Number()` on a string) so literals fold at
-         * compile time to what the blocks would compute: `[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?`,
-         * `[+-]?Infinity`, and unsigned `0x`, `0o` and `0b` integers of ASCII digits, rounded once.
+         * JavaScript `Number()` on a string, NaN included, from SB3O's mirror of scratch-vm's `Cast`, so
+         * literals fold at compile time to what the blocks would compute. The runtime's `Cast.parseNumber`
+         * follows the same rules.
          */
-        fun parseNumber(raw: String): Double {
-            val s = raw.trim()
-            if (s.isEmpty()) return 0.0
-            if (isDecimal(s)) return s.toDouble()
-            return when (s) {
-                "Infinity", "+Infinity" -> Double.POSITIVE_INFINITY
-                "-Infinity" -> Double.NEGATIVE_INFINITY
-                else -> parsePrefixed(s)
-            }
-        }
+        fun parseNumber(raw: String): Double = ScratchValues.parseNumber(raw)
 
         /** Whether [raw], trimmed, is a number in decimal notation, the only kind JSON can store as a number. */
-        fun isDecimal(raw: String): Boolean {
-            val s = raw.trim()
-            val n = s.length
-            var i = if (n > 0 && (s[0] == '+' || s[0] == '-')) 1 else 0
-            var digits = 0
-            while (i < n && s[i] in '0'..'9') {
-                digits++
-                i++
-            }
-            if (i < n && s[i] == '.') {
-                i++
-                while (i < n && s[i] in '0'..'9') {
-                    digits++
-                    i++
-                }
-            }
-            if (digits == 0) return false
-            if (i < n && (s[i] == 'e' || s[i] == 'E')) {
-                i++
-                if (i < n && (s[i] == '+' || s[i] == '-')) i++
-                if (i == n || s[i] !in '0'..'9') return false
-                while (i < n && s[i] in '0'..'9') i++
-            }
-            return i == n
-        }
+        fun isDecimal(raw: String): Boolean = ScratchValues.isDecimal(raw)
 
-        private fun parsePrefixed(s: String): Double {
-            if (s.length < 3 || s[0] != '0') return Double.NaN
-            val radix =
-                when (s[1]) {
-                    'x', 'X' -> 16
-                    'o', 'O' -> 8
-                    'b', 'B' -> 2
-                    else -> return Double.NaN
-                }
-            for (i in 2 until s.length) {
-                val c = s[i]
-                if (c.code >= 128 || Character.digit(c, radix) < 0) return Double.NaN
-            }
-            return BigInteger(s.substring(2), radix).toDouble()
-        }
-
-        /** Mirrors `Cast.toString(double)` for the common cases literals hit. */
-        fun formatNumber(n: Double): String {
-            if (n == Math.rint(n) && Math.abs(n) < 1e15) return n.toLong().toString()
-            return n.toString()
-        }
+        /** JavaScript's `String(number)`, which is what `Cast.toString(double)` gives at run time. */
+        fun formatNumber(n: Double): String = JsNumbers.toString(n)
 
         fun pushInt(mv: MethodVisitor, v: Int) {
             when {

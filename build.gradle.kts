@@ -3,6 +3,7 @@ import org.jlleitschuh.gradle.ktlint.KtlintExtension
 
 plugins {
     alias(libs.plugins.kotlin.jvm) apply false
+    alias(libs.plugins.kotlin.multiplatform) apply false
     alias(libs.plugins.ktlint) apply false
     alias(libs.plugins.teavm) apply false
 }
@@ -44,6 +45,13 @@ subprojects {
                 events("passed", "failed", "skipped")
                 showStandardStreams = true
             }
+        }
+    }
+    // The multiplatform module (sb3o) configures its own targets, but is linted like the rest.
+    plugins.withId("org.jetbrains.kotlin.multiplatform") {
+        apply(plugin = "org.jlleitschuh.gradle.ktlint")
+        extensions.configure<KtlintExtension> {
+            version.set(ktlintVersion)
         }
     }
 }

@@ -1,4 +1,4 @@
-package org.jscratch.compiler
+package org.jscratch.sb3o
 
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
