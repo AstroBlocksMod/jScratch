@@ -12,7 +12,8 @@ flowchart TB
     end
     subgraph compile ["Compile"]
         direction LR
-        model["Project model<br>targets, blocks, inputs"] --> codegen["ProjectCompiler + TargetCompiler<br>ASM bytecode"]
+        model["Project model<br>SB3O: targets, blocks, inputs"] --> opt["SB3O passes<br>with --optimize"]
+        opt --> codegen["ProjectCompiler + TargetCompiler<br>ASM bytecode"]
         codegen --> classes["Stage, Sprite_*, Main classes"]
     end
     subgraph package ["Package"]
@@ -27,8 +28,8 @@ flowchart TB
 
 1. **Unpacking.** `Sb3Parser` unzips the archive with `java.util.zip`, which works on the JVM and under TeaVM alike.
 2. **Parsing and validation.** `project.json` goes to [scratch-parser](https://github.com/scratchfoundation/scratch-parser), the Scratch Foundation's JavaScript parser. The `sb3js` module bundles its `lib/parse` and `lib/validate` (JSON parsing with Scratch's control-character cleanup, then validation against the official sb3 JSON schema) into one script with esbuild. On the JVM that script runs inside [Rhino](https://github.com/mozilla/rhino); in the browser it is loaded by the page. The `ProjectJson` interface hides the difference.
-3. **JSON.** Plain JSON (the validated project handed back by scratch-parser, and the argument lists inside custom block mutations) is parsed by kotlinx-serialization on the JVM and by `JSON.parse` in the browser. Both produce the small `JsonValue` tree in `compiler/.../json/JsonTree.kt`, which is all the model mapping sees.
-4. **Model.** The tree is mapped onto the model in `Model.kt`, whose shape follows ScratchEverywhere's `sb3.cpp`: a list of targets, each with variables, lists, broadcasts, costumes, sounds and a block table keyed by block id. Inputs are decoded into literals, variable and list references, broadcast references or block references.
+3. **JSON.** The validated project handed back by scratch-parser is parsed by kotlinx-serialization on the JVM and by `JSON.parse` in the browser. Both produce SB3O's small `JsonValue` tree (`sb3o/.../json/JsonTree.kt`), which is all the model mapping sees. SB3O also has its own JSON parser and writer, which it uses on its own and for the argument lists inside custom block mutations.
+4. **Model.** SB3O's `ProjectReader` maps the tree onto the model in its `Model.kt`, whose shape follows ScratchEverywhere's `sb3.cpp`: a list of targets, each with variables, lists, broadcasts, costumes, sounds and a block table keyed by block id. Inputs are decoded into literals, variable and list references, broadcast references or block references, each keeping the shadow it covers. With `--optimize`, [SB3O](sb3o.md)'s passes rewrite the model here, before any code is generated.
 5. **Code generation.** `ProjectCompiler` assigns a class name per target and a field per variable, and builds the monitor table: every monitor saved in the project, plus a hidden one for each variable and list without one, so the show blocks can show any of them. `TargetCompiler` then emits one class per target with ASM. The class extends the runtime's `Stage` or `Sprite`, and its constructor fills in position, costumes, sounds, variable values and hat registrations.
 6. **JAR assembly.** `JarWriter` writes the manifest, the generated classes, list data resources, the monitor table (`data/monitors.txt`, one tab-separated line per monitor), the used assets and every entry of the runtime JAR.
 
@@ -157,13 +158,17 @@ Whether a sound is still playing is never asked of the audio thread. The player 
 ```mermaid
 flowchart TD
     sb3js["sb3js<br>scratch-parser and converter bundles"]
+    sb3o["sb3o<br>model, reader, writer, optimizer (JVM and JS, BSD-3)"]
+    sb3oCli["sb3o-cli<br>the sb3o command"]
     runtime["runtime<br>Scratch semantics, scheduler, Swing stage"]
-    compiler["compiler<br>model, codegen, JAR writer (platform neutral)"]
+    compiler["compiler<br>codegen, JAR writer (platform neutral)"]
     compilerJvm["compiler-jvm<br>Rhino + kotlinx-serialization"]
     cli["cli<br>command line, embeds runtime JAR"]
     web["web<br>TeaVM playground, JSON.parse + page script"]
     samples["samples<br>.sb3 and .sb2 built from sources"]
     benchmarks["benchmarks<br>timed against scratch-vm and TurboWarp"]
+    sb3o --> sb3oCli
+    sb3o --> compiler
     compiler --> compilerJvm
     compiler --> web
     compilerJvm --> cli
@@ -174,6 +179,7 @@ flowchart TD
     runtime -. fat JAR as resource .-> cli
     runtime -. fat JAR served to the page .-> web
     samples -. test input .-> compilerJvm
+    samples -. round-trip input .-> sb3o
 ```
 
-The `compiler` module depends on neither the runtime nor any JSON or JavaScript engine. It only knows the runtime's class and method names (listed in `RT` in `Names.kt`) and the `ProjectJson` interface, which is what makes the TeaVM build possible.
+The `compiler` module depends on neither the runtime nor any JSON or JavaScript engine. It only knows the runtime's class and method names (listed in `RT` in `Names.kt`) and the `ProjectJson` interface, which is what makes the TeaVM build possible. The model it compiles comes from [SB3O](sb3o.md), whose JVM artifact TeaVM translates along with the compiler; SB3O depends on nothing but the Kotlin standard library and is the one part of the repository under a permissive license.

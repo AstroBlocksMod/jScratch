@@ -32,6 +32,9 @@ Options:
   --no-runtime          Emit only the generated classes and assets, without the runtime
   --turbowarp           Tell the project it runs in TurboWarp: the hacked
                         "is turbowarp?" and "is compiled?" blocks report true
+  --optimize            Run SB3O on the project first: fold constant expressions,
+                        decide control blocks with a known condition and drop
+                        blocks that can never run
   -h, --help            Show this help
 """
 
@@ -44,6 +47,7 @@ fun main(args: Array<String>) {
     var dump = false
     var includeRuntime = true
     var turboWarp = false
+    var optimize = false
 
     var i = 0
     while (i < args.size) {
@@ -67,6 +71,7 @@ fun main(args: Array<String>) {
             "--dump" -> dump = true
             "--no-runtime" -> includeRuntime = false
             "--turbowarp" -> turboWarp = true
+            "--optimize" -> optimize = true
             else -> {
                 if (a.startsWith("-")) fail("unknown option $a")
                 if (input != null) fail("only one input is supported")
@@ -77,8 +82,8 @@ fun main(args: Array<String>) {
     }
 
     val arg = input ?: fail("no input given\n\n${USAGE.trim()}")
-    if (convertOnly && (run || dump || !includeRuntime || turboWarp)) {
-        fail("--convert writes an .sb3 instead of a JAR; drop --run, --dump, --no-runtime and --turbowarp")
+    if (convertOnly && (run || dump || !includeRuntime || turboWarp || optimize)) {
+        fail("--convert writes an .sb3 instead of a JAR; drop --run, --dump, --no-runtime, --turbowarp and --optimize")
     }
     if (convertOnly && saveSb3 != null) fail("--convert already writes the .sb3; name it with -o instead of --save-sb3")
     val json = RhinoProjectJson()
@@ -151,10 +156,14 @@ fun main(args: Array<String>) {
     val runtimeJar = if (includeRuntime) loadRuntimeJar() else null
     val result =
         try {
-            JScratch.compile(sb3, runtimeJar, json, CompileOptions(turboWarp = turboWarp))
+            JScratch.compile(sb3, runtimeJar, json, CompileOptions(turboWarp = turboWarp, optimize = optimize))
         } catch (e: Exception) {
             fail("compilation failed: ${e.message}")
         }
+    result.optimization?.let { report ->
+        for (m in report.messages) System.err.println("sb3o: $m")
+        System.err.println("sb3o: ${report.summary()}")
+    }
     for (w in result.warnings) System.err.println("warning: $w")
     if (dump) {
         for ((name, bytes) in result.classes) {

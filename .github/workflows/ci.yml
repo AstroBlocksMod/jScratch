@@ -11,6 +11,8 @@ on:
     paths: &paths
       - "runtime/**"
       - "sb3js/**"
+      - "sb3o/**"
+      - "sb3o-cli/**"
       - "compiler/**"
       - "compiler-jvm/**"
       - "cli/**"
@@ -18,6 +20,7 @@ on:
       - "samples/**"
       - "benchmarks/**"
       - "gradle/**"
+      - "kotlin-js-store/**"
       - "build.gradle.kts"
       - "settings.gradle.kts"
       - "gradle.properties"
