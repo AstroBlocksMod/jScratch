@@ -16,6 +16,7 @@ java -jar my-game.jar
 - **Straight from the Scratch website.** Give the CLI a project link instead of a file and it downloads the project, costumes and sounds for you.
 - **Old projects too.** Projects from Scratch 1.4 (`.sb`) and Scratch 2 (`.sb2`) are converted to Scratch 3 with the same code the Scratch 3 editor uses, then compiled like any other.
 - **A browser playground.** The compiler itself is translated to JavaScript with [TeaVM](https://teavm.org), so you can compile a project without installing anything. [Try it](https://jscratch.hermits.cc/playground/) or read how it works in [Web playground](web-playground.md).
+- **An optimizer.** [SB3O](sb3o.md) rewrites a project at the block level so that it does the same thing with fewer blocks, for any Scratch engine. It is a library under the BSD 3-Clause License with its own command, and `jscratch --optimize` runs it before compiling.
 
 ## Status
 
