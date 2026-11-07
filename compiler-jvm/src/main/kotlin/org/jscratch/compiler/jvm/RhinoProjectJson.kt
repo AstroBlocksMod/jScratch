@@ -1,9 +1,9 @@
 package org.jscratch.compiler.jvm
 
 import kotlinx.serialization.json.Json
-import org.jscratch.compiler.json.JsonValue
 import org.jscratch.compiler.json.ProjectJson
-import org.jscratch.compiler.sb3.Sb3Exception
+import org.jscratch.sb3o.json.JsonValue
+import org.jscratch.sb3o.model.Sb3Exception
 import org.mozilla.javascript.Context
 import org.mozilla.javascript.Function
 import org.mozilla.javascript.JavaScriptException

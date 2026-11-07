@@ -1,8 +1,8 @@
 package org.jscratch.compiler.codegen
 
-import org.jscratch.compiler.sb3.Monitor
-import org.jscratch.compiler.sb3.Project
-import org.jscratch.compiler.sb3.Target
+import org.jscratch.sb3o.model.Monitor
+import org.jscratch.sb3o.model.Project
+import org.jscratch.sb3o.model.Target
 
 /**
  * One monitor as the runtime sees it. [owner] is the target whose value it shows, and [slot] the index of

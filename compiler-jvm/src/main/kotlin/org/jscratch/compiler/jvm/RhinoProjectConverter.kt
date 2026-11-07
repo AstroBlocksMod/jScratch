@@ -3,7 +3,7 @@ package org.jscratch.compiler.jvm
 import org.jscratch.compiler.convert.ConvertedProject
 import org.jscratch.compiler.convert.OldProject
 import org.jscratch.compiler.convert.ProjectConverter
-import org.jscratch.compiler.sb3.Sb3Exception
+import org.jscratch.sb3o.model.Sb3Exception
 import org.mozilla.javascript.BaseFunction
 import org.mozilla.javascript.Context
 import org.mozilla.javascript.Function

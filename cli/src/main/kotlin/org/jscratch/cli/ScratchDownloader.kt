@@ -1,11 +1,11 @@
 package org.jscratch.cli
 
-import org.jscratch.compiler.Archives
 import org.jscratch.compiler.convert.OldProjects
 import org.jscratch.compiler.convert.ProjectFormat
-import org.jscratch.compiler.json.JsonValue
 import org.jscratch.compiler.json.ProjectJson
-import org.jscratch.compiler.sb3.Sb3Exception
+import org.jscratch.sb3o.Archives
+import org.jscratch.sb3o.json.JsonValue
+import org.jscratch.sb3o.model.Sb3Exception
 import java.io.IOException
 import java.net.URI
 import java.net.http.HttpClient

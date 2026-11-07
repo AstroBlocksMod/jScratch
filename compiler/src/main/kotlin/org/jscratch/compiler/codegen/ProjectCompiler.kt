@@ -1,8 +1,8 @@
 package org.jscratch.compiler.codegen
 
 import org.jscratch.compiler.CompileOptions
-import org.jscratch.compiler.sb3.Project
-import org.jscratch.compiler.sb3.Target
+import org.jscratch.sb3o.model.Project
+import org.jscratch.sb3o.model.Target
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
 
