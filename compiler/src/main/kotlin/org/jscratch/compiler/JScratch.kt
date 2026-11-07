@@ -3,7 +3,9 @@ package org.jscratch.compiler
 import org.jscratch.compiler.codegen.ProjectCompiler
 import org.jscratch.compiler.json.ProjectJson
 import org.jscratch.compiler.sb3.Sb3Parser
+import org.jscratch.sb3o.SB3O
 import org.jscratch.sb3o.model.Project
+import org.jscratch.sb3o.passes.OptimizeReport
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.util.TraceClassVisitor
 import java.io.PrintWriter
@@ -14,11 +16,14 @@ class CompileResult(
     val jar: ByteArray,
     /** Generated class files by internal name. */
     val classes: Map<String, ByteArray>,
+    /** The project that was compiled, after SB3O rewrote it when [CompileOptions.optimize] is on. */
     val project: Project,
     val warnings: List<String>,
+    /** What SB3O changed, or null when it did not run. */
+    val optimization: OptimizeReport?,
 )
 
-/** Settings that change what a project sees about the player it runs in. */
+/** Settings that change what a project sees about the player it runs in, and what is done to it first. */
 class CompileOptions(
     /**
      * Whether the hacked `is turbowarp?` and `is compiled?` blocks report true. They are boolean argument
@@ -26,6 +31,8 @@ class CompileOptions(
      * projects use them to tell which player they run in. Some refuse to run without TurboWarp.
      */
     val turboWarp: Boolean = false,
+    /** Whether to run SB3O's passes on the project before generating code. */
+    val optimize: Boolean = false,
 )
 
 /** Entry point shared by the CLI, the tests and the browser playground. */
@@ -42,6 +49,7 @@ object JScratch {
         options: CompileOptions = CompileOptions(),
     ): CompileResult {
         val file = Sb3Parser(json).readSb3(sb3)
+        val optimization = if (options.optimize) SB3O.optimize(file.project) else null
         val generated = ProjectCompiler.compile(file.project, options)
         val warnings = ArrayList(generated.warnings)
         val usedAssets = LinkedHashMap<String, ByteArray>()
@@ -64,7 +72,7 @@ object JScratch {
             }
         }
         val jar = JarWriter.write(generated, usedAssets, runtimeJar)
-        return CompileResult(jar, generated.classes, file.project, warnings)
+        return CompileResult(jar, generated.classes, file.project, warnings, optimization)
     }
 
     /** Human-readable bytecode listing of a class file (ASM Textifier). */

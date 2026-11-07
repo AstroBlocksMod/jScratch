@@ -13,8 +13,8 @@ import org.teavm.jso.JSObject
  * Browser entry point. TeaVM compiles the compiler module to JavaScript and this
  * file exposes it as `window.jscratch`:
  *
- * - `compile(sb3, runtimeJar, listing, turboWarp)` compiles an .sb3. `turboWarp` is
- *   [CompileOptions.turboWarp].
+ * - `compile(sb3, runtimeJar, listing, turboWarp, optimize)` compiles an .sb3. `turboWarp` is
+ *   [CompileOptions.turboWarp] and `optimize` is [CompileOptions.optimize].
  * - `readOld(data)` reads a Scratch 1.4 or 2 project for the converter bundle
  *   (`jscratch-convert.js`), or returns null for anything else.
  * - `writeSb3(projectJson, names, datas)` packs the converter's result into an .sb3.
@@ -27,7 +27,13 @@ import org.teavm.jso.JSObject
  */
 @JSFunctor
 fun interface CompileFunction : JSObject {
-    fun compile(sb3: ByteArray, runtimeJar: ByteArray?, listing: Boolean, turboWarp: Boolean): JSObject
+    fun compile(
+        sb3: ByteArray,
+        runtimeJar: ByteArray?,
+        listing: Boolean,
+        turboWarp: Boolean,
+        optimize: Boolean,
+    ): JSObject
 }
 
 @JSFunctor
@@ -71,10 +77,19 @@ external fun stringAt(array: JSObject, i: Int): String
 external fun bytesAt(array: JSObject, i: Int): ByteArray
 
 @JSBody(
-    params = ["jar", "listing", "warnings", "classes", "targets"],
-    script = "return { ok: true, jar: jar, listing: listing, warnings: warnings, classes: classes, targets: targets };",
+    params = ["jar", "listing", "warnings", "classes", "targets", "optimizations"],
+    script =
+    "return { ok: true, jar: jar, listing: listing, warnings: warnings, classes: classes, targets: targets, " +
+        "optimizations: optimizations };",
 )
-external fun success(jar: ByteArray, listing: String, warnings: String, classes: String, targets: String): JSObject
+external fun success(
+    jar: ByteArray,
+    listing: String,
+    warnings: String,
+    classes: String,
+    targets: String,
+    optimizations: String,
+): JSObject
 
 @JSBody(params = ["message"], script = "return { ok: false, error: message };")
 external fun failure(message: String): JSObject
@@ -87,12 +102,13 @@ fun main() {
                 runtimeJar: ByteArray?,
                 listing: Boolean,
                 turboWarp: Boolean,
+                optimize: Boolean,
             ): JSObject = try {
                 val result = JScratch.compile(
                     sb3,
                     runtimeJar,
                     BrowserProjectJson,
-                    CompileOptions(turboWarp = turboWarp),
+                    CompileOptions(turboWarp = turboWarp, optimize = optimize),
                 )
                 val text =
                     if (listing) {
@@ -110,6 +126,7 @@ fun main() {
                     result.project.targets.joinToString("\n") { t ->
                         "${t.name}\t${if (t.isStage) "stage" else "sprite"}\t${t.blocks.size}\t${t.costumes.size}"
                     },
+                    result.optimization?.let { (it.messages + it.summary()).joinToString("\n") } ?: "",
                 )
             } catch (t: Throwable) {
                 failure(t.message ?: t.toString())

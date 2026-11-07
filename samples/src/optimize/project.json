@@ -1,0 +1,123 @@
+{
+  "targets": [
+    {
+      "isStage": true,
+      "name": "Stage",
+      "variables": {},
+      "lists": {},
+      "broadcasts": {},
+      "blocks": {},
+      "comments": {},
+      "currentCostume": 0,
+      "costumes": [
+        {
+          "name": "Blue Sky",
+          "bitmapResolution": 1,
+          "dataFormat": "svg",
+          "assetId": "e7c147730f19d284bcd7b3f00af19bb6",
+          "md5ext": "e7c147730f19d284bcd7b3f00af19bb6.svg",
+          "rotationCenterX": 240,
+          "rotationCenterY": 180
+        }
+      ],
+      "sounds": [],
+      "volume": 100,
+      "layerOrder": 0,
+      "tempo": 60,
+      "videoTransparency": 50,
+      "videoState": "on",
+      "textToSpeechLanguage": null
+    },
+    {
+      "isStage": false,
+      "name": "Cat",
+      "variables": {},
+      "lists": {},
+      "broadcasts": {},
+      "blocks": {
+        "hat": {"opcode": "event_whenflagclicked", "next": "s1", "parent": null, "inputs": {}, "fields": {}, "shadow": false, "topLevel": true, "x": 20, "y": 20},
+
+        "s1": {"opcode": "looks_say", "next": "s2", "parent": "hat", "inputs": {"MESSAGE": [3, "a1", [10, ""]]}, "fields": {}, "shadow": false, "topLevel": false},
+        "a1": {"opcode": "operator_add", "next": null, "parent": "s1", "inputs": {"NUM1": [1, [4, "2"]], "NUM2": [1, [4, "2"]]}, "fields": {}, "shadow": false, "topLevel": false},
+
+        "s2": {"opcode": "looks_say", "next": "s3", "parent": "s1", "inputs": {"MESSAGE": [3, "a2", [10, ""]]}, "fields": {}, "shadow": false, "topLevel": false},
+        "a2": {"opcode": "operator_divide", "next": null, "parent": "s2", "inputs": {"NUM1": [1, [4, "1"]], "NUM2": [1, [4, "3"]]}, "fields": {}, "shadow": false, "topLevel": false},
+
+        "s3": {"opcode": "looks_say", "next": "s4", "parent": "s2", "inputs": {"MESSAGE": [3, "a3", [10, ""]]}, "fields": {}, "shadow": false, "topLevel": false},
+        "a3": {"opcode": "operator_join", "next": null, "parent": "s3", "inputs": {"STRING1": [1, [10, "a"]], "STRING2": [3, "a4", [10, ""]]}, "fields": {}, "shadow": false, "topLevel": false},
+        "a4": {"opcode": "operator_join", "next": null, "parent": "a3", "inputs": {"STRING1": [1, [10, "b"]], "STRING2": [1, [10, "c"]]}, "fields": {}, "shadow": false, "topLevel": false},
+
+        "s4": {"opcode": "control_if_else", "next": "s7", "parent": "s3", "inputs": {"CONDITION": [2, "c1"], "SUBSTACK": [2, "s5"], "SUBSTACK2": [2, "s6"]}, "fields": {}, "shadow": false, "topLevel": false},
+        "c1": {"opcode": "operator_equals", "next": null, "parent": "s4", "inputs": {"OPERAND1": [1, [10, "1"]], "OPERAND2": [1, [10, "1.0"]]}, "fields": {}, "shadow": false, "topLevel": false},
+        "s5": {"opcode": "looks_say", "next": null, "parent": "s4", "inputs": {"MESSAGE": [1, [10, "yes"]]}, "fields": {}, "shadow": false, "topLevel": false},
+        "s6": {"opcode": "looks_say", "next": null, "parent": "s4", "inputs": {"MESSAGE": [1, [10, "no"]]}, "fields": {}, "shadow": false, "topLevel": false},
+
+        "s7": {"opcode": "control_if", "next": "s9", "parent": "s4", "inputs": {"CONDITION": [2, "c2"], "SUBSTACK": [2, "s8"]}, "fields": {}, "shadow": false, "topLevel": false},
+        "c2": {"opcode": "operator_lt", "next": null, "parent": "s7", "inputs": {"OPERAND1": [1, [10, "2"]], "OPERAND2": [1, [10, "1"]]}, "fields": {}, "shadow": false, "topLevel": false},
+        "s8": {"opcode": "looks_say", "next": null, "parent": "s7", "inputs": {"MESSAGE": [1, [10, "never"]]}, "fields": {}, "shadow": false, "topLevel": false},
+
+        "s9": {"opcode": "looks_say", "next": "s10", "parent": "s7", "inputs": {"MESSAGE": [3, "a5", [10, ""]]}, "fields": {}, "shadow": false, "topLevel": false},
+        "a5": {"opcode": "operator_letter_of", "next": null, "parent": "s9", "inputs": {"LETTER": [1, [6, "2"]], "STRING": [1, [10, "xyz"]]}, "fields": {}, "shadow": false, "topLevel": false},
+
+        "s10": {"opcode": "looks_say", "next": "s11", "parent": "s9", "inputs": {"MESSAGE": [3, "a6", [10, ""]]}, "fields": {}, "shadow": false, "topLevel": false},
+        "a6": {"opcode": "operator_add", "next": null, "parent": "s10", "inputs": {"NUM1": [1, [4, "0.1"]], "NUM2": [1, [4, "0.2"]]}, "fields": {}, "shadow": false, "topLevel": false},
+
+        "s11": {"opcode": "looks_say", "next": "s12", "parent": "s10", "inputs": {"MESSAGE": [3, "a7", [10, ""]]}, "fields": {}, "shadow": false, "topLevel": false},
+        "a7": {"opcode": "operator_round", "next": null, "parent": "s11", "inputs": {"NUM": [1, [4, "2.5"]]}, "fields": {}, "shadow": false, "topLevel": false},
+
+        "s12": {"opcode": "control_repeat_until", "next": "s14", "parent": "s11", "inputs": {"CONDITION": [2, "c3"], "SUBSTACK": [2, "s13"]}, "fields": {}, "shadow": false, "topLevel": false},
+        "c3": {"opcode": "operator_equals", "next": null, "parent": "s12", "inputs": {"OPERAND1": [1, [10, "a"]], "OPERAND2": [1, [10, "A"]]}, "fields": {}, "shadow": false, "topLevel": false},
+        "s13": {"opcode": "looks_say", "next": null, "parent": "s12", "inputs": {"MESSAGE": [1, [10, "skipped"]]}, "fields": {}, "shadow": false, "topLevel": false},
+
+        "s14": {"opcode": "procedures_call", "next": "s15", "parent": "s12", "inputs": {"arg": [1, [10, "Cat"]]}, "fields": {}, "shadow": false, "topLevel": false,
+                "mutation": {"tagName": "mutation", "children": [], "proccode": "greet %s", "argumentids": "[\"arg\"]", "warp": "false"}},
+        "s15": {"opcode": "looks_say", "next": null, "parent": "s14", "inputs": {"MESSAGE": [1, [10, "done"]]}, "fields": {}, "shadow": false, "topLevel": false},
+
+        "def": {"opcode": "procedures_definition", "next": "d1", "parent": null, "inputs": {"custom_block": [1, "proto"]}, "fields": {}, "shadow": false, "topLevel": true, "x": 400, "y": 20},
+        "proto": {"opcode": "procedures_prototype", "next": null, "parent": "def", "inputs": {"arg": [1, "argshadow"]}, "fields": {}, "shadow": true, "topLevel": false,
+                  "mutation": {"tagName": "mutation", "children": [], "proccode": "greet %s", "argumentids": "[\"arg\"]", "argumentnames": "[\"who\"]", "argumentdefaults": "[\"\"]", "warp": "false"}},
+        "argshadow": {"opcode": "argument_reporter_string_number", "next": null, "parent": "proto", "inputs": {}, "fields": {"VALUE": ["who", null]}, "shadow": true, "topLevel": false},
+        "d1": {"opcode": "looks_say", "next": null, "parent": "def", "inputs": {"MESSAGE": [3, "j1", [10, ""]]}, "fields": {}, "shadow": false, "topLevel": false},
+        "j1": {"opcode": "operator_join", "next": null, "parent": "d1", "inputs": {"STRING1": [1, [10, "hi "]], "STRING2": [2, "argrep"]}, "fields": {}, "shadow": false, "topLevel": false},
+        "argrep": {"opcode": "argument_reporter_string_number", "next": null, "parent": "j1", "inputs": {}, "fields": {"VALUE": ["who", null]}, "shadow": false, "topLevel": false},
+
+        "udef": {"opcode": "procedures_definition", "next": "u1", "parent": null, "inputs": {"custom_block": [1, "uproto"]}, "fields": {}, "shadow": false, "topLevel": true, "x": 400, "y": 300},
+        "uproto": {"opcode": "procedures_prototype", "next": null, "parent": "udef", "inputs": {}, "fields": {}, "shadow": true, "topLevel": false,
+                   "mutation": {"tagName": "mutation", "children": [], "proccode": "unused", "argumentids": "[]", "argumentnames": "[]", "argumentdefaults": "[]", "warp": "false"}},
+        "u1": {"opcode": "looks_say", "next": null, "parent": "udef", "inputs": {"MESSAGE": [1, [10, "unused"]]}, "fields": {}, "shadow": false, "topLevel": false},
+
+        "loose": {"opcode": "looks_say", "next": null, "parent": null, "inputs": {"MESSAGE": [1, [10, "loose"]]}, "fields": {}, "shadow": false, "topLevel": true, "x": 20, "y": 600}
+      },
+      "comments": {},
+      "currentCostume": 0,
+      "costumes": [
+        {
+          "name": "Cat",
+          "bitmapResolution": 1,
+          "dataFormat": "svg",
+          "assetId": "6ac3a6339b85092fa9b1694f2da7779d",
+          "md5ext": "6ac3a6339b85092fa9b1694f2da7779d.svg",
+          "rotationCenterX": 48,
+          "rotationCenterY": 50
+        }
+      ],
+      "sounds": [],
+      "volume": 100,
+      "layerOrder": 1,
+      "visible": true,
+      "x": 0,
+      "y": 0,
+      "size": 100,
+      "direction": 90,
+      "draggable": false,
+      "rotationStyle": "all around"
+    }
+  ],
+  "monitors": [],
+  "extensions": [],
+  "meta": {
+    "semver": "3.0.0",
+    "vm": "0.2.0",
+    "agent": "jscratch-sample"
+  }
+}

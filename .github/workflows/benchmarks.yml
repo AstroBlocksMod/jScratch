@@ -10,6 +10,7 @@ on:
     branches: [main]
     paths:
       - "benchmarks/**"
+      - "sb3o/**"
       - "compiler/**"
       - "compiler-jvm/**"
       - "sb3js/**"
