@@ -9,6 +9,7 @@ import org.jscratch.sb3o.model.ProjectReader
 import org.jscratch.sb3o.model.ProjectWriter
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -147,6 +148,24 @@ class ProjectRoundTripTest {
         assertEquals("[3,\"add\",[4,\"1\"]]", blocks["switch"]!!["inputs"]!!["EXTRA"].toString())
         assertEquals("[2,\"eq\"]", blocks["if"]!!["inputs"]!!["CONDITION"].toString())
         assertEquals("[1,null]", blocks["if"]!!["inputs"]!!["SUBSTACK"].toString())
+    }
+
+    /**
+     * NaN and the infinities cannot be stored as a number literal: JSON would write null, and their text
+     * reports something else ("NaN" is true as a boolean, the number NaN false).
+     */
+    @Test
+    fun refusesNonFiniteNumberLiterals() {
+        for (n in listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)) {
+            assertFailsWith<IllegalArgumentException>("$n") { Input.Literal(4, n.toString(), n) }
+        }
+        // The same text without a number is an ordinary text literal and writes as one.
+        val text = Input.Literal(10, "NaN")
+        val project = ProjectReader.read(SAMPLE_PROJECT)
+        val sprite = project.sprites.single()
+        sprite.blocks.getValue("say").inputs["MESSAGE"] = text
+        val say = ProjectWriter.write(project)["targets"]!![1]!!["blocks"]!!["say"]!!
+        assertEquals("[1,[10,\"NaN\"]]", say["inputs"]!!["MESSAGE"].toString())
     }
 }
 

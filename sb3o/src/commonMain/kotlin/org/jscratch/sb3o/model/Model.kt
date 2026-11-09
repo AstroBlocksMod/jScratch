@@ -163,13 +163,21 @@ sealed class Input {
      * A literal typed into the slot. [type] is Scratch's primitive type (4 number, 10 string, ...). [value]
      * is its text. [numberValue] is set when the project stores the literal as a JSON number instead of
      * text, which Scratch 2 imports and the optimizer do: the block then reports a number, not a string.
+     * It is always finite: JSON has no NaN or infinity, and no other encoding keeps what the block reports
+     * (the text "NaN" is true as a boolean, the number NaN false), so such a literal cannot be made.
      */
     class Literal(
         val type: Int,
         val value: String,
         val numberValue: Double? = null,
         override val raw: JsonValue? = null,
-    ) : Input()
+    ) : Input() {
+        init {
+            require(numberValue == null || numberValue.isFinite()) {
+                "a literal stored as a number must be finite, not $numberValue"
+            }
+        }
+    }
 
     class BroadcastRef(
         val name: String,
