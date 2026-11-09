@@ -39,7 +39,7 @@ wrote my-game-optimized.sb3 (412 KiB)
 | `--no-remove-procedures` | Keep custom blocks that nothing calls. |
 | `-q`, `--quiet` | Report only errors. |
 
-The input can also be a bare `project.json`, which gives a `project.json` back. Costumes and sounds are copied into the output as they are.
+For an `.sb3`, everything in the archive except `project.json` (costumes, sounds and any other files) goes into the output as it is, under the same path. The input can also be a bare `project.json`, which gives `<name>-optimized.json` back, holding only the optimized `project.json`.
 
 With jScratch, `jscratch my-game.sb3 --optimize` runs the same passes on the project before compiling it and prints the same report, prefixed with `sb3o:`.
 
@@ -53,7 +53,13 @@ A top-level block that is not a hat only runs when someone clicks it in the edit
 
 ### Fold constants
 
-A reporter whose inputs are all literals is computed and replaced by its result. The operator reporters are the ones that get folded: arithmetic, `mod`, `round`, the `mathop` functions, `join`, `letter of`, `length of`, `contains`, the comparisons and `and`, `or` and `not`. The arithmetic is scratch-vm's own: the cast rules of its `Cast` class (what counts as a number, how text compares) and its operator code are mirrored in `ScratchValues`, down to `log` being `ln` divided by `ln 10` and `sin` rounded to ten decimals, and the number formatting is JavaScript's. On JavaScript the arithmetic runs on the engine's own `Math`, so every `mathop` function folds. The JVM's `StrictMath` agrees with V8 on most inputs but not every one (`e ^ 1` differs in the last bit), so there only `abs`, `floor`, `ceiling` and `sqrt`, which every platform computes exactly, fold; the other functions stay blocks.
+A reporter whose inputs are all literals is computed and replaced by its result. The operator reporters are the ones that get folded: arithmetic, `mod`, `round`, the `mathop` functions, `join`, `letter of`, `length of`, `contains`, the comparisons and `and`, `or` and `not`. The arithmetic is scratch-vm's own: the cast rules of its `Cast` class (what counts as a number, how text compares) and its operator code are mirrored in `ScratchValues`, down to `log` being `ln` divided by `ln 10` and `sin` rounded to ten decimals, and the number formatting is JavaScript's, worked out with exact arithmetic so it comes out the same on the JVM, in the browser and under TeaVM.
+
+The `mathop` functions are the exception to folding whatever is constant, because the optimized project will run on engines other than the one that folded it, and their `Math` functions do not agree to the last bit: V8, SpiderMonkey, JavaScriptCore and the JVM can each give a different double for `e ^ 1`. So a function only folds where every engine gives the same answer:
+
+- `abs`, `floor`, `ceiling` and `sqrt` always fold, since IEEE 754 defines them exactly.
+- `sin`, `cos` and `tan` are rounded to ten decimals, which hides the last bits, so they fold unless the value sits close enough to a halfway point between two rounded results that some engine could round it the other way. That allows for a few ulps of error in the function, for engines that turn degrees into radians another way, and for the two roundings in use: scratch-vm's `toFixed(10)` and the `Math.round(x * 1e10) / 1e10` of TurboWarp and jScratch, which only differ at such halfway points. Angles beyond 100000 degrees never fold, since engines reduce those less consistently.
+- `ln`, `log`, `e ^`, `10 ^`, `asin`, `acos` and `atan` never fold.
 
 A result only replaces a reporter when the slot can hold it without any block seeing a difference:
 
@@ -100,7 +106,7 @@ The library reads `project.json` into a model, runs passes over it and writes it
     const result = optimizeProjectJson(projectJsonText);
     console.log(result.summary);
     for (const message of result.messages) console.log(message);
-    const options = new JsOptimizeOptions(false, true, true); // removeLooseStacks, foldConstants, removeUnusedProcedures
+    const options = new JsOptimizeOptions(false, true, false); // removeLooseStacks, foldConstants, removeUnusedProcedures
     const onlyFolded = optimizeProjectJson(projectJsonText, options);
     ```
 

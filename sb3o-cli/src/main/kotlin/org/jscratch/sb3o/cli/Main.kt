@@ -7,6 +7,7 @@ import org.jscratch.sb3o.json.JsonException
 import org.jscratch.sb3o.model.Sb3Exception
 import org.jscratch.sb3o.passes.OptimizeReport
 import java.io.File
+import java.io.IOException
 import kotlin.system.exitProcess
 
 private const val USAGE = """
@@ -65,19 +66,21 @@ fun main(args: Array<String>) {
 
     val inFile = File(input ?: fail("no input given\n\n${USAGE.trim()}"))
     if (!inFile.isFile) fail("${inFile.path} does not exist")
-    val data = inFile.readBytes()
     val options = OptimizeOptions(removeLoose, fold, removeProcedures)
     val base = File(inFile.parentFile ?: File("."), inFile.nameWithoutExtension)
 
+    val data = io("could not read ${inFile.path}") { inFile.readBytes() }
     val result: ByteArray
     val outFile: File
     try {
         if (Archives.isZip(data)) {
-            val entries = Archives.read(data)
-            val projectJson = entries.remove("project.json") ?: fail("${inFile.path} has no project.json")
-            val optimized = SB3O.optimizeJson(projectJson.toString(Charsets.UTF_8), options)
+            // Every entry goes back under its own path, in its own place, so only project.json changes.
+            val entries = io("${inFile.path} is not a readable zip archive") { Archives.readPaths(data) }
+            val path = Archives.projectJsonPath(entries.keys) ?: fail("${inFile.path} has no project.json")
+            val optimized = SB3O.optimizeJson(entries.getValue(path).toString(Charsets.UTF_8), options)
             report(optimized.report, quiet)
-            result = Archives.writeProject(optimized.projectJson.toByteArray(Charsets.UTF_8), entries)
+            entries[path] = optimized.projectJson.toByteArray(Charsets.UTF_8)
+            result = Archives.write(entries)
             outFile = output ?: File("${base.path}-optimized.sb3")
         } else {
             val optimized = SB3O.optimizeJson(data.toString(Charsets.UTF_8), options)
@@ -90,9 +93,18 @@ fun main(args: Array<String>) {
     } catch (e: JsonException) {
         fail("${inFile.path}: not a Scratch 3 project: ${e.message}")
     }
-    outFile.absoluteFile.parentFile?.mkdirs()
-    outFile.writeBytes(result)
+    io("could not write ${outFile.path}") {
+        outFile.absoluteFile.parentFile?.mkdirs()
+        outFile.writeBytes(result)
+    }
     if (!quiet) System.err.println("wrote ${outFile.path} (${result.size / 1024} KiB)")
+}
+
+/** Runs [block], turning an I/O failure into a short error and exit code 2 instead of a stack trace. */
+private inline fun <T> io(what: String, block: () -> T): T = try {
+    block()
+} catch (e: IOException) {
+    fail("$what: ${e.message ?: e.javaClass.simpleName}")
 }
 
 private fun report(report: OptimizeReport, quiet: Boolean) {

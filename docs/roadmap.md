@@ -82,6 +82,7 @@ Cloud variables behave as ordinary variables today, so their values are lost whe
 - [ ] **More passes.** Unused variables and lists, once `sensing_of` with a static sprite and the monitors are accounted for; `and` and `or` with one constant side when the other side has no effects; identities such as `x + 0` once a variable is known to hold numbers; and broadcasts nothing receives when every broadcast name in the project is a literal.
 - [ ] **Assets.** Drop costumes and sounds nothing refers to when every costume and sound name in the project is a literal, share identical assets, and minify SVG costumes.
 - [ ] **An engine target.** TurboWarp's compiler already folds some of this itself, so a `vanilla` and a `turbowarp` target could pick the passes that pay off for each.
+- [ ] **A JavaScript API for the model.** JavaScript gets `optimizeProjectJson` only. Exporting the reader, the writer and the model would let engines and tools work on a project themselves, but the model's collections and sealed classes need a JavaScript-shaped interface first.
 - [ ] **Publishing.** The library on Maven Central and npm, and the command on the nightly release next to `jscratch.jar`.
 
 ## Distribution

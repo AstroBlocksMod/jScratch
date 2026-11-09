@@ -2,7 +2,7 @@
 
 ## Overview
 
-jScratch compiles `.sb3` files into Java bytecode and executable JAR files. Kotlin everywhere, ASM for bytecode, Gradle (Kotlin DSL) for the build, TeaVM for the browser playground. License: GPL-3.0, except the SB3O library in `sb3o/`, which is BSD 3-Clause (its own `LICENSE` is in that directory) so that any Scratch engine or tool can use it. Nothing GPL may be moved into `sb3o/`, and `sb3o/` may not depend on any other module.
+jScratch compiles `.sb3` files into Java bytecode and executable JAR files. Kotlin everywhere, ASM for bytecode, Gradle (Kotlin DSL) for the build, TeaVM for the browser playground. License: GPL-3.0, except the SB3O library in `sb3o/`, which is BSD 3-Clause (its own `LICENSE` is in that directory) so that any Scratch engine or tool can use it. Code only goes into `sb3o/` when it can be BSD licensed: new code, or code the copyright holder relicenses. The model, reader, JSON tree and `Archives` came from `compiler/` that way, relicensed by jScratch's sole author when SB3O was created. Never copy in code from anyone else's GPL or AGPL project (scratch-vm's sources are a reference to read, not to paste), and `sb3o/` may not depend on any other module.
 
 Modules:
 
