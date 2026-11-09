@@ -33,7 +33,7 @@ object Cast {
      */
     @JvmStatic
     internal fun parseNumber(raw: String): Double {
-        val s = raw.trim()
+        val s = jsTrim(raw)
         val n = s.length
         if (n == 0) return 0.0
         var i = 0
@@ -139,11 +139,17 @@ object Cast {
         else -> true
     }
 
+    /**
+     * False for "", "0" and anything whose JavaScript `toLowerCase()` is "false". Only the ASCII letters
+     * lowercase to those five (`equals(ignoreCase = true)` would also take "false" spelled with the long s,
+     * U+017F, since it uppercases to S), so the test needs no lowercase copy.
+     */
     @JvmStatic
-    fun toBoolean(value: String): Boolean = !(
-        value.isEmpty() || value == "0" ||
-            value.equals("false", ignoreCase = true)
-        )
+    fun toBoolean(value: String): Boolean = !(value.isEmpty() || value == "0" || isFalseText(value))
+
+    private fun isFalseText(s: String): Boolean =
+        s.length == 5 && (s[0] == 'f' || s[0] == 'F') && (s[1] == 'a' || s[1] == 'A') &&
+            (s[2] == 'l' || s[2] == 'L') && (s[3] == 's' || s[3] == 'S') && (s[4] == 'e' || s[4] == 'E')
 
     @JvmStatic
     fun toBoolean(value: Double): Boolean = value != 0.0 && !value.isNaN()
@@ -195,7 +201,31 @@ object Cast {
     }
 
     @JvmStatic
-    fun isWhiteSpace(value: Any?): Boolean = value is String && value.trim().isEmpty()
+    fun isWhiteSpace(value: Any?): Boolean = value is String && jsTrim(value).isEmpty()
+
+    /**
+     * JavaScript's `String.prototype.trim`, which `Number()` and scratch-vm's `isWhiteSpace` use. It strips
+     * the Unicode space separators, the line terminators and the byte order mark, but not U+001C to U+001F,
+     * which Kotlin's `trim` strips and JavaScript keeps. Text that starts and ends with a visible ASCII
+     * character, nearly all of it, returns at once.
+     */
+    @JvmStatic
+    fun jsTrim(s: String): String {
+        val n = s.length
+        if (n == 0 || (s[0] in '!'..'~' && s[n - 1] in '!'..'~')) return s
+        var start = 0
+        var end = n
+        while (start < end && isJsWhitespace(s[start])) start++
+        while (end > start && isJsWhitespace(s[end - 1])) end--
+        return if (start == 0 && end == n) s else s.substring(start, end)
+    }
+
+    private fun isJsWhitespace(c: Char): Boolean = when (c) {
+        '\u0009', '\u000A', '\u000B', '\u000C', '\u000D', '\u0020', '\u00A0', '\u1680', '\u2028', '\u2029',
+        '\u202F', '\u205F', '\u3000', '\uFEFF',
+        -> true
+        else -> c in '\u2000'..'\u200A'
+    }
 
     /**
      * Scratch comparison: numeric when both sides look like numbers, otherwise a

@@ -161,7 +161,8 @@ object ProjectWriter {
     private fun encodeValue(input: Input): JsonValue = when (input) {
         is Input.BlockRef -> JsonString(input.id)
         is Input.Literal -> {
-            val value = input.numberValue?.let { JsonNumber(it) } ?: JsonString(input.value)
+            // JSON has no NaN or infinity (JsonWriter would write null), so such a value goes back as its text.
+            val value = input.numberValue?.takeIf { it.isFinite() }?.let { JsonNumber(it) } ?: JsonString(input.value)
             JsonArray(JsonNumber(input.type.toDouble()), value)
         }
         is Input.BroadcastRef ->

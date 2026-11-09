@@ -38,6 +38,10 @@ class CastTest {
     @Test
     fun parseNumberFollowsTheNumberGrammar() {
         assertEquals(100000.0, Cast.parseNumber("1e5"))
+        // Trimmed like JavaScript: the byte order mark goes, U+001C to U+001F stay.
+        assertEquals(5.0, Cast.parseNumber("\uFEFF5\u3000"))
+        assertTrue(Cast.parseNumber("\u001C5").isNaN())
+        assertTrue(Cast.isWhiteSpace(" \u00A0\uFEFF\u2003 "))
         assertEquals(120.0, Cast.parseNumber("12e+1"))
         assertEquals(1.2, Cast.parseNumber("12e-1"))
         assertEquals(12.0, Cast.parseNumber("12."))
@@ -75,6 +79,9 @@ class CastTest {
         assertFalse(Cast.toBoolean(""))
         assertFalse(Cast.toBoolean("0"))
         assertFalse(Cast.toBoolean("FALSE"))
+        assertFalse(Cast.toBoolean("fAlSe"))
+        // JavaScript's toLowerCase leaves the long s alone, so this is not "false".
+        assertTrue(Cast.toBoolean("fal\u017Fe"))
         assertTrue(Cast.toBoolean("hello"))
         assertFalse(Cast.toBoolean(0.0))
         assertTrue(Cast.toBoolean(2.0))

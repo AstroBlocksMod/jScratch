@@ -3,8 +3,6 @@ package org.jscratch.sb3o.values
 import kotlin.math.pow
 
 actual object JsMath {
-    actual val exact: Boolean = true
-
     actual fun sin(x: Double): Double = kotlin.math.sin(x)
 
     actual fun cos(x: Double): Double = kotlin.math.cos(x)

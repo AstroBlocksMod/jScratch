@@ -1,8 +1,6 @@
 package org.jscratch.sb3o.values
 
 actual object JsMath {
-    actual val exact: Boolean = false
-
     actual fun sin(x: Double): Double = StrictMath.sin(x)
 
     actual fun cos(x: Double): Double = StrictMath.cos(x)

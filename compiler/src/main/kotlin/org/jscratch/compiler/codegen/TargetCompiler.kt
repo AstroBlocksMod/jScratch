@@ -1346,7 +1346,7 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
             when (want) {
                 VType.NUM -> pushDouble(mv, if (n.isNaN()) 0.0 else n)
                 VType.STR -> mv.visitLdcInsn(formatNumber(n))
-                VType.BOOL -> mv.visitInsn(if (n != 0.0 && !n.isNaN()) ICONST_1 else ICONST_0)
+                VType.BOOL -> mv.visitInsn(if (ScratchValues.toBoolean(n)) ICONST_1 else ICONST_0)
                 VType.ANY -> {
                     pushDouble(mv, n)
                     coerce(mv, VType.NUM, VType.ANY)
@@ -1363,10 +1363,7 @@ class TargetCompiler(private val ctx: ProjectContext, private val target: Target
         when (want) {
             VType.NUM -> pushDouble(mv, if (n.isNaN()) 0.0 else n)
             VType.STR -> mv.visitLdcInsn(if (foldsToNumber) formatNumber(n) else lit.value)
-            VType.BOOL -> {
-                val b = !(lit.value.isEmpty() || lit.value == "0" || lit.value.equals("false", ignoreCase = true))
-                mv.visitInsn(if (b) ICONST_1 else ICONST_0)
-            }
+            VType.BOOL -> mv.visitInsn(if (ScratchValues.toBoolean(lit.value)) ICONST_1 else ICONST_0)
             VType.ANY -> {
                 if (foldsToNumber) {
                     pushDouble(mv, n)

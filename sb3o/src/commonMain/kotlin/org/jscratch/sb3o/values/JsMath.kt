@@ -1,15 +1,13 @@
 package org.jscratch.sb3o.values
 
 /**
- * The transcendental functions of JavaScript's `Math`. On JavaScript they are the engine's own, so
- * a value computed with them is what scratch-vm computes. On the JVM they are `StrictMath`, which
- * agrees with V8 on most inputs but not all (`exp(1)` differs in the last bit), so the folder only
- * trusts them where [exact] is true.
+ * The transcendental functions of JavaScript's `Math`: the engine's own on JavaScript, `StrictMath` (the
+ * fdlibm algorithms JavaScript engines derive theirs from) on the JVM. Engines do not agree on these to
+ * the last bit, not even two JavaScript engines, so nothing may treat a result as the one every player
+ * computes. The folder only uses them where the answer is rounded far enough that the last bits cannot
+ * show (see `FoldConstants`).
  */
 expect object JsMath {
-    /** Whether these are the very functions scratch-vm runs with, bit for bit. */
-    val exact: Boolean
-
     fun sin(x: Double): Double
 
     fun cos(x: Double): Double

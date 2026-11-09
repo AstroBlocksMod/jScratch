@@ -1,6 +1,5 @@
 package org.jscratch.sb3o
 
-import org.jscratch.sb3o.values.JsMath
 import org.jscratch.sb3o.values.ScratchValues
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -20,9 +19,17 @@ class ScratchValuesTest {
         assertEquals(5.0, ScratchValues.parseNumber("5."))
         assertEquals(Double.NEGATIVE_INFINITY, ScratchValues.parseNumber("-Infinity"))
         assertEquals(0.0, ScratchValues.parseNumber(""))
-        assertEquals(0.0, ScratchValues.parseNumber("  ﻿  "))
-        val bad = listOf("0x-1", "-0x1", "0x", "0b2", "0x١", "0xａ", "1e", ".", "infinity", "1_000", "5\u001c", "1d")
+        assertEquals(0.0, ScratchValues.parseNumber(" \u00A0\uFEFF\u2003 "))
+        // Arabic-Indic one (U+0661) and fullwidth a (U+FF41) are digits to Kotlin but not to JavaScript.
+        val arabicOne = Char(0x0661)
+        val fullwidthA = Char(0xFF41)
+        val bad =
+            listOf("0x-1", "-0x1", "0x", "0b2", "0x$arabicOne", "0x$fullwidthA") +
+                listOf("1e", ".", "infinity", "1_000", "5\u001c", "1d")
         for (s in bad) assertTrue(ScratchValues.parseNumber(s).isNaN(), "'$s' should be NaN")
+        // JavaScript trims the byte order mark but not the separators below space that Kotlin's trim takes.
+        assertEquals(5.0, ScratchValues.parseNumber("\uFEFF5\u3000"))
+        assertTrue(ScratchValues.parseNumber("\u001C5").isNaN())
         // toNumber turns NaN into 0, like Cast.toNumber.
         assertEquals(0.0, ScratchValues.toNumber("abc"))
         assertEquals(0.0, ScratchValues.toNumber(Double.NaN))
@@ -34,6 +41,10 @@ class ScratchValuesTest {
         assertFalse(ScratchValues.toBoolean(""))
         assertFalse(ScratchValues.toBoolean("0"))
         assertFalse(ScratchValues.toBoolean("FALSE"))
+        assertFalse(ScratchValues.toBoolean("fAlSe"))
+        // JavaScript's toLowerCase leaves the long s alone, so this is not "false".
+        assertTrue(ScratchValues.toBoolean("fal\u017Fe"))
+        assertTrue(ScratchValues.toBoolean("false "))
         assertTrue(ScratchValues.toBoolean("00"))
         assertTrue(ScratchValues.toBoolean(" "))
         assertFalse(ScratchValues.toBoolean(0.0))
@@ -85,8 +96,11 @@ class ScratchValuesTest {
         // Dividing by ln 10 is what scratch-vm does, rounding error included.
         assertEquals(2.9999999999999996, ScratchValues.mathop("log", 1000.0))
         assertEquals(100.0, ScratchValues.mathop("10 ^", 2.0))
-        // V8 gives Math.E here; the JVM's StrictMath is a bit off, which is why the folder skips these there.
-        if (JsMath.exact) assertEquals(2.718281828459045, ScratchValues.mathop("e ^", 1.0))
+        assertEquals(1.0, ScratchValues.mathop("e ^", 0.0))
+        assertEquals(1.0, ScratchValues.mathop("TAN", 405.0))
+        assertEquals(Double.NEGATIVE_INFINITY, ScratchValues.mathop("tan", 630.0))
+        assertEquals(null, ScratchValues.trigBeforeRounding("tan", -270.0))
+        assertEquals(0.49999999999999994, ScratchValues.trigBeforeRounding("sin", 30.0))
         assertEquals(4.0, ScratchValues.mathop("sqrt", 16.0))
         assertEquals(-2.0, ScratchValues.mathop("ceiling", -2.5))
         assertEquals(2.0, ScratchValues.mathop("ABS", -2.0))

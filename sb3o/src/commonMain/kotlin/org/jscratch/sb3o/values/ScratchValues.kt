@@ -62,27 +62,7 @@ object ScratchValues {
                 }
             }
         }
-        var digits = 0
-        while (i < n && s[i] in '0'..'9') {
-            digits++
-            i++
-        }
-        if (i < n && s[i] == '.') {
-            i++
-            while (i < n && s[i] in '0'..'9') {
-                digits++
-                i++
-            }
-        }
-        if (digits == 0) return Double.NaN
-        if (i < n && (s[i] == 'e' || s[i] == 'E')) {
-            i++
-            if (i < n && (s[i] == '+' || s[i] == '-')) i++
-            if (i == n || s[i] !in '0'..'9') return Double.NaN
-            while (i < n && s[i] in '0'..'9') i++
-        }
-        if (i != n) return Double.NaN
-        return s.toDouble()
+        return if (isDecimalTrimmed(s)) s.toDouble() else Double.NaN
     }
 
     private fun parsePrefixed(s: String, radix: Int): Double {
@@ -101,8 +81,10 @@ object ScratchValues {
     }
 
     /** Whether [raw], trimmed, is a number in decimal notation, the only kind JSON can store as a number. */
-    fun isDecimal(raw: String): Boolean {
-        val s = jsTrim(raw)
+    fun isDecimal(raw: String): Boolean = isDecimalTrimmed(jsTrim(raw))
+
+    /** The decimal grammar, `[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?`, on text already trimmed. */
+    private fun isDecimalTrimmed(s: String): Boolean {
         val n = s.length
         var i = if (n > 0 && (s[0] == '+' || s[0] == '-')) 1 else 0
         var digits = 0
@@ -130,11 +112,24 @@ object ScratchValues {
     fun toBoolean(value: Any?): Boolean = when (value) {
         null -> false
         is Boolean -> value
-        is String -> !(value.isEmpty() || value == "0" || value.lowercase() == "false")
+        is String -> toBoolean(value)
         is Double -> value != 0.0 && !value.isNaN()
         is Number -> value.toDouble() != 0.0
         else -> true
     }
+
+    /**
+     * `Cast.toBoolean` on text: false for "", "0" and anything whose `toLowerCase()` is "false". Only the
+     * ASCII letters lowercase to those five, and the one character whose lowercase is longer (the dotted
+     * capital I, U+0130) adds a combining dot, so the test is exact without building a lowercase copy.
+     * Comparing with `equals(ignoreCase = true)` would be wrong: it takes "false" spelled with the long s,
+     * U+017F, since that uppercases to S.
+     */
+    fun toBoolean(value: String): Boolean = !(value.isEmpty() || value == "0" || isFalseText(value))
+
+    private fun isFalseText(s: String): Boolean =
+        s.length == 5 && (s[0] == 'f' || s[0] == 'F') && (s[1] == 'a' || s[1] == 'A') &&
+            (s[2] == 'l' || s[2] == 'L') && (s[3] == 's' || s[3] == 'S') && (s[4] == 'e' || s[4] == 'E')
 
     /** JavaScript `String(value)`. */
     fun toString(value: Any?): String = when (value) {
@@ -195,9 +190,7 @@ object ScratchValues {
         "floor" -> floor(n)
         "ceiling" -> kotlin.math.ceil(n)
         "sqrt" -> kotlin.math.sqrt(n)
-        "sin" -> roundTo10(JsMath.sin((PI * n) / 180))
-        "cos" -> roundTo10(JsMath.cos((PI * n) / 180))
-        "tan" -> tan(n)
+        "sin", "cos", "tan" -> trigBeforeRounding(operator.lowercase(), n)?.let { roundTo10(it) } ?: tanPole(n) ?: 0.0
         "asin" -> (JsMath.asin(n) * 180) / PI
         "acos" -> (JsMath.acos(n) * 180) / PI
         "atan" -> (JsMath.atan(n) * 180) / PI
@@ -208,14 +201,25 @@ object ScratchValues {
         else -> 0.0
     }
 
-    /** scratch-vm's `MathUtil.tan`: exact at the poles, otherwise rounded to 10 decimals. */
-    private fun tan(angle: Double): Double {
-        val a = angle % 360
-        return when (a) {
-            -270.0, 90.0 -> Double.POSITIVE_INFINITY
-            -90.0, 270.0 -> Double.NEGATIVE_INFINITY
-            else -> roundTo10(JsMath.tan((PI * a) / 180))
+    /**
+     * What `sin`, `cos` and `tan` of [degrees] are before scratch-vm rounds them to 10 decimals, or null for
+     * `tan` at a pole, where `MathUtil.tan` answers an exact infinity instead (see [tanPole]).
+     */
+    fun trigBeforeRounding(operator: String, degrees: Double): Double? = when (operator) {
+        "sin" -> JsMath.sin((PI * degrees) / 180)
+        "cos" -> JsMath.cos((PI * degrees) / 180)
+        "tan" -> {
+            val a = degrees % 360
+            if (tanPole(degrees) != null) null else JsMath.tan((PI * a) / 180)
         }
+        else -> null
+    }
+
+    /** `MathUtil.tan` at its poles: plus or minus infinity when the angle is 90 or 270 degrees around, else null. */
+    fun tanPole(degrees: Double): Double? = when (degrees % 360) {
+        -270.0, 90.0 -> Double.POSITIVE_INFINITY
+        -90.0, 270.0 -> Double.NEGATIVE_INFINITY
+        else -> null
     }
 
     /** `parseFloat(x.toFixed(10))`, which scratch-vm applies to sin, cos and tan to hide floating point noise. */
@@ -241,9 +245,9 @@ object ScratchValues {
     }
 
     private fun isJsWhitespace(c: Char): Boolean = when (c) {
-        '\u0009', '\u000A', '\u000B', '\u000C', '\u000D', ' ', ' ', ' ', ' ', ' ',
-        ' ', ' ', '　', '﻿',
+        '\u0009', '\u000A', '\u000B', '\u000C', '\u000D', '\u0020', '\u00A0', '\u1680', '\u2028', '\u2029',
+        '\u202F', '\u205F', '\u3000', '\uFEFF',
         -> true
-        else -> c in ' '..' '
+        else -> c in '\u2000'..'\u200A'
     }
 }

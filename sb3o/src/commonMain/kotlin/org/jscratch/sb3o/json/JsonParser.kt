@@ -7,6 +7,9 @@ class JsonException(message: String) : RuntimeException(message)
  * `JSON.parse` makes them, so a project reads the same here as in Scratch.
  */
 object JsonParser {
+    /** How deep objects and arrays may nest before the input is rejected. */
+    const val MAX_DEPTH = 512
+
     fun parse(text: String): JsonValue {
         val p = State(text)
         p.skipWhitespace()
@@ -18,6 +21,20 @@ object JsonParser {
 
     private class State(val text: String) {
         var pos = 0
+        private var depth = 0
+
+        /**
+         * Parses an object or array one level deeper. The parser recurses per level, so a hostile file
+         * nested a hundred thousand deep would overflow the stack; real projects nest about ten deep.
+         */
+        private inline fun <T> nested(read: () -> T): T {
+            if (++depth > MAX_DEPTH) fail("JSON nested more than $MAX_DEPTH levels deep")
+            try {
+                return read()
+            } finally {
+                depth--
+            }
+        }
 
         fun fail(message: String): Nothing = throw JsonException("$message at offset $pos")
 
@@ -31,8 +48,8 @@ object JsonParser {
         fun readValue(): JsonValue {
             if (pos >= text.length) fail("unexpected end of JSON")
             return when (val c = text[pos]) {
-                '{' -> readObject()
-                '[' -> readArray()
+                '{' -> nested { readObject() }
+                '[' -> nested { readArray() }
                 '"' -> JsonString(readString())
                 't' -> literal("true", JsonBoolean(true))
                 'f' -> literal("false", JsonBoolean(false))
@@ -131,8 +148,11 @@ object JsonParser {
                             'u' -> {
                                 if (pos + 5 > text.length) fail("truncated \\u escape")
                                 val hex = text.substring(pos + 1, pos + 5)
-                                val code = hex.toIntOrNull(16) ?: fail("bad \\u escape '$hex'")
-                                sb.append(code.toChar())
+                                // Exactly four hex digits: toIntOrNull alone would also take a sign.
+                                if (!hex.all { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }) {
+                                    fail("bad \\u escape '$hex'")
+                                }
+                                sb.append(hex.toInt(16).toChar())
                                 pos += 4
                             }
                             else -> fail("bad escape '\\$e'")
