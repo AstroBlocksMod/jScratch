@@ -79,6 +79,24 @@ class RemovePassesTest {
         )
     }
 
+    /** With two definitions of one custom block, calls run the first, so what it calls has to stay. */
+    @Test
+    fun keepsWhatTheFirstOfTwoDefinitionsCalls() {
+        val builder = ProjectBuilder()
+        builder.block("hat", "event_whenflagclicked", next = "callFoo", topLevel = true)
+        builder.call("callFoo", "foo", parent = "hat")
+        builder.definition("first", "foo", next = "callBar")
+        builder.call("callBar", "bar", parent = "first")
+        builder.definition("second", "foo")
+        builder.definition("bar", "bar")
+        val project = ProjectReader.read(builder.build())
+        val report = SB3O.optimize(project, OptimizeOptions(foldConstants = false))
+        val sprite = project.sprites.single()
+        assertTrue("bar" in sprite.blocks, "bar is called by the definition that runs")
+        assertTrue("first" in sprite.blocks && "second" in sprite.blocks)
+        assertEquals(emptyList(), report.messages)
+    }
+
     @Test
     fun optimizesJsonText() {
         val builder = ProjectBuilder()

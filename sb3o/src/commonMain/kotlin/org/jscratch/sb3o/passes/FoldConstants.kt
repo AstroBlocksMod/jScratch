@@ -5,9 +5,11 @@ import org.jscratch.sb3o.model.Input
 import org.jscratch.sb3o.model.PrimitiveType
 import org.jscratch.sb3o.model.Project
 import org.jscratch.sb3o.model.Target
-import org.jscratch.sb3o.values.JsMath
 import org.jscratch.sb3o.values.JsNumbers
 import org.jscratch.sb3o.values.ScratchValues
+import kotlin.math.abs
+import kotlin.math.floor
+import kotlin.math.ulp
 
 /**
  * Computes blocks whose inputs are all literals and puts the result in their place, and
@@ -42,8 +44,34 @@ object FoldConstants : Pass {
 
     private val NOT_CONSTANT = Any()
 
-    /** The `mathop` functions every platform computes exactly. */
+    /** The `mathop` functions IEEE 754 defines exactly, so every engine gives the same double. */
     private val EXACT_MATHOPS = setOf("abs", "floor", "ceiling", "sqrt")
+
+    /**
+     * Whether `mathop` of [n] has one answer on every engine, so folding it cannot change what a player
+     * computes. The functions in [EXACT_MATHOPS] always do. The others come from each engine's `Math`, which
+     * differs in the last bits between V8, SpiderMonkey, JavaScriptCore and the JVM, so `ln`, `log`, `e ^`,
+     * `10 ^` and the inverse functions never fold. `sin`, `cos` and `tan` are rounded to 10 decimals, which
+     * hides those bits unless the value sits near a halfway point between two results: there scratch-vm's
+     * `toFixed` and the `Math.round(x * 1e10) / 1e10` of TurboWarp and jScratch can also round apart. So they
+     * fold when the value is far enough from such a point that no engine's error could reach it, allowing
+     * for a few ulps from the function and for engines that turn degrees into radians another way.
+     */
+    private fun foldsTheSameEverywhere(operator: String, n: Double): Boolean {
+        if (operator in EXACT_MATHOPS) return true
+        if (operator != "sin" && operator != "cos" && operator != "tan") return false
+        // Huge angles leave it to each engine's argument reduction, which varies more.
+        if (abs(n) > 1e5) return false
+        val raw = ScratchValues.trigBeforeRounding(operator, n) ?: return operator == "tan"
+        if (!raw.isFinite()) return false
+        val degrees = if (operator == "tan") n % 360 else n
+        val angle = abs((ScratchValues.PI * degrees) / 180)
+        val slope = if (operator == "tan") 1 + raw * raw else 1.0
+        val error = 16 * abs(raw).ulp + 4 * angle.ulp * slope
+        val scaled = abs(raw) * 1e10
+        val distanceToHalfway = abs(scaled - floor(scaled) - 0.5) / 1e10
+        return distanceToHalfway > error + scaled.ulp / 1e10
+    }
 
     private class Folder(val target: Target, val report: OptimizeReport) {
         private val memo = HashMap<String, Any>()
@@ -179,12 +207,12 @@ object FoldConstants : Pass {
                     "operator_mod" -> num("NUM1")?.let { a -> num("NUM2")?.let { b -> ScratchValues.mod(a, b) } }
                     "operator_round" -> num("NUM")?.let { ScratchValues.jsRound(it) }
                     "operator_mathop" -> {
-                        // The transcendental functions only fold where the platform's are scratch-vm's own.
                         val operator = block.fields["OPERATOR"]?.value?.lowercase()
-                        if (operator == null || !(JsMath.exact || operator in EXACT_MATHOPS)) {
+                        val n = num("NUM")
+                        if (operator == null || n == null || !foldsTheSameEverywhere(operator, n)) {
                             null
                         } else {
-                            num("NUM")?.let { ScratchValues.mathop(operator, it) }
+                            ScratchValues.mathop(operator, n)
                         }
                     }
                     "operator_join" -> str("STRING1")?.let { a -> str("STRING2")?.let { b -> a + b } }

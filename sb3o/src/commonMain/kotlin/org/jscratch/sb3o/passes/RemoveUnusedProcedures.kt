@@ -21,7 +21,9 @@ object RemoveUnusedProcedures : Pass {
             for (top in target.topLevelBlocks) {
                 val proccode = if (top.opcode == "procedures_definition") proccodeOf(target, top) else null
                 if (proccode != null) {
-                    definitions[proccode] = top
+                    // A call runs the first definition in block order, as scratch-vm's getProcedureDefinition
+                    // picks it. Later ones with the same proccode never run, so they are left as they are.
+                    if (proccode !in definitions) definitions[proccode] = top
                 } else if (!top.shadow) {
                     roots.add(top)
                 }

@@ -1,7 +1,6 @@
 package org.jscratch.sb3o
 
 import org.jscratch.sb3o.model.Input
-import org.jscratch.sb3o.values.JsMath
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -175,12 +174,15 @@ class FoldConstantsTest {
         )
         assertEquals("[1,[10,4]]", mathop("sqrt", "16").input("say", "MESSAGE"))
         assertEquals("[1,[10,-3]]", mathop("floor", "-2.5").input("say", "MESSAGE"))
-        // The transcendental functions fold only where the platform's Math is scratch-vm's own.
-        val sin = mathop("sin", "30")
-        if (JsMath.exact) {
-            assertEquals("[1,[10,0.5]]", sin.input("say", "MESSAGE"))
-        } else {
-            assertTrue("r" in sin.sprite.blocks, "sin should stay a block on the JVM")
+        // sin, cos and tan fold when rounding to 10 decimals hides the engines' last-bit differences.
+        assertEquals("[1,[10,0.5]]", mathop("sin", "30").input("say", "MESSAGE"))
+        assertEquals("[1,[10,0.5]]", mathop("cos", "60").input("say", "MESSAGE"))
+        assertEquals("[1,[10,1]]", mathop("tan", "405").input("say", "MESSAGE"))
+        // The unrounded functions differ between engines in the last bits, and so does reducing huge angles.
+        val unfolded =
+            listOf("e ^" to "1", "ln" to "2", "log" to "1000", "10 ^" to "0.3", "asin" to "0.5", "sin" to "1e6")
+        for ((operator, n) in unfolded) {
+            assertTrue("r" in mathop(operator, n).sprite.blocks, "$operator $n should stay a block")
         }
     }
 
