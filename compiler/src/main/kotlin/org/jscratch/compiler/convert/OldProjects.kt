@@ -1,9 +1,9 @@
 package org.jscratch.compiler.convert
 
-import org.jscratch.compiler.Archives
-import org.jscratch.compiler.json.JsonValue
 import org.jscratch.compiler.json.ProjectJson
-import org.jscratch.compiler.sb3.Sb3Exception
+import org.jscratch.sb3o.Archives
+import org.jscratch.sb3o.json.JsonValue
+import org.jscratch.sb3o.model.Sb3Exception
 import java.io.IOException
 
 /** The Scratch version a project file was saved by. */

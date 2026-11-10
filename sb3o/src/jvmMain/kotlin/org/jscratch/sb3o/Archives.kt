@@ -1,4 +1,4 @@
-package org.jscratch.compiler
+package org.jscratch.sb3o
 
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -26,6 +26,44 @@ object Archives {
             }
         }
         return entries
+    }
+
+    /**
+     * Every file in a zip archive by its full path, in archive order, for tools that write the archive
+     * back and must keep it as it was: [read] would merge `a/x.png` and `b/x.png` into one entry.
+     */
+    fun readPaths(bytes: ByteArray): LinkedHashMap<String, ByteArray> {
+        val entries = LinkedHashMap<String, ByteArray>()
+        ZipInputStream(ByteArrayInputStream(bytes)).use { zip ->
+            while (true) {
+                val entry = zip.nextEntry ?: break
+                if (entry.isDirectory) continue
+                entries[entry.name] = readEntry(zip)
+            }
+        }
+        return entries
+    }
+
+    /**
+     * Which of the [paths] of an archive is its `project.json`: at the top, or in one folder, which is
+     * where scratch-vm looks for it. Null when there is none.
+     */
+    fun projectJsonPath(paths: Collection<String>): String? =
+        paths.firstOrNull { it == "project.json" } ?: paths.firstOrNull { p ->
+            p.endsWith("/project.json") && p.indexOf('/') == p.length - "/project.json".length
+        }
+
+    /** A zip archive of [entries], by path, in their order. */
+    fun write(entries: Map<String, ByteArray>): ByteArray {
+        val out = ByteArrayOutputStream()
+        ZipOutputStream(out).use { zip ->
+            for ((name, data) in entries) {
+                zip.putNextEntry(ZipEntry(name))
+                zip.write(data)
+                zip.closeEntry()
+            }
+        }
+        return out.toByteArray()
     }
 
     /**

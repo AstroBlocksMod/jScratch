@@ -1,10 +1,10 @@
 package org.jscratch.web
 
-import org.jscratch.compiler.Archives
 import org.jscratch.compiler.CompileOptions
 import org.jscratch.compiler.JScratch
 import org.jscratch.compiler.convert.OldProject
 import org.jscratch.compiler.convert.OldProjects
+import org.jscratch.sb3o.Archives
 import org.teavm.jso.JSBody
 import org.teavm.jso.JSFunctor
 import org.teavm.jso.JSObject

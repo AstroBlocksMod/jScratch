@@ -18,8 +18,34 @@ class CastTest {
         assertEquals("1e+21", Cast.toString(1e21))
         assertEquals("1e-7", Cast.toString(1e-7))
         assertEquals("1.5e-7", Cast.toString(1.5e-7))
+        // Java prints these as 1.0E-5 and 1.0E-3, which are no longer one digit once laid out plain.
+        assertEquals("0.00001", Cast.toString(1e-5))
+        assertEquals("-0.0002", Cast.toString(-2e-4))
+        assertEquals("0.001", Cast.toString(1e-3))
+        assertEquals("0.000001", Cast.toString(1e-6))
+        // Whole numbers past 2^53 show their shortest digits, not their exact value.
+        assertEquals("123456789012345680000", Cast.toString(1.2345678901234568e20))
+        assertEquals("9007199254740994", Cast.toString(9007199254740994.0))
+        // Java never prints fewer than two digits (4.9E-324); JavaScript prints one when one reads back.
+        assertEquals("5e-324", Cast.toString(Double.MIN_VALUE))
+        assertEquals("-1.7976931348623157e+308", Cast.toString(-Double.MAX_VALUE))
+        assertEquals("1.5e+21", Cast.toString(1.5e21))
         assertEquals("Infinity", Cast.toString(Double.POSITIVE_INFINITY))
         assertEquals("NaN", Cast.toString(Double.NaN))
+    }
+
+    /** Over random doubles: the text reads back as the value, and its digits never end in a zero after the point. */
+    @Test
+    fun printedNumbersReadBackWithoutTrailingZeros() {
+        val random = kotlin.random.Random(20261110)
+        repeat(50_000) {
+            val v = java.lang.Double.longBitsToDouble(random.nextLong())
+            if (!v.isFinite()) return@repeat
+            val text = Cast.toString(v)
+            assertEquals(v, text.toDouble(), text)
+            val mantissa = text.substringBefore('e')
+            if ('.' in mantissa) assertFalse(mantissa.endsWith("0"), text)
+        }
     }
 
     @Test
@@ -38,6 +64,10 @@ class CastTest {
     @Test
     fun parseNumberFollowsTheNumberGrammar() {
         assertEquals(100000.0, Cast.parseNumber("1e5"))
+        // Trimmed like JavaScript: the byte order mark goes, U+001C to U+001F stay.
+        assertEquals(5.0, Cast.parseNumber("\uFEFF5\u3000"))
+        assertTrue(Cast.parseNumber("\u001C5").isNaN())
+        assertTrue(Cast.isWhiteSpace(" \u00A0\uFEFF\u2003 "))
         assertEquals(120.0, Cast.parseNumber("12e+1"))
         assertEquals(1.2, Cast.parseNumber("12e-1"))
         assertEquals(12.0, Cast.parseNumber("12."))
@@ -75,6 +105,9 @@ class CastTest {
         assertFalse(Cast.toBoolean(""))
         assertFalse(Cast.toBoolean("0"))
         assertFalse(Cast.toBoolean("FALSE"))
+        assertFalse(Cast.toBoolean("fAlSe"))
+        // JavaScript's toLowerCase leaves the long s alone, so this is not "false".
+        assertTrue(Cast.toBoolean("fal\u017Fe"))
         assertTrue(Cast.toBoolean("hello"))
         assertFalse(Cast.toBoolean(0.0))
         assertTrue(Cast.toBoolean(2.0))

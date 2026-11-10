@@ -6,7 +6,7 @@ import org.jscratch.compiler.convert.OldProjects
 import org.jscratch.compiler.convert.ProjectFormat
 import org.jscratch.compiler.jvm.RhinoProjectConverter
 import org.jscratch.compiler.jvm.RhinoProjectJson
-import org.jscratch.compiler.sb3.Sb3Exception
+import org.jscratch.sb3o.model.Sb3Exception
 import java.io.File
 import kotlin.system.exitProcess
 

@@ -2,6 +2,8 @@ package org.jscratch.runtime
 
 import java.math.BigDecimal
 import java.math.BigInteger
+import java.math.MathContext
+import java.math.RoundingMode
 
 /**
  * Scratch value conversions. Scratch values are dynamically typed: a value is a
@@ -33,7 +35,7 @@ object Cast {
      */
     @JvmStatic
     internal fun parseNumber(raw: String): Double {
-        val s = raw.trim()
+        val s = jsTrim(raw)
         val n = s.length
         if (n == 0) return 0.0
         var i = 0
@@ -139,11 +141,17 @@ object Cast {
         else -> true
     }
 
+    /**
+     * False for "", "0" and anything whose JavaScript `toLowerCase()` is "false". Only the ASCII letters
+     * lowercase to those five (`equals(ignoreCase = true)` would also take "false" spelled with the long s,
+     * U+017F, since it uppercases to S), so the test needs no lowercase copy.
+     */
     @JvmStatic
-    fun toBoolean(value: String): Boolean = !(
-        value.isEmpty() || value == "0" ||
-            value.equals("false", ignoreCase = true)
-        )
+    fun toBoolean(value: String): Boolean = !(value.isEmpty() || value == "0" || isFalseText(value))
+
+    private fun isFalseText(s: String): Boolean =
+        s.length == 5 && (s[0] == 'f' || s[0] == 'F') && (s[1] == 'a' || s[1] == 'A') &&
+            (s[2] == 'l' || s[2] == 'L') && (s[3] == 's' || s[3] == 'S') && (s[4] == 'e' || s[4] == 'E')
 
     @JvmStatic
     fun toBoolean(value: Double): Boolean = value != 0.0 && !value.isNaN()
@@ -161,27 +169,37 @@ object Cast {
     @JvmStatic
     fun toString(value: Boolean): String = if (value) "true" else "false"
 
-    /** Formats a double the way JavaScript's `Number.prototype.toString` does. */
+    /**
+     * Formats a double the way JavaScript's `Number.prototype.toString` does: the fewest digits that read
+     * back as the value, plain from 1e-6 up to 1e21 and in exponent notation beyond. The JDK's
+     * `Double.toString` gives those digits (it has since JDK 19), except that it always prints at least two,
+     * so 1.0E-5 and 4.9E-324 are cut to the one digit JavaScript prints when one reads back. Whole numbers
+     * past 2^53 go the same way, since their exact value (123456789012345683968) has more digits than
+     * JavaScript shows (123456789012345680000).
+     */
     @JvmStatic
     fun toString(value: Double): String {
         if (value.isNaN()) return "NaN"
         if (value.isInfinite()) return if (value > 0) "Infinity" else "-Infinity"
         if (value == 0.0) return "0"
         val abs = Math.abs(value)
-        if (value == Math.rint(value) && abs < 1e21) {
-            return if (abs < 9.007199254740992E15) value.toLong().toString() else BigDecimal(value).toPlainString()
-        }
+        if (abs < 9.007199254740992E15 && value == Math.rint(value)) return value.toLong().toString()
 
-        val java = java.lang.Double.toString(value)
-        if (abs >= 1e-6 && abs < 1e21) {
-            return BigDecimal(java).toPlainString()
+        var digits = BigDecimal(java.lang.Double.toString(value)).stripTrailingZeros()
+        if (digits.precision() == 2) {
+            val one = digits.round(MathContext(1, RoundingMode.HALF_EVEN))
+            if (one.toDouble() == value) digits = one.stripTrailingZeros()
         }
-        // Scientific notation: Java prints 1.0E-7, JavaScript prints 1e-7 and 1.5e+21.
-        val e = java.indexOf('E')
-        var mantissa = java.substring(0, e)
-        if (mantissa.endsWith(".0")) mantissa = mantissa.dropLast(2)
-        val exponent = java.substring(e + 1)
-        return if (exponent.startsWith("-")) "${mantissa}e$exponent" else "${mantissa}e+$exponent"
+        if (abs >= 1e-6 && abs < 1e21) return digits.toPlainString()
+        // Exponent notation: JavaScript writes 1e-7, 1.5e-7 and 1e+21.
+        val unscaled = digits.unscaledValue().abs().toString()
+        val exponent = digits.precision() - digits.scale() - 1
+        val sb = StringBuilder()
+        if (value < 0) sb.append('-')
+        sb.append(unscaled[0])
+        if (unscaled.length > 1) sb.append('.').append(unscaled, 1, unscaled.length)
+        sb.append('e').append(if (exponent < 0) '-' else '+').append(Math.abs(exponent))
+        return sb.toString()
     }
 
     /** Whether a value should be treated as an integer by `pick random` and list indexing. */
@@ -195,7 +213,31 @@ object Cast {
     }
 
     @JvmStatic
-    fun isWhiteSpace(value: Any?): Boolean = value is String && value.trim().isEmpty()
+    fun isWhiteSpace(value: Any?): Boolean = value is String && jsTrim(value).isEmpty()
+
+    /**
+     * JavaScript's `String.prototype.trim`, which `Number()` and scratch-vm's `isWhiteSpace` use. It strips
+     * the Unicode space separators, the line terminators and the byte order mark, but not U+001C to U+001F,
+     * which Kotlin's `trim` strips and JavaScript keeps. Text that starts and ends with a visible ASCII
+     * character, nearly all of it, returns at once.
+     */
+    @JvmStatic
+    fun jsTrim(s: String): String {
+        val n = s.length
+        if (n == 0 || (s[0] in '!'..'~' && s[n - 1] in '!'..'~')) return s
+        var start = 0
+        var end = n
+        while (start < end && isJsWhitespace(s[start])) start++
+        while (end > start && isJsWhitespace(s[end - 1])) end--
+        return if (start == 0 && end == n) s else s.substring(start, end)
+    }
+
+    private fun isJsWhitespace(c: Char): Boolean = when (c) {
+        '\u0009', '\u000A', '\u000B', '\u000C', '\u000D', '\u0020', '\u00A0', '\u1680', '\u2028', '\u2029',
+        '\u202F', '\u205F', '\u3000', '\uFEFF',
+        -> true
+        else -> c in '\u2000'..'\u200A'
+    }
 
     /**
      * Scratch comparison: numeric when both sides look like numbers, otherwise a
