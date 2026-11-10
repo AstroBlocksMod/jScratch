@@ -13,6 +13,7 @@ on:
       - "mockups/**"
       - "zensical.toml"
       - "web/**"
+      - "sb3o/**"
       - "compiler/**"
       - "sb3js/**"
       - "runtime/**"

@@ -56,4 +56,4 @@ dependencyResolutionManagement {
     }
 }
 
-include("runtime", "sb3js", "sb3o", "compiler", "compiler-jvm", "cli", "web", "samples", "benchmarks")
+include("runtime", "sb3js", "sb3o", "sb3o-cli", "compiler", "compiler-jvm", "cli", "web", "samples", "benchmarks")

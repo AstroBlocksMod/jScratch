@@ -7,6 +7,10 @@
   const compileButton = document.getElementById("compile");
   const listingCheckbox = document.getElementById("listing");
   const turboWarpCheckbox = document.getElementById("turbowarp");
+  const optimizeCheckbox = document.getElementById("optimize");
+  const optimizationsDetails = document.getElementById("optimizations-details");
+  const optimizationCount = document.getElementById("optimization-count");
+  const optimizationsOut = document.getElementById("optimizations");
   const status = document.getElementById("status");
   const result = document.getElementById("result");
   const summary = document.getElementById("summary");
@@ -98,11 +102,16 @@
 
   fileInput.addEventListener("change", () => choose(fileInput.files[0] || null));
 
-  // The setting is compiled into the JAR, so a JAR from before the change would not have it.
+  // These settings are compiled into the JAR, so a JAR from before the change would not have them.
   turboWarpCheckbox.addEventListener("change", () => {
     if (result.classList.contains("hidden")) return;
     result.classList.add("hidden");
     setStatus("Compile again to apply the TurboWarp setting.");
+  });
+  optimizeCheckbox.addEventListener("change", () => {
+    if (result.classList.contains("hidden")) return;
+    result.classList.add("hidden");
+    setStatus("Compile again to apply the SB3O setting.");
   });
 
   ["dragenter", "dragover"].forEach((ev) =>
@@ -138,7 +147,13 @@
       const sb3 = converted ? converted.sb3 : data;
       setStatus("Compiling " + selected.name + "…");
       const started = performance.now();
-      const out = window.jscratch.compile(sb3, runtimeJar, listingCheckbox.checked, turboWarpCheckbox.checked);
+      const out = window.jscratch.compile(
+        sb3,
+        runtimeJar,
+        listingCheckbox.checked,
+        turboWarpCheckbox.checked,
+        optimizeCheckbox.checked
+      );
       const ms = Math.round(performance.now() - started);
       if (!out.ok) {
         setStatus("Compilation failed: " + out.error, true);
@@ -179,6 +194,11 @@
       const warnings = (converted ? converted.warnings : []).concat(out.warnings ? out.warnings.split("\n").filter(Boolean) : []);
       warningCount.textContent = String(warnings.length);
       warningsOut.textContent = warnings.join("\n");
+
+      const optimizations = out.optimizations ? out.optimizations.split("\n").filter(Boolean) : [];
+      optimizationsDetails.classList.toggle("hidden", !optimizeCheckbox.checked);
+      optimizationCount.textContent = String(Math.max(0, optimizations.length - 1));
+      optimizationsOut.textContent = optimizations.join("\n");
 
       listingOut.textContent = out.listing || "";
       listingDetails.classList.toggle("hidden", !listingCheckbox.checked);

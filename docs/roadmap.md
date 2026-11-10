@@ -71,6 +71,20 @@ Cloud variables behave as ordinary variables today, so their values are lost whe
 - [ ] **Clearer output.** Show warnings next to the block that caused them and group the bytecode listing by sprite.
 - [ ] **Run projects in the page.** A preview that runs the compiled classes in the browser, to show that a project works without downloading the JAR. The page cannot load new JVM classes, so a small bytecode interpreter compiled with TeaVM would run them against a browser build of the runtime: a canvas in place of Java2D and Swing, the browser's own SVG rendering in place of JSVG, Web Audio in place of the sound decoders, and TeaVM threads in place of virtual threads. That means splitting the runtime into a shared core and a backend per platform first. See [Web playground](web-playground.md#running-projects-in-the-page).
 
+## SB3O
+
+[SB3O](sb3o.md) is the project optimizer that lives in this repository: a tool for Scratch and Scratch-based engines first, which jScratch uses in a few places. Its library is under the BSD 3-Clause License so that any engine or tool can take it.
+
+- [x] **The library.** The sb3 model with a reader and a writer that put back everything they do not interpret, scratch-vm's value semantics for folding, and the first passes: fold constants, decide control blocks with a constant condition, remove loose stacks and remove unused custom blocks. Kotlin Multiplatform, so it builds for the JVM and for JavaScript with TypeScript declarations.
+- [x] **The `sb3o` command and `jscratch --optimize`.** The same passes from the command line, through the playground, and on the way into the compiler.
+- [ ] **Differential tests against scratch-vm and TurboWarp.** Run the samples and the benchmarks optimized and not on both engines, with the Node runner the benchmarks already have, and compare what they say. Today the comparison runs on jScratch only.
+- [ ] **A fuzzer for the folder.** Generate random expressions over the operator blocks and check what SB3O folds them to against scratch-vm, so a casting rule that drifts is caught before a project is.
+- [ ] **More passes.** Unused variables and lists, once `sensing_of` with a static sprite and the monitors are accounted for; `and` and `or` with one constant side when the other side has no effects; identities such as `x + 0` once a variable is known to hold numbers; and broadcasts nothing receives when every broadcast name in the project is a literal.
+- [ ] **Assets.** Drop costumes and sounds nothing refers to when every costume and sound name in the project is a literal, share identical assets, and minify SVG costumes.
+- [ ] **An engine target.** TurboWarp's compiler already folds some of this itself, so a `vanilla` and a `turbowarp` target could pick the passes that pay off for each.
+- [ ] **A JavaScript API for the model.** JavaScript gets `optimizeProjectJson` only. Exporting the reader, the writer and the model would let engines and tools work on a project themselves, but the model's collections and sealed classes need a JavaScript-shaped interface first.
+- [ ] **Publishing.** The library on Maven Central and npm, and the command on the nightly release next to `jscratch.jar`.
+
 ## Distribution
 
 - [x] **Nightly builds.** Whenever CI passes on `main`, it replaces the CLI JAR on the rolling `nightly` prerelease. See [Download a nightly build](getting-started.md#download-a-nightly-build).
