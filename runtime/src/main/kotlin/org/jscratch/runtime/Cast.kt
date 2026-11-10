@@ -2,6 +2,8 @@ package org.jscratch.runtime
 
 import java.math.BigDecimal
 import java.math.BigInteger
+import java.math.MathContext
+import java.math.RoundingMode
 
 /**
  * Scratch value conversions. Scratch values are dynamically typed: a value is a
@@ -167,27 +169,37 @@ object Cast {
     @JvmStatic
     fun toString(value: Boolean): String = if (value) "true" else "false"
 
-    /** Formats a double the way JavaScript's `Number.prototype.toString` does. */
+    /**
+     * Formats a double the way JavaScript's `Number.prototype.toString` does: the fewest digits that read
+     * back as the value, plain from 1e-6 up to 1e21 and in exponent notation beyond. The JDK's
+     * `Double.toString` gives those digits (it has since JDK 19), except that it always prints at least two,
+     * so 1.0E-5 and 4.9E-324 are cut to the one digit JavaScript prints when one reads back. Whole numbers
+     * past 2^53 go the same way, since their exact value (123456789012345683968) has more digits than
+     * JavaScript shows (123456789012345680000).
+     */
     @JvmStatic
     fun toString(value: Double): String {
         if (value.isNaN()) return "NaN"
         if (value.isInfinite()) return if (value > 0) "Infinity" else "-Infinity"
         if (value == 0.0) return "0"
         val abs = Math.abs(value)
-        if (value == Math.rint(value) && abs < 1e21) {
-            return if (abs < 9.007199254740992E15) value.toLong().toString() else BigDecimal(value).toPlainString()
-        }
+        if (abs < 9.007199254740992E15 && value == Math.rint(value)) return value.toLong().toString()
 
-        val java = java.lang.Double.toString(value)
-        if (abs >= 1e-6 && abs < 1e21) {
-            return BigDecimal(java).toPlainString()
+        var digits = BigDecimal(java.lang.Double.toString(value)).stripTrailingZeros()
+        if (digits.precision() == 2) {
+            val one = digits.round(MathContext(1, RoundingMode.HALF_EVEN))
+            if (one.toDouble() == value) digits = one.stripTrailingZeros()
         }
-        // Scientific notation: Java prints 1.0E-7, JavaScript prints 1e-7 and 1.5e+21.
-        val e = java.indexOf('E')
-        var mantissa = java.substring(0, e)
-        if (mantissa.endsWith(".0")) mantissa = mantissa.dropLast(2)
-        val exponent = java.substring(e + 1)
-        return if (exponent.startsWith("-")) "${mantissa}e$exponent" else "${mantissa}e+$exponent"
+        if (abs >= 1e-6 && abs < 1e21) return digits.toPlainString()
+        // Exponent notation: JavaScript writes 1e-7, 1.5e-7 and 1e+21.
+        val unscaled = digits.unscaledValue().abs().toString()
+        val exponent = digits.precision() - digits.scale() - 1
+        val sb = StringBuilder()
+        if (value < 0) sb.append('-')
+        sb.append(unscaled[0])
+        if (unscaled.length > 1) sb.append('.').append(unscaled, 1, unscaled.length)
+        sb.append('e').append(if (exponent < 0) '-' else '+').append(Math.abs(exponent))
+        return sb.toString()
     }
 
     /** Whether a value should be treated as an integer by `pick random` and list indexing. */
